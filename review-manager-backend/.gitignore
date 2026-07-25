@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.venv/
+review_manager.db
+.env

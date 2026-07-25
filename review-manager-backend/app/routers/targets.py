@@ -1,0 +1,30 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app import crud, schemas
+from app.database import get_db
+
+router = APIRouter(prefix="/api/targets", tags=["targets"])
+
+
+@router.get("", response_model=list[schemas.ReviewTargetOut])
+def list_targets(db: Session = Depends(get_db)):
+    return crud.get_targets(db)
+
+
+@router.post("", response_model=schemas.ReviewTargetOut)
+def create_target(data: schemas.ReviewTargetCreate, db: Session = Depends(get_db)):
+    try:
+        return crud.create_review_target(db, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{target_id}", response_model=schemas.ReviewTargetDetailOut)
+def get_target(target_id: int, db: Session = Depends(get_db)):
+    target = crud.get_target(db, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="리뷰 대상을 찾을 수 없습니다")
+    out = schemas.ReviewTargetDetailOut.model_validate(target)
+    out.tasks = [crud.task_to_out(t) for t in target.tasks]
+    return out

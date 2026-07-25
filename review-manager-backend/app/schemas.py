@@ -1,0 +1,189 @@
+import datetime
+from typing import Literal, Optional
+
+from pydantic import BaseModel, ConfigDict
+
+Platform = Literal["naver", "kakao"]
+
+
+# --- ReviewAccount ---
+
+class ReviewAccountCreate(BaseModel):
+    platform: Platform
+    label: str
+    profile_url: Optional[str] = None
+
+
+class ReviewAccountUpdate(BaseModel):
+    platform: Optional[Platform] = None
+    label: Optional[str] = None
+    profile_url: Optional[str] = None
+
+
+class ReviewAccountOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    reviewer_id: int
+    platform: Platform
+    label: str
+    profile_url: Optional[str] = None
+    created_at: datetime.datetime
+
+
+# --- Reviewer ---
+
+class ReviewerCreate(BaseModel):
+    name: str
+    memo: Optional[str] = None
+    contact_info: Optional[str] = None
+    is_active: bool = True
+
+
+class ReviewerUpdate(BaseModel):
+    name: Optional[str] = None
+    memo: Optional[str] = None
+    contact_info: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ReviewerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    memo: Optional[str] = None
+    contact_info: Optional[str] = None
+    is_active: bool
+    created_at: datetime.datetime
+    accounts: list[ReviewAccountOut] = []
+
+
+# --- ReviewTarget ---
+
+class ReviewTargetCreate(BaseModel):
+    platform: Platform
+    store_name: str
+    store_url: str
+    required_count: int
+    unit_price: int
+    claim_time_limit_hours: int = 24
+
+
+class ReviewTargetOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    platform: Platform
+    store_name: str
+    store_url: str
+    required_count: int
+    unit_price: int
+    claim_time_limit_hours: int
+    created_at: datetime.datetime
+
+
+class ReviewTargetDetailOut(ReviewTargetOut):
+    tasks: list["TaskOut"] = []
+
+
+# --- Task ---
+
+class TaskOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    review_target_id: int
+    review_account_id: Optional[int] = None
+    platform: Platform
+    status: str
+    claimed_at: Optional[datetime.datetime] = None
+    claim_deadline: Optional[datetime.datetime] = None
+    last_expired_at: Optional[datetime.datetime] = None
+    naver_available_date: Optional[datetime.date] = None
+    result_link: Optional[str] = None
+    completed_at: Optional[datetime.datetime] = None
+    review_posted_date: Optional[datetime.date] = None
+    blind_status: str
+    blind_checked_at: Optional[datetime.datetime] = None
+    check_expired: bool
+    settlement_amount: int
+    settlement_status: str
+    settlement_paid_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    # denormalized display fields, filled in by the router (not on the ORM model)
+    reviewer_id: Optional[int] = None
+    reviewer_name: Optional[str] = None
+    reviewer_contact_info: Optional[str] = None
+    account_label: Optional[str] = None
+    store_name: Optional[str] = None
+    store_url: Optional[str] = None
+
+
+class TaskResultUpdate(BaseModel):
+    result_link: str
+
+
+class TaskSettlementUpdate(BaseModel):
+    settlement_status: Literal["unpaid", "paid"]
+    settlement_amount: Optional[int] = None
+
+
+# --- Settlement summary ---
+
+class SettlementSummaryItem(BaseModel):
+    reviewer_id: int
+    reviewer_name: str
+    completed_count: int
+    unpaid_amount: int
+    paid_amount: int
+
+
+# --- Settings ---
+
+class SettingsOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    naver_blind_check_interval_minutes: int
+    kakao_blind_check_interval_minutes: int
+    naver_default_claim_hours: int
+    kakao_default_claim_hours: int
+
+
+class SettingsUpdate(BaseModel):
+    naver_blind_check_interval_minutes: Optional[int] = None
+    kakao_blind_check_interval_minutes: Optional[int] = None
+    naver_default_claim_hours: Optional[int] = None
+    kakao_default_claim_hours: Optional[int] = None
+
+
+class ReviewerImportResult(BaseModel):
+    created: int
+    skipped_duplicate: int
+    skipped_invalid: int
+
+
+# --- Self-service portal ---
+
+class OtpRequestIn(BaseModel):
+    phone: str
+    name: Optional[str] = None  # used to create a new reviewer if phone isn't found yet
+
+
+class OtpVerifyIn(BaseModel):
+    phone: str
+    code: str
+
+
+class OtpVerifyOut(BaseModel):
+    token: str
+    reviewer: ReviewerOut
+
+
+class PortalClaimIn(BaseModel):
+    account_id: int
+
+
+ReviewTargetDetailOut.model_rebuild()

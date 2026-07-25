@@ -1,0 +1,68 @@
+from sqlalchemy import text
+
+# Lightweight ad-hoc migrations for the SQLite dev DB (no Alembic setup at this
+# scale). Base.metadata.create_all only creates missing tables, not columns
+# added to existing tables, so new columns need an explicit ALTER TABLE here.
+
+
+def _add_column_if_missing(conn, table: str, column: str, ddl: str) -> None:
+    columns = {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
+    if column not in columns:
+        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
+
+
+def run_migrations(engine) -> None:
+    with engine.connect() as conn:
+        # reviewers: is_active (existing rows default to 0/연락불가 so the admin
+        # explicitly reviews who's reachable) + OTP fields for the self-service portal
+        _add_column_if_missing(
+            conn, "reviewers", "is_active", "is_active BOOLEAN NOT NULL DEFAULT 0"
+        )
+        _add_column_if_missing(conn, "reviewers", "otp_code", "otp_code TEXT")
+        _add_column_if_missing(
+            conn, "reviewers", "otp_expires_at", "otp_expires_at DATETIME"
+        )
+
+        # review_targets: per-target claim time limit for the open-pool model
+        _add_column_if_missing(
+            conn,
+            "review_targets",
+            "claim_time_limit_hours",
+            "claim_time_limit_hours INTEGER NOT NULL DEFAULT 24",
+        )
+
+        # settings: default claim-hour presets to prefill the target form
+        _add_column_if_missing(
+            conn,
+            "settings",
+            "naver_default_claim_hours",
+            "naver_default_claim_hours INTEGER NOT NULL DEFAULT 24",
+        )
+        _add_column_if_missing(
+            conn,
+            "settings",
+            "kakao_default_claim_hours",
+            "kakao_default_claim_hours INTEGER NOT NULL DEFAULT 24",
+        )
+
+        # tasks: review_account_id must become nullable (open-pool tasks start
+        # unassigned) and gains claimed_at/claim_deadline/last_expired_at. SQLite
+        # can't ALTER a column's NOT NULL constraint, so if the old shape is
+        # detected we rebuild the table — safe here since this app has no real
+        # task history yet; if it ever does, this skips rather than risk data loss.
+        task_columns = list(conn.execute(text("PRAGMA table_info(tasks)")))
+        if task_columns:
+            col_names = {c[1] for c in task_columns}
+            review_account_col = next(
+                (c for c in task_columns if c[1] == "review_account_id"), None
+            )
+            old_shape = review_account_col is not None and review_account_col[3] == 1
+            if old_shape or "claimed_at" not in col_names:
+                existing_count = conn.execute(text("SELECT COUNT(*) FROM tasks")).scalar()
+                if existing_count == 0:
+                    conn.execute(text("DROP TABLE tasks"))
+                # if there's real data, we deliberately leave the old table alone
+                # rather than risk destroying it — this app is pre-production scale
+                # so that hasn't happened, but this guard costs nothing to keep.
+
+        conn.commit()
