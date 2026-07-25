@@ -1,8 +1,10 @@
-import { Upload } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Search, Upload } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import ReviewerCard from './ReviewerCard.jsx'
 import ReviewerForm from './ReviewerForm.jsx'
+
+const MAX_VISIBLE = 50
 
 export default function ReviewerManager() {
   const [reviewers, setReviewers] = useState([])
@@ -11,6 +13,7 @@ export default function ReviewerManager() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [search, setSearch] = useState('')
   const fileInputRef = useRef(null)
 
   async function refresh() {
@@ -30,39 +33,47 @@ export default function ReviewerManager() {
   }, [])
 
   async function handleCreateReviewer(data) {
-    await api.createReviewer(data)
-    await refresh()
+    const reviewer = await api.createReviewer(data)
+    setReviewers((prev) => [...prev, reviewer])
   }
 
   async function handleDeleteReviewer(id) {
     if (!confirm('이 리뷰어를 삭제할까요?')) return
     try {
       await api.deleteReviewer(id)
-      await refresh()
+      setReviewers((prev) => prev.filter((r) => r.id !== id))
     } catch (err) {
       alert(err.message)
     }
   }
 
   async function handleCreateAccount(reviewerId, data) {
-    await api.createAccount(reviewerId, data)
-    await refresh()
+    const account = await api.createAccount(reviewerId, data)
+    setReviewers((prev) =>
+      prev.map((r) => (r.id === reviewerId ? { ...r, accounts: [...r.accounts, account] } : r)),
+    )
   }
 
   async function handleToggleActive(id, isActive) {
     try {
-      await api.updateReviewer(id, { is_active: isActive })
-      await refresh()
+      const updated = await api.updateReviewer(id, { is_active: isActive })
+      setReviewers((prev) => prev.map((r) => (r.id === id ? updated : r)))
     } catch (err) {
       alert(err.message)
     }
   }
 
-  async function handleDeleteAccount(accountId) {
+  async function handleDeleteAccount(reviewerId, accountId) {
     if (!confirm('이 계정을 삭제할까요?')) return
     try {
       await api.deleteAccount(accountId)
-      await refresh()
+      setReviewers((prev) =>
+        prev.map((r) =>
+          r.id === reviewerId
+            ? { ...r, accounts: r.accounts.filter((a) => a.id !== accountId) }
+            : r,
+        ),
+      )
     } catch (err) {
       alert(err.message)
     }
@@ -84,6 +95,20 @@ export default function ReviewerManager() {
       e.target.value = ''
     }
   }
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return reviewers.filter((r) => {
+      if (statusFilter === 'active' && !r.is_active) return false
+      if (statusFilter === 'inactive' && r.is_active) return false
+      if (query && !r.name.toLowerCase().includes(query) && !r.contact_info?.includes(query)) {
+        return false
+      }
+      return true
+    })
+  }, [reviewers, statusFilter, search])
+
+  const visible = filtered.slice(0, MAX_VISIBLE)
 
   return (
     <div className="space-y-4">
@@ -123,10 +148,19 @@ export default function ReviewerManager() {
         <span className="text-xs text-slate-500">
           전체 {reviewers.length}명 · 연락가능 {reviewers.filter((r) => r.is_active).length}명
         </span>
+        <div className="relative ml-auto">
+          <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="이름/연락처 검색"
+            className="w-48 rounded border border-slate-300 py-1 pl-7 pr-2 text-sm"
+          />
+        </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="ml-auto rounded border border-slate-300 px-2 py-1 text-sm"
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
         >
           <option value="all">전체 보기</option>
           <option value="active">연락가능만</option>
@@ -134,23 +168,23 @@ export default function ReviewerManager() {
         </select>
       </div>
 
+      {filtered.length > MAX_VISIBLE && (
+        <p className="text-xs text-amber-600">
+          조건에 맞는 {filtered.length}명 중 {MAX_VISIBLE}명만 표시 중입니다. 검색으로 좁혀보세요.
+        </p>
+      )}
+
       <div className="space-y-3">
-        {reviewers
-          .filter((r) => {
-            if (statusFilter === 'active') return r.is_active
-            if (statusFilter === 'inactive') return !r.is_active
-            return true
-          })
-          .map((reviewer) => (
-            <ReviewerCard
-              key={reviewer.id}
-              reviewer={reviewer}
-              onDeleteReviewer={handleDeleteReviewer}
-              onToggleActive={handleToggleActive}
-              onCreateAccount={handleCreateAccount}
-              onDeleteAccount={handleDeleteAccount}
-            />
-          ))}
+        {visible.map((reviewer) => (
+          <ReviewerCard
+            key={reviewer.id}
+            reviewer={reviewer}
+            onDeleteReviewer={handleDeleteReviewer}
+            onToggleActive={handleToggleActive}
+            onCreateAccount={handleCreateAccount}
+            onDeleteAccount={handleDeleteAccount}
+          />
+        ))}
       </div>
     </div>
   )

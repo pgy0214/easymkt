@@ -70,7 +70,7 @@ export default function ReviewerCard({
               )}
             </div>
             <button
-              onClick={() => onDeleteAccount(account.id)}
+              onClick={() => onDeleteAccount(reviewer.id, account.id)}
               className="text-slate-400 hover:text-red-600"
               title="계정 삭제"
             >
