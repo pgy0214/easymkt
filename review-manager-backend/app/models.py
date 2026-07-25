@@ -49,18 +49,31 @@ class ReviewAccount(Base):
     tasks = relationship("Task", back_populates="review_account")
 
 
+class Store(Base):
+    __tablename__ = "stores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    platform = Column(String, nullable=False)  # 'naver' | 'kakao'
+    name = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    cooldown_days = Column(Integer, nullable=False, default=90)  # 계정당 재작업 가능 주기
+    created_at = Column(DateTime, default=utcnow)
+
+    targets = relationship("ReviewTarget", back_populates="store")
+
+
 class ReviewTarget(Base):
     __tablename__ = "review_targets"
 
     id = Column(Integer, primary_key=True, index=True)
-    platform = Column(String, nullable=False)  # 'naver' | 'kakao'
-    store_name = Column(String, nullable=False)
-    store_url = Column(String, nullable=False)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    platform = Column(String, nullable=False)  # 'naver' | 'kakao', copied from store at creation
     required_count = Column(Integer, nullable=False)
     unit_price = Column(Integer, nullable=False)
     claim_time_limit_hours = Column(Integer, nullable=False, default=24)
     created_at = Column(DateTime, default=utcnow)
 
+    store = relationship("Store", back_populates="targets")
     tasks = relationship(
         "Task", back_populates="review_target", cascade="all, delete-orphan"
     )

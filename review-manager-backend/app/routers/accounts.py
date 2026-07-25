@@ -27,3 +27,11 @@ def delete_account(account_id: int, db: Session = Depends(get_db)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"ok": True}
+
+
+@router.get("/{account_id}/store-history", response_model=list[schemas.AccountStoreHistoryItem])
+def get_store_history(account_id: int, db: Session = Depends(get_db)):
+    account = crud.get_account(db, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
+    return crud.get_account_store_history(db, account_id)

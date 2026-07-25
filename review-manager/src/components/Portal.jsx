@@ -266,7 +266,9 @@ function PortalHome({ token, onLogout }) {
 }
 
 function PoolTaskRow({ task, myAccounts, onClaim }) {
-  const [accountId, setAccountId] = useState(myAccounts[0]?.id ?? '')
+  const eligibleIds = new Set(task.eligible_account_ids ?? myAccounts.map((a) => a.id))
+  const eligibleAccounts = myAccounts.filter((a) => eligibleIds.has(a.id))
+  const [accountId, setAccountId] = useState(eligibleAccounts[0]?.id ?? '')
 
   return (
     <div className="flex items-center justify-between rounded border border-slate-100 px-3 py-2 text-sm">
@@ -275,29 +277,36 @@ function PoolTaskRow({ task, myAccounts, onClaim }) {
         <div className="text-xs text-slate-500">
           {PLATFORM_LABEL[task.platform]} · 건당 {formatKRW(task.settlement_amount)}
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {myAccounts.length > 1 && (
-          <select
-            value={accountId}
-            onChange={(e) => setAccountId(Number(e.target.value))}
-            className="rounded border border-slate-300 px-1.5 py-1 text-xs"
-          >
-            {myAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.label}
-              </option>
-            ))}
-          </select>
+        {eligibleAccounts.length === 0 && (
+          <div className="text-xs text-amber-600">
+            보유 계정이 모두 이 매장의 재작업 가능 기간이 지나지 않았어요
+          </div>
         )}
-        <button
-          onClick={() => onClaim(task.id, accountId)}
-          disabled={!accountId}
-          className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          할게요
-        </button>
       </div>
+      {eligibleAccounts.length > 0 && (
+        <div className="flex items-center gap-2">
+          {eligibleAccounts.length > 1 && (
+            <select
+              value={accountId}
+              onChange={(e) => setAccountId(Number(e.target.value))}
+              className="rounded border border-slate-300 px-1.5 py-1 text-xs"
+            >
+              {eligibleAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={() => onClaim(task.id, accountId)}
+            disabled={!accountId}
+            className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            할게요
+          </button>
+        </div>
+      )}
     </div>
   )
 }

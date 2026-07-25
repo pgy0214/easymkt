@@ -176,10 +176,66 @@ def delete_account(db: Session, account: models.ReviewAccount) -> None:
     db.commit()
 
 
+# --- Store ---
+
+def get_stores(db: Session, platform: str | None = None) -> list[models.Store]:
+    query = db.query(models.Store)
+    if platform is not None:
+        query = query.filter(models.Store.platform == platform)
+    return query.order_by(models.Store.name).all()
+
+
+def get_store(db: Session, store_id: int) -> models.Store | None:
+    return db.query(models.Store).filter(models.Store.id == store_id).first()
+
+
+def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
+    store = models.Store(
+        platform=data.platform,
+        name=data.name,
+        url=data.url,
+        cooldown_days=data.cooldown_days,
+    )
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+    return store
+
+
+def update_store(db: Session, store: models.Store, data: schemas.StoreUpdate) -> models.Store:
+    if data.name is not None:
+        store.name = data.name
+    if data.url is not None:
+        store.url = data.url
+    if data.cooldown_days is not None:
+        store.cooldown_days = data.cooldown_days
+    db.commit()
+    db.refresh(store)
+    return store
+
+
+def delete_store(db: Session, store: models.Store) -> None:
+    target_count = (
+        db.query(models.ReviewTarget).filter(models.ReviewTarget.store_id == store.id).count()
+    )
+    if target_count > 0:
+        raise ValueError("리뷰 대상으로 사용 중인 매장은 삭제할 수 없습니다")
+    db.delete(store)
+    db.commit()
+
+
 # --- ReviewTarget ---
 
 def get_targets(db: Session) -> list[models.ReviewTarget]:
     return db.query(models.ReviewTarget).order_by(models.ReviewTarget.id.desc()).all()
+
+
+def target_to_out(target: models.ReviewTarget) -> schemas.ReviewTargetOut:
+    out = schemas.ReviewTargetOut.model_validate(target)
+    if target.store is not None:
+        out.store_name = target.store.name
+        out.store_url = target.store.url
+    return out
 
 
 def get_target(db: Session, target_id: int) -> models.ReviewTarget | None:
@@ -193,10 +249,13 @@ def create_review_target(
 ) -> models.ReviewTarget:
     """Create the target and its tasks as an unassigned open pool — reviewers
     claim them themselves via the self-service portal (no auto round-robin)."""
+    store = get_store(db, data.store_id)
+    if not store:
+        raise ValueError("매장을 찾을 수 없습니다")
+
     target = models.ReviewTarget(
-        platform=data.platform,
-        store_name=data.store_name,
-        store_url=data.store_url,
+        store_id=store.id,
+        platform=store.platform,
         required_count=data.required_count,
         unit_price=data.unit_price,
         claim_time_limit_hours=data.claim_time_limit_hours,
@@ -208,7 +267,7 @@ def create_review_target(
         task = models.Task(
             review_target_id=target.id,
             review_account_id=None,
-            platform=data.platform,
+            platform=store.platform,
             status="open",
             settlement_amount=data.unit_price,
         )
@@ -233,9 +292,10 @@ def task_to_out(task: models.Task) -> schemas.TaskOut:
         out.reviewer_contact_info = reviewer.contact_info
     if account is not None:
         out.account_label = account.label
-    if target is not None:
-        out.store_name = target.store_name
-        out.store_url = target.store_url
+    if target is not None and target.store is not None:
+        out.store_id = target.store.id
+        out.store_name = target.store.name
+        out.store_url = target.store.url
     return out
 
 
@@ -279,6 +339,97 @@ def get_tasks(
     return query.all()
 
 
+# --- Store cooldown eligibility (재작업 가능 주기) ---
+
+def get_last_completed_task_for_store(
+    db: Session, account_id: int, store_id: int
+) -> models.Task | None:
+    return (
+        db.query(models.Task)
+        .join(models.ReviewTarget, models.Task.review_target_id == models.ReviewTarget.id)
+        .filter(
+            models.Task.review_account_id == account_id,
+            models.ReviewTarget.store_id == store_id,
+            models.Task.status == "completed",
+        )
+        .order_by(models.Task.completed_at.desc())
+        .first()
+    )
+
+
+def _task_reference_date(task: models.Task) -> datetime.date | None:
+    """The date to count the cooldown from: the actual review posting date if
+    known (from blind-check matching), else the completion timestamp."""
+    if task.review_posted_date:
+        return task.review_posted_date
+    if task.completed_at:
+        return task.completed_at.date()
+    return None
+
+
+def is_account_eligible_for_store(
+    db: Session, account_id: int, store_id: int, now: datetime.datetime | None = None
+) -> bool:
+    now = now or datetime.datetime.utcnow()
+    store = get_store(db, store_id)
+    if not store:
+        return True
+    last_task = get_last_completed_task_for_store(db, account_id, store_id)
+    if not last_task:
+        return True
+    reference = _task_reference_date(last_task)
+    if reference is None:
+        return True
+    eligible_at = datetime.datetime.combine(reference, datetime.time.min) + datetime.timedelta(
+        days=store.cooldown_days
+    )
+    return now >= eligible_at
+
+
+def get_eligible_account_ids(
+    db: Session, accounts: list[models.ReviewAccount], store_id: int
+) -> list[int]:
+    now = datetime.datetime.utcnow()
+    return [a.id for a in accounts if is_account_eligible_for_store(db, a.id, store_id, now)]
+
+
+def get_account_store_history(db: Session, account_id: int) -> list[schemas.AccountStoreHistoryItem]:
+    completed_tasks = (
+        db.query(models.Task)
+        .join(models.ReviewTarget, models.Task.review_target_id == models.ReviewTarget.id)
+        .filter(models.Task.review_account_id == account_id, models.Task.status == "completed")
+        .all()
+    )
+
+    latest_by_store: dict[int, tuple[datetime.date, models.Store]] = {}
+    for task in completed_tasks:
+        store = task.review_target.store if task.review_target else None
+        reference = _task_reference_date(task)
+        if not store or reference is None:
+            continue
+        existing = latest_by_store.get(store.id)
+        if not existing or reference > existing[0]:
+            latest_by_store[store.id] = (reference, store)
+
+    now = datetime.datetime.utcnow()
+    items = []
+    for reference, store in latest_by_store.values():
+        reference_dt = datetime.datetime.combine(reference, datetime.time.min)
+        eligible_at = reference_dt + datetime.timedelta(days=store.cooldown_days)
+        items.append(
+            schemas.AccountStoreHistoryItem(
+                store_id=store.id,
+                store_name=store.name,
+                platform=store.platform,
+                last_completed_at=reference_dt,
+                cooldown_days=store.cooldown_days,
+                eligible_at=eligible_at,
+                is_eligible_now=now >= eligible_at,
+            )
+        )
+    return items
+
+
 def get_task(db: Session, task_id: int) -> models.Task | None:
     return db.query(models.Task).filter(models.Task.id == task_id).first()
 
@@ -307,6 +458,8 @@ def claim_task(db: Session, task: models.Task, account: models.ReviewAccount) ->
         raise ValueError("이미 다른 사람이 가져간 작업입니다")
     if task.platform != account.platform:
         raise ValueError("플랫폼이 일치하지 않는 계정입니다")
+    if not is_account_eligible_for_store(db, account.id, task.review_target.store_id):
+        raise ValueError("이 계정은 해당 매장의 재작업 가능 기간이 아직 지나지 않았습니다")
 
     now = datetime.datetime.utcnow()
     task.review_account_id = account.id

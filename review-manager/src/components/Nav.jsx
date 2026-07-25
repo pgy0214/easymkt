@@ -1,7 +1,8 @@
-import { ClipboardList, Settings2, Store, Users, Wallet } from 'lucide-react'
+import { Building2, ClipboardList, Settings2, Store, Users, Wallet } from 'lucide-react'
 
 const TABS = [
   { id: 'reviewers', label: '리뷰어 관리', icon: Users },
+  { id: 'stores', label: '매장 관리', icon: Building2 },
   { id: 'targets', label: '리뷰 대상 등록', icon: Store },
   { id: 'tasks', label: '작업 현황', icon: ClipboardList },
   { id: 'settlement', label: '정산 요약', icon: Wallet },

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import scheduler
 from app.database import Base, engine
 from app.migrations import run_migrations
-from app.routers import accounts, portal, reviewers, settings, settlement, targets, tasks
+from app.routers import accounts, portal, reviewers, settings, settlement, stores, targets, tasks
 
 
 @asynccontextmanager
@@ -35,6 +35,7 @@ app.add_middleware(
 
 app.include_router(reviewers.router)
 app.include_router(accounts.router)
+app.include_router(stores.router)
 app.include_router(targets.router)
 app.include_router(tasks.router)
 app.include_router(settlement.router)

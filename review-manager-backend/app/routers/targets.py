@@ -9,13 +9,13 @@ router = APIRouter(prefix="/api/targets", tags=["targets"])
 
 @router.get("", response_model=list[schemas.ReviewTargetOut])
 def list_targets(db: Session = Depends(get_db)):
-    return crud.get_targets(db)
+    return [crud.target_to_out(t) for t in crud.get_targets(db)]
 
 
 @router.post("", response_model=schemas.ReviewTargetOut)
 def create_target(data: schemas.ReviewTargetCreate, db: Session = Depends(get_db)):
     try:
-        return crud.create_review_target(db, data)
+        return crud.target_to_out(crud.create_review_target(db, data))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -26,5 +26,8 @@ def get_target(target_id: int, db: Session = Depends(get_db)):
     if not target:
         raise HTTPException(status_code=404, detail="리뷰 대상을 찾을 수 없습니다")
     out = schemas.ReviewTargetDetailOut.model_validate(target)
+    if target.store is not None:
+        out.store_name = target.store.name
+        out.store_url = target.store.url
     out.tasks = [crud.task_to_out(t) for t in target.tasks]
     return out

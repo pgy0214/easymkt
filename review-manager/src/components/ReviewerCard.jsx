@@ -1,5 +1,6 @@
 import { Trash2 } from 'lucide-react'
 import AccountForm from './AccountForm.jsx'
+import AccountStoreMatrix from './AccountStoreMatrix.jsx'
 
 const PLATFORM_BADGE = {
   naver: 'bg-green-100 text-green-700',
@@ -79,6 +80,8 @@ export default function ReviewerCard({
           </div>
         ))}
       </div>
+
+      <AccountStoreMatrix accounts={reviewer.accounts} />
 
       <AccountForm onCreate={(data) => onCreateAccount(reviewer.id, data)} />
     </div>

@@ -59,12 +59,36 @@ class ReviewerOut(BaseModel):
     accounts: list[ReviewAccountOut] = []
 
 
+# --- Store ---
+
+class StoreCreate(BaseModel):
+    platform: Platform
+    name: str
+    url: str
+    cooldown_days: int = 90
+
+
+class StoreUpdate(BaseModel):
+    name: Optional[str] = None
+    url: Optional[str] = None
+    cooldown_days: Optional[int] = None
+
+
+class StoreOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    platform: Platform
+    name: str
+    url: str
+    cooldown_days: int
+    created_at: datetime.datetime
+
+
 # --- ReviewTarget ---
 
 class ReviewTargetCreate(BaseModel):
-    platform: Platform
-    store_name: str
-    store_url: str
+    store_id: int
     required_count: int
     unit_price: int
     claim_time_limit_hours: int = 24
@@ -74,13 +98,16 @@ class ReviewTargetOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    store_id: int
     platform: Platform
-    store_name: str
-    store_url: str
     required_count: int
     unit_price: int
     claim_time_limit_hours: int
     created_at: datetime.datetime
+
+    # denormalized, filled in by the router
+    store_name: Optional[str] = None
+    store_url: Optional[str] = None
 
 
 class ReviewTargetDetailOut(ReviewTargetOut):
@@ -118,8 +145,13 @@ class TaskOut(BaseModel):
     reviewer_name: Optional[str] = None
     reviewer_contact_info: Optional[str] = None
     account_label: Optional[str] = None
+    store_id: Optional[int] = None
     store_name: Optional[str] = None
     store_url: Optional[str] = None
+
+    # portal-pool only: which of the requesting reviewer's own accounts (for
+    # this task's platform) currently pass the store's cooldown and may claim it
+    eligible_account_ids: Optional[list[int]] = None
 
 
 class TaskResultUpdate(BaseModel):
@@ -184,6 +216,18 @@ class OtpVerifyOut(BaseModel):
 
 class PortalClaimIn(BaseModel):
     account_id: int
+
+
+# --- Account work history (매장별 작업 이력) ---
+
+class AccountStoreHistoryItem(BaseModel):
+    store_id: int
+    store_name: str
+    platform: Platform
+    last_completed_at: datetime.datetime
+    cooldown_days: int
+    eligible_at: datetime.datetime
+    is_eligible_now: bool
 
 
 ReviewTargetDetailOut.model_rebuild()

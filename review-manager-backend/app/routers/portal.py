@@ -98,7 +98,16 @@ def get_pool(
     platforms = sorted({a.platform for a in reviewer.accounts})
     if not platforms:
         return []
-    return [crud.task_to_out(t) for t in crud.get_open_pool_tasks(db, platforms)]
+
+    results = []
+    for task in crud.get_open_pool_tasks(db, platforms):
+        out = crud.task_to_out(task)
+        my_accounts = [a for a in reviewer.accounts if a.platform == task.platform]
+        out.eligible_account_ids = crud.get_eligible_account_ids(
+            db, my_accounts, task.review_target.store_id
+        )
+        results.append(out)
+    return results
 
 
 @router.get("/tasks/mine", response_model=list[schemas.TaskOut])

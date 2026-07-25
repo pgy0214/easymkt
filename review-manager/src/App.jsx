@@ -3,6 +3,7 @@ import Nav from './components/Nav.jsx'
 import ReviewerManager from './components/ReviewerManager.jsx'
 import SettingsPanel from './components/SettingsPanel.jsx'
 import SettlementSummary from './components/SettlementSummary.jsx'
+import StoreManager from './components/StoreManager.jsx'
 import TargetForm from './components/TargetForm.jsx'
 import TaskDashboard from './components/TaskDashboard.jsx'
 
@@ -17,6 +18,7 @@ export default function App() {
       <Nav active={tab} onChange={setTab} />
       <main className="mx-auto max-w-6xl px-4 py-6">
         {tab === 'reviewers' && <ReviewerManager />}
+        {tab === 'stores' && <StoreManager />}
         {tab === 'targets' && <TargetForm />}
         {tab === 'tasks' && <TaskDashboard />}
         {tab === 'settlement' && <SettlementSummary />}

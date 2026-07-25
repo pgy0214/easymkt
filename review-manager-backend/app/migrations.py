@@ -45,6 +45,23 @@ def run_migrations(engine) -> None:
             "kakao_default_claim_hours INTEGER NOT NULL DEFAULT 24",
         )
 
+        # review_targets: store_name/store_url columns replaced by a store_id FK
+        # to the new stores table (stores are now a reusable list, not re-typed
+        # per campaign). Same SQLite rebuild-if-empty approach as below.
+        target_columns = list(conn.execute(text("PRAGMA table_info(review_targets)")))
+        if target_columns:
+            col_names = {c[1] for c in target_columns}
+            if "store_id" not in col_names:
+                targets_count = conn.execute(
+                    text("SELECT COUNT(*) FROM review_targets")
+                ).scalar()
+                if targets_count == 0:
+                    tasks_count = conn.execute(text("SELECT COUNT(*) FROM tasks")).scalar()
+                    if tasks_count == 0:
+                        conn.execute(text("DROP TABLE tasks"))
+                    conn.execute(text("DROP TABLE review_targets"))
+                # if there's real data, leave both alone rather than risk loss
+
         # tasks: review_account_id must become nullable (open-pool tasks start
         # unassigned) and gains claimed_at/claim_deadline/last_expired_at. SQLite
         # can't ALTER a column's NOT NULL constraint, so if the old shape is

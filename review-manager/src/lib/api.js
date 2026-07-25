@@ -55,6 +55,13 @@ export const api = {
   updateAccount: (id, data) =>
     request(`/accounts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteAccount: (id) => request(`/accounts/${id}`, { method: 'DELETE' }),
+  getAccountStoreHistory: (id) => request(`/accounts/${id}/store-history`),
+
+  getStores: (platform) => request(`/stores${toQueryString({ platform })}`),
+  createStore: (data) => request('/stores', { method: 'POST', body: JSON.stringify(data) }),
+  updateStore: (id, data) =>
+    request(`/stores/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteStore: (id) => request(`/stores/${id}`, { method: 'DELETE' }),
 
   getTargets: () => request('/targets'),
   createTarget: (data) => request('/targets', { method: 'POST', body: JSON.stringify(data) }),
