@@ -7,7 +7,7 @@ const EMPTY = {
   store_id: '',
   required_count: 1,
   unit_price: 0,
-  claim_time_limit_hours: 24,
+  claim_time_limit_minutes: 1440,
 }
 
 export default function TargetForm() {
@@ -37,13 +37,23 @@ export default function TargetForm() {
   }, [])
 
   function handlePlatformChange(platform) {
-    const defaultHours = settings
+    const defaultMinutes = settings
       ? platform === 'naver'
-        ? settings.naver_default_claim_hours
-        : settings.kakao_default_claim_hours
-      : form.claim_time_limit_hours
-    setForm((prev) => ({ ...prev, platform, claim_time_limit_hours: defaultHours }))
+        ? settings.naver_default_claim_minutes
+        : settings.kakao_default_claim_minutes
+      : form.claim_time_limit_minutes
+    setForm((prev) => ({ ...prev, platform, claim_time_limit_minutes: defaultMinutes }))
     refreshStores(platform)
+  }
+
+  async function handleDelete(id) {
+    if (!confirm('이 캠페인을 삭제할까요? (클레임되었거나 완료된 작업이 있으면 삭제할 수 없습니다)')) return
+    try {
+      await api.deleteTarget(id)
+      await refreshTargets()
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   async function handleSubmit(e) {
@@ -60,7 +70,7 @@ export default function TargetForm() {
         store_id: Number(form.store_id),
         required_count: Number(form.required_count),
         unit_price: Number(form.unit_price),
-        claim_time_limit_hours: Number(form.claim_time_limit_hours),
+        claim_time_limit_minutes: Number(form.claim_time_limit_minutes),
       })
       setMessage(
         `"${target.store_name}" 등록 완료 — ${target.required_count}건이 오픈풀에 등록되었습니다. 리뷰어가 직접 클레임합니다.`,
@@ -127,12 +137,12 @@ export default function TargetForm() {
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-500">클레임 제한시간 (시간)</label>
+          <label className="block text-xs text-slate-500">작업 제한시간 (분)</label>
           <input
             type="number"
             min="1"
-            value={form.claim_time_limit_hours}
-            onChange={(e) => setForm({ ...form, claim_time_limit_hours: e.target.value })}
+            value={form.claim_time_limit_minutes}
+            onChange={(e) => setForm({ ...form, claim_time_limit_minutes: e.target.value })}
             className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
@@ -148,14 +158,14 @@ export default function TargetForm() {
         <p className="text-xs text-slate-400 sm:col-span-6">
           매장 목록에 없다면 먼저 "매장 관리" 탭에서 등록해주세요. 등록된 작업은 자동
           배정되지 않고 오픈풀에 공개되며, 리뷰어가 셀프서비스 포털에서 직접 "할게요"를
-          눌러 클레임합니다. 클레임 제한시간 안에 완료하지 못하면 자동으로 다시 오픈풀로
+          눌러 클레임합니다. 작업 제한시간 안에 완료하지 못하면 자동으로 다시 오픈풀로
           돌아갑니다.
         </p>
         {message && <p className="text-sm text-green-700 sm:col-span-6">{message}</p>}
         {error && <p className="text-sm text-red-600 sm:col-span-6">{error}</p>}
       </form>
 
-      <TargetList targets={targets} />
+      <TargetList targets={targets} onDelete={handleDelete} />
     </div>
   )
 }

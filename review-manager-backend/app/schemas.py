@@ -91,7 +91,7 @@ class ReviewTargetCreate(BaseModel):
     store_id: int
     required_count: int
     unit_price: int
-    claim_time_limit_hours: int = 24
+    claim_time_limit_minutes: int = 1440
 
 
 class ReviewTargetOut(BaseModel):
@@ -102,7 +102,7 @@ class ReviewTargetOut(BaseModel):
     platform: Platform
     required_count: int
     unit_price: int
-    claim_time_limit_hours: int
+    claim_time_limit_minutes: int
     created_at: datetime.datetime
 
     # denormalized, filled in by the router
@@ -180,15 +180,15 @@ class SettingsOut(BaseModel):
 
     naver_blind_check_interval_minutes: int
     kakao_blind_check_interval_minutes: int
-    naver_default_claim_hours: int
-    kakao_default_claim_hours: int
+    naver_default_claim_minutes: int
+    kakao_default_claim_minutes: int
 
 
 class SettingsUpdate(BaseModel):
     naver_blind_check_interval_minutes: Optional[int] = None
     kakao_blind_check_interval_minutes: Optional[int] = None
-    naver_default_claim_hours: Optional[int] = None
-    kakao_default_claim_hours: Optional[int] = None
+    naver_default_claim_minutes: Optional[int] = None
+    kakao_default_claim_minutes: Optional[int] = None
 
 
 class ReviewerImportResult(BaseModel):

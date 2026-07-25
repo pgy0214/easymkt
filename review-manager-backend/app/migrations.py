@@ -23,35 +23,53 @@ def run_migrations(engine) -> None:
             conn, "reviewers", "otp_expires_at", "otp_expires_at DATETIME"
         )
 
-        # review_targets: per-target claim time limit for the open-pool model
-        _add_column_if_missing(
-            conn,
-            "review_targets",
-            "claim_time_limit_hours",
-            "claim_time_limit_hours INTEGER NOT NULL DEFAULT 24",
-        )
-
-        # settings: default claim-hour presets to prefill the target form
-        _add_column_if_missing(
-            conn,
-            "settings",
-            "naver_default_claim_hours",
-            "naver_default_claim_hours INTEGER NOT NULL DEFAULT 24",
-        )
-        _add_column_if_missing(
-            conn,
-            "settings",
-            "kakao_default_claim_hours",
-            "kakao_default_claim_hours INTEGER NOT NULL DEFAULT 24",
-        )
+        # settings: default claim-time presets, now in minutes (was hours). Add
+        # the new columns, copy over converted values, then drop the old ones —
+        # settings only ever has one row and it's worth preserving in place
+        # rather than reaching for the rebuild-if-empty trick used below.
+        settings_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(settings)"))}
+        if settings_columns:
+            if "naver_default_claim_minutes" not in settings_columns:
+                conn.execute(
+                    text(
+                        "ALTER TABLE settings ADD COLUMN naver_default_claim_minutes "
+                        "INTEGER NOT NULL DEFAULT 1440"
+                    )
+                )
+                if "naver_default_claim_hours" in settings_columns:
+                    conn.execute(
+                        text(
+                            "UPDATE settings SET naver_default_claim_minutes = "
+                            "naver_default_claim_hours * 60"
+                        )
+                    )
+            if "kakao_default_claim_minutes" not in settings_columns:
+                conn.execute(
+                    text(
+                        "ALTER TABLE settings ADD COLUMN kakao_default_claim_minutes "
+                        "INTEGER NOT NULL DEFAULT 1440"
+                    )
+                )
+                if "kakao_default_claim_hours" in settings_columns:
+                    conn.execute(
+                        text(
+                            "UPDATE settings SET kakao_default_claim_minutes = "
+                            "kakao_default_claim_hours * 60"
+                        )
+                    )
+            if "naver_default_claim_hours" in settings_columns:
+                conn.execute(text("ALTER TABLE settings DROP COLUMN naver_default_claim_hours"))
+            if "kakao_default_claim_hours" in settings_columns:
+                conn.execute(text("ALTER TABLE settings DROP COLUMN kakao_default_claim_hours"))
 
         # review_targets: store_name/store_url columns replaced by a store_id FK
         # to the new stores table (stores are now a reusable list, not re-typed
-        # per campaign). Same SQLite rebuild-if-empty approach as below.
+        # per campaign), and claim_time_limit_hours renamed to _minutes. Same
+        # SQLite rebuild-if-empty approach as below.
         target_columns = list(conn.execute(text("PRAGMA table_info(review_targets)")))
         if target_columns:
             col_names = {c[1] for c in target_columns}
-            if "store_id" not in col_names:
+            if "store_id" not in col_names or "claim_time_limit_minutes" not in col_names:
                 targets_count = conn.execute(
                     text("SELECT COUNT(*) FROM review_targets")
                 ).scalar()

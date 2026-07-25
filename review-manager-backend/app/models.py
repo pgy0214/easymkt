@@ -70,7 +70,7 @@ class ReviewTarget(Base):
     platform = Column(String, nullable=False)  # 'naver' | 'kakao', copied from store at creation
     required_count = Column(Integer, nullable=False)
     unit_price = Column(Integer, nullable=False)
-    claim_time_limit_hours = Column(Integer, nullable=False, default=24)
+    claim_time_limit_minutes = Column(Integer, nullable=False, default=1440)
     created_at = Column(DateTime, default=utcnow)
 
     store = relationship("Store", back_populates="targets")
@@ -126,5 +126,5 @@ class Settings(Base):
     id = Column(Integer, primary_key=True, index=True)
     naver_blind_check_interval_minutes = Column(Integer, nullable=False, default=20)
     kakao_blind_check_interval_minutes = Column(Integer, nullable=False, default=20)
-    naver_default_claim_hours = Column(Integer, nullable=False, default=24)
-    kakao_default_claim_hours = Column(Integer, nullable=False, default=24)
+    naver_default_claim_minutes = Column(Integer, nullable=False, default=1440)
+    kakao_default_claim_minutes = Column(Integer, nullable=False, default=1440)

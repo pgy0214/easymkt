@@ -219,7 +219,7 @@ def delete_store(db: Session, store: models.Store) -> None:
         db.query(models.ReviewTarget).filter(models.ReviewTarget.store_id == store.id).count()
     )
     if target_count > 0:
-        raise ValueError("리뷰 대상으로 사용 중인 매장은 삭제할 수 없습니다")
+        raise ValueError("캠페인으로 사용 중인 매장은 삭제할 수 없습니다")
     db.delete(store)
     db.commit()
 
@@ -244,6 +244,16 @@ def get_target(db: Session, target_id: int) -> models.ReviewTarget | None:
     )
 
 
+def delete_target(db: Session, target: models.ReviewTarget) -> None:
+    in_progress = [t for t in target.tasks if t.status != "open"]
+    if in_progress:
+        raise ValueError(
+            "이미 클레임되었거나 완료된 작업이 있어 캠페인을 삭제할 수 없습니다"
+        )
+    db.delete(target)
+    db.commit()
+
+
 def create_review_target(
     db: Session, data: schemas.ReviewTargetCreate
 ) -> models.ReviewTarget:
@@ -258,7 +268,7 @@ def create_review_target(
         platform=store.platform,
         required_count=data.required_count,
         unit_price=data.unit_price,
-        claim_time_limit_hours=data.claim_time_limit_hours,
+        claim_time_limit_minutes=data.claim_time_limit_minutes,
     )
     db.add(target)
     db.flush()
@@ -464,7 +474,9 @@ def claim_task(db: Session, task: models.Task, account: models.ReviewAccount) ->
     now = datetime.datetime.utcnow()
     task.review_account_id = account.id
     task.claimed_at = now
-    task.claim_deadline = now + datetime.timedelta(hours=task.review_target.claim_time_limit_hours)
+    task.claim_deadline = now + datetime.timedelta(
+        minutes=task.review_target.claim_time_limit_minutes
+    )
     task.status = "claimed"
     db.commit()
     db.refresh(task)
@@ -569,10 +581,10 @@ def update_settings(db: Session, data: schemas.SettingsUpdate) -> models.Setting
         settings.naver_blind_check_interval_minutes = data.naver_blind_check_interval_minutes
     if data.kakao_blind_check_interval_minutes is not None:
         settings.kakao_blind_check_interval_minutes = data.kakao_blind_check_interval_minutes
-    if data.naver_default_claim_hours is not None:
-        settings.naver_default_claim_hours = data.naver_default_claim_hours
-    if data.kakao_default_claim_hours is not None:
-        settings.kakao_default_claim_hours = data.kakao_default_claim_hours
+    if data.naver_default_claim_minutes is not None:
+        settings.naver_default_claim_minutes = data.naver_default_claim_minutes
+    if data.kakao_default_claim_minutes is not None:
+        settings.kakao_default_claim_minutes = data.kakao_default_claim_minutes
     db.commit()
     db.refresh(settings)
     return settings

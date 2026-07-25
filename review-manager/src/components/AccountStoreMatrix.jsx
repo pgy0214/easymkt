@@ -24,7 +24,10 @@ export default function AccountStoreMatrix({ accounts }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts.map((a) => a.id).join(',')])
 
-  if (loading || accounts.length === 0) return null
+  if (accounts.length === 0) return null
+  if (loading) {
+    return <p className="mt-2 text-xs text-slate-400">매장 이력 불러오는 중...</p>
+  }
 
   const storeMap = new Map()
   Object.values(historyByAccount)
@@ -32,7 +35,13 @@ export default function AccountStoreMatrix({ accounts }) {
     .forEach((item) => storeMap.set(item.store_id, item.store_name))
   const stores = Array.from(storeMap.entries()).map(([id, name]) => ({ id, name }))
 
-  if (stores.length === 0) return null
+  if (stores.length === 0) {
+    return (
+      <p className="mt-2 text-xs text-slate-400">
+        아직 완료된 작업이 없어 매장별 이력이 없습니다. 작업을 완료하면 여기에 계정×매장 표가 표시됩니다.
+      </p>
+    )
+  }
 
   return (
     <div className="mt-2 overflow-x-auto">

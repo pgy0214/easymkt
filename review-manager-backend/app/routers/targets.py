@@ -24,10 +24,22 @@ def create_target(data: schemas.ReviewTargetCreate, db: Session = Depends(get_db
 def get_target(target_id: int, db: Session = Depends(get_db)):
     target = crud.get_target(db, target_id)
     if not target:
-        raise HTTPException(status_code=404, detail="리뷰 대상을 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
     out = schemas.ReviewTargetDetailOut.model_validate(target)
     if target.store is not None:
         out.store_name = target.store.name
         out.store_url = target.store.url
     out.tasks = [crud.task_to_out(t) for t in target.tasks]
     return out
+
+
+@router.delete("/{target_id}")
+def delete_target(target_id: int, db: Session = Depends(get_db)):
+    target = crud.get_target(db, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    try:
+        crud.delete_target(db, target)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True}

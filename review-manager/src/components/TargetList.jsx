@@ -1,8 +1,9 @@
+import { Trash2 } from 'lucide-react'
 import { formatDateTime, formatKRW, PLATFORM_LABEL } from '../lib/format.js'
 
-export default function TargetList({ targets }) {
+export default function TargetList({ targets, onDelete }) {
   if (targets.length === 0) {
-    return <p className="text-sm text-slate-400">등록된 리뷰 대상이 없습니다</p>
+    return <p className="text-sm text-slate-400">등록된 캠페인이 없습니다</p>
   }
 
   return (
@@ -14,8 +15,9 @@ export default function TargetList({ targets }) {
             <th className="px-3 py-2">가게명</th>
             <th className="px-3 py-2">건수</th>
             <th className="px-3 py-2">단가</th>
-            <th className="px-3 py-2">클레임 제한</th>
+            <th className="px-3 py-2">작업 제한</th>
             <th className="px-3 py-2">등록일</th>
+            <th className="px-3 py-2" />
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -34,8 +36,17 @@ export default function TargetList({ targets }) {
               </td>
               <td className="px-3 py-2">{target.required_count}건</td>
               <td className="px-3 py-2">{formatKRW(target.unit_price)}</td>
-              <td className="px-3 py-2">{target.claim_time_limit_hours}시간</td>
+              <td className="px-3 py-2">{target.claim_time_limit_minutes}분</td>
               <td className="px-3 py-2 text-slate-500">{formatDateTime(target.created_at)}</td>
+              <td className="px-3 py-2">
+                <button
+                  onClick={() => onDelete(target.id)}
+                  className="text-slate-400 hover:text-red-600"
+                  title="캠페인 삭제"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

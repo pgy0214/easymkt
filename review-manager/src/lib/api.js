@@ -66,6 +66,7 @@ export const api = {
   getTargets: () => request('/targets'),
   createTarget: (data) => request('/targets', { method: 'POST', body: JSON.stringify(data) }),
   getTarget: (id) => request(`/targets/${id}`),
+  deleteTarget: (id) => request(`/targets/${id}`, { method: 'DELETE' }),
 
   getTasks: (params = {}) => request(`/tasks${toQueryString(params)}`),
   updateTaskResult: (id, resultLink) =>

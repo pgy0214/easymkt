@@ -14,7 +14,15 @@ const BLIND_TEXT = {
 
 const RECENTLY_EXPIRED_MS = 24 * 60 * 60 * 1000
 
-export default function TaskRow({ task, onSubmitResult, onUpdateSettlement }) {
+export default function TaskRow({
+  task,
+  selected,
+  onToggleSelect,
+  onRecheckOne,
+  rechecking,
+  onSubmitResult,
+  onUpdateSettlement,
+}) {
   const [linkInput, setLinkInput] = useState('')
   const [amount, setAmount] = useState(task.settlement_amount)
 
@@ -28,6 +36,15 @@ export default function TaskRow({ task, onSubmitResult, onUpdateSettlement }) {
 
   return (
     <tr className={`align-top ${recentlyExpired ? 'bg-amber-50' : ''}`}>
+      <td className="px-3 py-2">
+        {isCompleted && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect(task.id)}
+          />
+        )}
+      </td>
       <td className="px-3 py-2">
         {isOpen ? (
           <div className="text-sm text-slate-400">미배정 (오픈풀)</div>
@@ -96,6 +113,15 @@ export default function TaskRow({ task, onSubmitResult, onUpdateSettlement }) {
         </span>
         {task.check_expired && (
           <div className="mt-1 text-xs text-amber-600">확인기간 만료</div>
+        )}
+        {isCompleted && (
+          <button
+            onClick={() => onRecheckOne(task.id)}
+            disabled={rechecking}
+            className="mt-1 block text-xs text-blue-600 hover:underline disabled:opacity-50"
+          >
+            지금 재확인
+          </button>
         )}
       </td>
       <td className="px-3 py-2">

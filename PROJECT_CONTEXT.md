@@ -58,8 +58,9 @@ npm run dev
 - **ReviewAccount**: 리뷰어 소유, `platform`(naver|kakao)/`label`(닉네임, 블라인드 매칭용)/`profile_url`(네이버 마이플레이스, 선택)
 - **Store**: 재사용 가능한 매장 마스터 목록. `platform`/`name`/`url`/`cooldown_days`(계정당 재작업
   가능 주기, 기본 90일). "매장 관리" 탭에서 한 번만 등록해두고 여러 캠페인에서 재사용한다.
-- **ReviewTarget**: 리뷰 캠페인. `store_id`(FK)/`required_count`/`unit_price`/`claim_time_limit_hours`.
-  가게 이름/URL은 더 이상 여기 직접 안 들어있고 `store` 관계로 참조한다.
+- **ReviewTarget**: "캠페인"(UI 명칭, DB/API는 여전히 target). `store_id`(FK)/`required_count`/
+  `unit_price`/`claim_time_limit_minutes`(분 단위, 예전엔 시간 단위였음). 가게 이름/URL은 더 이상
+  여기 직접 안 들어있고 `store` 관계로 참조한다.
 - **Task**: 개별 작업. `status`: `open`(오픈풀, 미배정) → `claimed`(리뷰어가 가져감)
   → (네이버만) `checking_date` → `ready` → `completed`. `claim_deadline` 지나면 자동으로 `open`으로 복귀.
 
@@ -121,12 +122,33 @@ npm run dev
     state만 업데이트(optimistic update)하도록 고침. 리뷰어/계정 목록이 계속 커질 걸 감안하면
     이 패턴(검색 필터 + 로컬 state 업데이트)을 다른 대량 리스트 화면에도 적용할 것.
 
+13. **"리뷰 대상 등록" → "캠페인 등록"으로 UI 명칭만 변경.** DB 테이블/모델명(`ReviewTarget`,
+    `/api/targets`)은 그대로 두고 화면에 보이는 라벨/문구만 "캠페인"으로 바꿨다 — 백엔드
+    리네이밍까지는 안 함 (불필요한 범위 확장이라 판단).
+
+14. **캠페인 삭제는 "오픈(미배정) 상태 작업만 있을 때"만 허용.** 하나라도 클레임/완료된
+    작업이 있으면 통째로 막음 (`crud.delete_target`) — 리뷰어의 진행 중인 작업을 관리자가
+    실수로 날리는 걸 방지하기 위한 안전장치. 강제 삭제 기능은 없음.
+
+15. **작업 제한시간 단위를 시간→분으로 변경함.** `claim_time_limit_hours` →
+    `claim_time_limit_minutes`, `naver/kakao_default_claim_hours` →
+    `_default_claim_minutes`로 전부 리네이밍(마이그레이션으로 기존 값 ×60 변환). SQLite raw
+    ALTER TABLE 마이그레이션 작업 중, **빈 테이블 재생성 조건이 고아 행(orphaned rows) 때문에
+    막힌 적이 있었음** — review_targets가 삭제된 store를 참조하는 행을 갖고 있어서 "비어있음"
+    조건이 거짓이 되어 스키마 재생성이 스킵됐었다. 앞으로 스키마를 또 바꿀 때, 재생성 조건이
+    막히면 먼저 `SELECT * FROM <table>`로 실제 내용을 확인할 것 (개수만 믿지 말 것 — 이번엔
+    개수 확인 자체를 안 해서 놓쳤음).
+
+16. **블라인드 확인 수동 트리거 UI 추가.** 자동 주기 확인(스케줄러, 설정 탭에서 주기 조정)은
+    이미 있었지만 프론트에 수동 버튼이 없어서 백엔드 `POST /api/tasks/{id}/recheck-blind`가
+    죽은 코드처럼 보였음. 작업현황에 완료된 작업만 체크박스로 선택 가능하게 하고, 개별
+    "지금 재확인" 버튼 + 선택 항목 일괄 재확인 버튼을 추가함.
+
 ## 아직 안 된 것 / 알려진 제약
 
 - 알리고 SMS API 키 미설정 (`.env`에 채워야 실제 문자 발송됨)
-- 카카오맵 블라인드확인 셀렉터 실제 페이지 검증 안 됨 (지금은 우선순위 낮음)
+- 카카오맵 블라인드확인 셀렉터 실제 페이지 검증 안 됨 (지금은 우선순위 낮음, 네이버에 집중 중)
 - CSV 일괄 등록은 "리뷰어" 시트 포맷 전용, 다른 포맷은 안 됨
-- 리뷰 대상(target)/작업(task) 삭제·수정 API 없음 (등록만 가능, 취소 불가) — 매장(Store)은
-  삭제 가능하지만 참조하는 target이 있으면 막힘
 - 매장 쿨다운(cooldown_days) 계산은 계정별로만 하고, 리뷰어(사람) 단위 합산은 안 함 — 한
   리뷰어가 같은 매장에 계정 A로 갔다가 쿨다운 끝나기 전에 계정 B로 다시 가는 건 막지 않음
+- 캠페인 삭제는 가능하지만 "수정"은 여전히 불가 (건수/단가/제한시간 등 고치려면 삭제 후 재등록)

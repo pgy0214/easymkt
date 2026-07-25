@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
 import { formatDateTime, PLATFORM_LABEL } from '../lib/format.js'
@@ -48,9 +48,10 @@ export default function StoreManager() {
     }
   }
 
-  async function handleCooldownChange(store, days) {
+  async function handleFieldChange(store, field, value) {
+    if (value === store[field]) return
     try {
-      const updated = await api.updateStore(store.id, { cooldown_days: Number(days) })
+      const updated = await api.updateStore(store.id, { [field]: value })
       setStores((prev) => prev.map((s) => (s.id === store.id ? updated : s)))
     } catch (err) {
       alert(err.message)
@@ -121,9 +122,9 @@ export default function StoreManager() {
           </button>
         </div>
         <p className="text-xs text-slate-400 sm:col-span-5">
-          같은 매장을 여러 번 리뷰 캠페인에 쓰려면 여기서 한 번만 등록해두세요. "리뷰 대상
-          등록"에서는 이 목록 중에서 골라 캠페인을 만듭니다. 재작업 가능 주기는 같은 계정이
-          이 매장을 다시 리뷰할 수 있기까지 걸리는 기간입니다.
+          같은 매장을 여러 번 캠페인에 쓰려면 여기서 한 번만 등록해두세요. "캠페인 등록"에서는
+          이 목록 중에서 골라 캠페인을 만듭니다. 재작업 가능 주기는 같은 계정이 이 매장을 다시
+          리뷰할 수 있기까지 걸리는 기간입니다.
         </p>
       </form>
 
@@ -136,6 +137,7 @@ export default function StoreManager() {
             <tr>
               <th className="px-3 py-2">플랫폼</th>
               <th className="px-3 py-2">매장명</th>
+              <th className="px-3 py-2">URL</th>
               <th className="px-3 py-2">재작업 주기(일)</th>
               <th className="px-3 py-2">등록일</th>
               <th className="px-3 py-2" />
@@ -146,21 +148,30 @@ export default function StoreManager() {
               <tr key={store.id}>
                 <td className="px-3 py-2">{PLATFORM_LABEL[store.platform]}</td>
                 <td className="px-3 py-2">
-                  <a
-                    href={store.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    {store.name}
-                  </a>
+                  <input
+                    defaultValue={store.name}
+                    onBlur={(e) => handleFieldChange(store, 'name', e.target.value.trim())}
+                    className="w-32 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-1">
+                    <input
+                      defaultValue={store.url}
+                      onBlur={(e) => handleFieldChange(store, 'url', e.target.value.trim())}
+                      className="w-48 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+                    />
+                    <a href={store.url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-blue-600">
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
                 </td>
                 <td className="px-3 py-2">
                   <input
                     type="number"
                     min="1"
                     defaultValue={store.cooldown_days}
-                    onBlur={(e) => handleCooldownChange(store, e.target.value)}
+                    onBlur={(e) => handleFieldChange(store, 'cooldown_days', Number(e.target.value))}
                     className="w-20 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
                   />
                 </td>
