@@ -195,6 +195,7 @@ def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
         name=data.name,
         url=data.url,
         address=data.address,
+        business_hours=data.business_hours,
         menu=data.menu,
         cooldown_days=data.cooldown_days,
     )
@@ -205,12 +206,10 @@ def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
 
 
 def update_store(db: Session, store: models.Store, data: schemas.StoreUpdate) -> models.Store:
-    if data.name is not None:
-        store.name = data.name
+    # name/address/business_hours are intentionally not in StoreUpdate — see
+    # the comment there
     if data.url is not None:
         store.url = data.url
-    if data.address is not None:
-        store.address = data.address
     if data.menu is not None:
         store.menu = data.menu
     if data.cooldown_days is not None:
@@ -236,11 +235,24 @@ def get_targets(db: Session) -> list[models.ReviewTarget]:
     return db.query(models.ReviewTarget).order_by(models.ReviewTarget.id.desc()).all()
 
 
+def encode_work_days(days: list[int] | None) -> str | None:
+    if not days:
+        return None
+    return ",".join(str(d) for d in sorted(set(days)))
+
+
+def decode_work_days(raw: str | None) -> list[int] | None:
+    if not raw:
+        return None
+    return sorted(int(d) for d in raw.split(",") if d.strip() != "")
+
+
 def target_to_out(target: models.ReviewTarget) -> schemas.ReviewTargetOut:
     out = schemas.ReviewTargetOut.model_validate(target)
     if target.store is not None:
         out.store_name = target.store.name
         out.store_url = target.store.url
+    out.work_days = decode_work_days(target.work_days_raw)
     return out
 
 
@@ -269,12 +281,22 @@ def create_review_target(
     if not store:
         raise ValueError("매장을 찾을 수 없습니다")
 
+    # claim time limit is no longer set per campaign — always the current
+    # Settings default for the platform, snapshotted at creation time
+    settings = get_settings(db)
+    claim_minutes = (
+        settings.naver_default_claim_minutes
+        if store.platform == "naver"
+        else settings.kakao_default_claim_minutes
+    )
+
     target = models.ReviewTarget(
         store_id=store.id,
         platform=store.platform,
         required_count=data.required_count,
         unit_price=data.unit_price,
-        claim_time_limit_minutes=data.claim_time_limit_minutes,
+        claim_time_limit_minutes=claim_minutes,
+        work_days_raw=encode_work_days(data.work_days),
     )
     db.add(target)
     db.flush()
@@ -450,13 +472,26 @@ def get_task(db: Session, task_id: int) -> models.Task | None:
     return db.query(models.Task).filter(models.Task.id == task_id).first()
 
 
+def _kst_weekday() -> int:
+    # this app is Korea-only; use KST (not naive UTC) so the pool's
+    # day-of-week restriction flips at Korean midnight, not UTC midnight
+    return (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).weekday()
+
+
 def get_open_pool_tasks(db: Session, platforms: list[str]) -> list[models.Task]:
-    return (
+    tasks = (
         db.query(models.Task)
         .filter(models.Task.status == "open", models.Task.platform.in_(platforms))
         .order_by(models.Task.created_at)
         .all()
     )
+    today = _kst_weekday()
+    return [
+        t
+        for t in tasks
+        if not t.review_target.work_days_raw
+        or today in decode_work_days(t.review_target.work_days_raw)
+    ]
 
 
 def get_reviewer_tasks(db: Session, reviewer_id: int) -> list[models.Task]:

@@ -29,6 +29,7 @@ def get_target(target_id: int, db: Session = Depends(get_db)):
     if target.store is not None:
         out.store_name = target.store.name
         out.store_url = target.store.url
+    out.work_days = crud.decode_work_days(target.work_days_raw)
     out.tasks = [crud.task_to_out(t) for t in target.tasks]
     return out
 

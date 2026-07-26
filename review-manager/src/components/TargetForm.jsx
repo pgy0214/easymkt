@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
+import { WEEKDAY_LABELS } from '../lib/format.js'
 import TargetList from './TargetList.jsx'
+
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 
 const EMPTY = {
   platform: 'naver',
   store_id: '',
   required_count: 1,
   unit_price: 0,
-  claim_time_limit_minutes: 1440,
+  work_days: ALL_DAYS,
 }
 
 export default function TargetForm() {
@@ -16,7 +19,6 @@ export default function TargetForm() {
   const [error, setError] = useState(null)
   const [message, setMessage] = useState(null)
   const [targets, setTargets] = useState([])
-  const [settings, setSettings] = useState(null)
   const [stores, setStores] = useState([])
 
   async function refreshTargets() {
@@ -31,19 +33,22 @@ export default function TargetForm() {
 
   useEffect(() => {
     refreshTargets()
-    api.getSettings().then(setSettings)
     refreshStores('naver')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handlePlatformChange(platform) {
-    const defaultMinutes = settings
-      ? platform === 'naver'
-        ? settings.naver_default_claim_minutes
-        : settings.kakao_default_claim_minutes
-      : form.claim_time_limit_minutes
-    setForm((prev) => ({ ...prev, platform, claim_time_limit_minutes: defaultMinutes }))
+    setForm((prev) => ({ ...prev, platform }))
     refreshStores(platform)
+  }
+
+  function toggleWorkDay(day) {
+    setForm((prev) => ({
+      ...prev,
+      work_days: prev.work_days.includes(day)
+        ? prev.work_days.filter((d) => d !== day)
+        : [...prev.work_days, day],
+    }))
   }
 
   async function handleDelete(id) {
@@ -62,6 +67,10 @@ export default function TargetForm() {
       setError('먼저 "매장 관리" 탭에서 매장을 등록해주세요.')
       return
     }
+    if (form.work_days.length === 0) {
+      setError('작업요일을 최소 하루 이상 선택해주세요.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     setMessage(null)
@@ -70,7 +79,7 @@ export default function TargetForm() {
         store_id: Number(form.store_id),
         required_count: Number(form.required_count),
         unit_price: Number(form.unit_price),
-        claim_time_limit_minutes: Number(form.claim_time_limit_minutes),
+        work_days: form.work_days,
       })
       setMessage(
         `"${target.store_name}" 등록 완료 — ${target.required_count}건이 오픈풀에 등록되었습니다. 리뷰어가 직접 클레임합니다.`,
@@ -136,15 +145,24 @@ export default function TargetForm() {
             className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
-        <div>
-          <label className="block text-xs text-slate-500">작업 제한시간 (분)</label>
-          <input
-            type="number"
-            min="1"
-            value={form.claim_time_limit_minutes}
-            onChange={(e) => setForm({ ...form, claim_time_limit_minutes: e.target.value })}
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-          />
+        <div className="sm:col-span-6">
+          <label className="block text-xs text-slate-500">작업요일 (선택한 요일에만 오픈풀에 노출)</label>
+          <div className="mt-1 flex gap-1">
+            {WEEKDAY_LABELS.map((label, day) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => toggleWorkDay(day)}
+                className={`h-7 w-7 rounded text-xs font-medium ${
+                  form.work_days.includes(day)
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex items-end sm:col-span-6">
           <button
@@ -158,8 +176,8 @@ export default function TargetForm() {
         <p className="text-xs text-slate-400 sm:col-span-6">
           매장 목록에 없다면 먼저 "매장 관리" 탭에서 등록해주세요. 등록된 작업은 자동
           배정되지 않고 오픈풀에 공개되며, 리뷰어가 셀프서비스 포털에서 직접 "할게요"를
-          눌러 클레임합니다. 작업 제한시간 안에 완료하지 못하면 자동으로 다시 오픈풀로
-          돌아갑니다.
+          눌러 클레임합니다. 작업 제한시간(리뷰어가 클레임 후 결과 링크를 제출해야 하는
+          시간)은 "설정" 탭에서 관리합니다.
         </p>
         {message && <p className="text-sm text-green-700 sm:col-span-6">{message}</p>}
         {error && <p className="text-sm text-red-600 sm:col-span-6">{error}</p>}

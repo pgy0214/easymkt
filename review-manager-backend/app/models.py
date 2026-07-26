@@ -57,6 +57,7 @@ class Store(Base):
     name = Column(String, nullable=False)
     url = Column(String, nullable=False)
     address = Column(String, nullable=True)
+    business_hours = Column(String, nullable=True)
     menu = Column(String, nullable=True)
     cooldown_days = Column(Integer, nullable=False, default=90)  # 계정당 재작업 가능 주기
     created_at = Column(DateTime, default=utcnow)
@@ -73,6 +74,7 @@ class ReviewTarget(Base):
     required_count = Column(Integer, nullable=False)
     unit_price = Column(Integer, nullable=False)
     claim_time_limit_minutes = Column(Integer, nullable=False, default=1440)
+    work_days_raw = Column(String, nullable=True)  # CSV weekday ints (0=Mon..6=Sun); null = every day
     created_at = Column(DateTime, default=utcnow)
 
     store = relationship("Store", back_populates="targets")

@@ -14,6 +14,10 @@ from app.crawlers.base import chrome_driver, logger
 # doesn't need to change.
 NAME_SELECTORS = ["h1#_header", "div.V4UO6 span.IY7ZX", "span.GHAhO"]
 ADDRESS_SELECTORS = ["span.LDgIH", ".PkgBl .LDgIH", "div.O8qbU span.place_bluelink"]
+# only a live "영업 중 · 21:00에 영업 종료" style status line, not the full
+# weekly schedule (that's behind a click-to-expand toggle on the page) — good
+# enough to tell the admin whether hours are registered at all
+BUSINESS_HOURS_SELECTORS = ["div.A_cdD"]
 MENU_ITEM_SELECTORS = ["li.E2jtL", "li.gHmZ_"]
 MENU_NAME_SELECTORS = ["span.lPzHi", "span.MI3iK"]
 MENU_PRICE_SELECTORS = ["div.GXS1X em", "div.GXS1X"]
@@ -58,13 +62,23 @@ def _extract_address(soup) -> str | None:
     return _first_text(soup, ADDRESS_SELECTORS)
 
 
+def _extract_business_hours(soup) -> str | None:
+    for sel in BUSINESS_HOURS_SELECTORS:
+        el = soup.select_one(sel)
+        if el:
+            text = el.get_text(" ", strip=True)
+            if text:
+                return text
+    return None
+
+
 # matches the numeric place id out of any of Naver's URL shapes for a store
 # page (short links and desktop map links redirect to one of these)
 PLACE_ID_PATTERN = re.compile(r"/(?:place|restaurant|accommodation|entry/place)/(\d+)")
 
 
 def fetch_store_info(store_url: str) -> dict:
-    result: dict = {"name": None, "address": None, "menu": None}
+    result: dict = {"name": None, "address": None, "business_hours": None, "menu": None}
 
     with chrome_driver() as driver:
         driver.get(store_url)
@@ -83,6 +97,7 @@ def fetch_store_info(store_url: str) -> dict:
         soup = BeautifulSoup(driver.page_source, "html.parser")
         result["name"] = _extract_name(soup)
         result["address"] = _extract_address(soup)
+        result["business_hours"] = _extract_business_hours(soup)
 
         try:
             menu_url = (

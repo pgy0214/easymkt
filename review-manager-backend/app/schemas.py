@@ -66,14 +66,16 @@ class StoreCreate(BaseModel):
     name: str
     url: str
     address: Optional[str] = None
+    business_hours: Optional[str] = None
     menu: Optional[str] = None
     cooldown_days: int = 90
 
 
 class StoreUpdate(BaseModel):
-    name: Optional[str] = None
+    # name/address/business_hours are crawled facts about the real place and
+    # are intentionally not editable after creation — fix a wrong value by
+    # deleting the store and re-registering it with the right URL.
     url: Optional[str] = None
-    address: Optional[str] = None
     menu: Optional[str] = None
     cooldown_days: Optional[int] = None
 
@@ -86,6 +88,7 @@ class StoreOut(BaseModel):
     name: str
     url: str
     address: Optional[str] = None
+    business_hours: Optional[str] = None
     menu: Optional[str] = None
     cooldown_days: int
     created_at: datetime.datetime
@@ -98,6 +101,7 @@ class StoreInfoFetchIn(BaseModel):
 class StoreInfoFetchOut(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
+    business_hours: Optional[str] = None
     menu: Optional[str] = None
 
 
@@ -107,7 +111,11 @@ class ReviewTargetCreate(BaseModel):
     store_id: int
     required_count: int
     unit_price: int
-    claim_time_limit_minutes: int = 1440
+    # weekday ints (0=Mon..6=Sun) the campaign's tasks may appear in the open
+    # pool; None/omitted = visible every day. claim_time_limit_minutes is no
+    # longer set per campaign — it's always snapshotted from Settings at
+    # creation time (see crud.create_review_target).
+    work_days: Optional[list[int]] = None
 
 
 class ReviewTargetOut(BaseModel):
@@ -124,6 +132,11 @@ class ReviewTargetOut(BaseModel):
     # denormalized, filled in by the router
     store_name: Optional[str] = None
     store_url: Optional[str] = None
+
+    # parsed from the ORM's work_days_raw CSV column by crud.target_to_out
+    # (kept off the ORM-matching attribute name to avoid a from_attributes
+    # type mismatch — see crud.decode_work_days)
+    work_days: Optional[list[int]] = None
 
 
 class ReviewTargetDetailOut(ReviewTargetOut):

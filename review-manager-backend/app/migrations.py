@@ -62,10 +62,15 @@ def run_migrations(engine) -> None:
             if "kakao_default_claim_hours" in settings_columns:
                 conn.execute(text("ALTER TABLE settings DROP COLUMN kakao_default_claim_hours"))
 
-        # stores: address/menu are new optional columns filled in by the
-        # URL auto-fill crawler (or left blank and typed manually)
+        # stores: address/business_hours/menu are optional columns filled in
+        # by the URL auto-fill crawler (or left blank and typed manually)
         _add_column_if_missing(conn, "stores", "address", "address TEXT")
+        _add_column_if_missing(conn, "stores", "business_hours", "business_hours TEXT")
         _add_column_if_missing(conn, "stores", "menu", "menu TEXT")
+
+        # review_targets: work_days_raw restricts which weekdays a campaign's
+        # tasks show up in the open pool (null = every day)
+        _add_column_if_missing(conn, "review_targets", "work_days_raw", "work_days_raw TEXT")
 
         # review_targets: store_name/store_url columns replaced by a store_id FK
         # to the new stores table (stores are now a reusable list, not re-typed

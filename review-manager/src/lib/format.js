@@ -35,3 +35,15 @@ export const BLIND_STATUS_LABEL = {
   visible: '정상노출',
   blinded: '블라인드',
 }
+
+// index = Python's date.weekday() convention (0=Mon..6=Sun), matches the
+// backend's work_days encoding
+export const WEEKDAY_LABELS = ['월', '화', '수', '목', '금', '토', '일']
+
+export function formatWorkDays(days) {
+  if (!days || days.length === 0 || days.length === 7) return '매일'
+  return [...days]
+    .sort((a, b) => a - b)
+    .map((d) => WEEKDAY_LABELS[d])
+    .join(',')
+}
