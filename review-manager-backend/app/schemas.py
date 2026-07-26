@@ -90,6 +90,10 @@ class StoreCreate(BaseModel):
     representative_hours: Optional[str] = None  # 대표시간
     representative_product: Optional[str] = None  # 대표상품
     cooldown_days: int = 90
+    # 크롤링 불가 — 영수증 생성용, 등록 화면에서 바로 입력 가능(수정 화면에서도 계속 고칠 수 있음)
+    business_registration_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class StoreUpdate(BaseModel):

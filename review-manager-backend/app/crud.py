@@ -228,6 +228,9 @@ def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
         representative_hours=data.representative_hours,
         representative_product=data.representative_product,
         cooldown_days=data.cooldown_days,
+        business_registration_number=data.business_registration_number,
+        representative_name=data.representative_name,
+        phone=data.phone,
     )
     db.add(store)
     db.commit()

@@ -1,4 +1,4 @@
-import { Download, Upload } from 'lucide-react'
+import { ChevronDown, ChevronRight, Download, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import { WEEKDAY_LABELS } from '../lib/format.js'
@@ -61,6 +61,7 @@ export default function TargetForm() {
   const [stores, setStores] = useState([])
   const [photoFile, setPhotoFile] = useState(null)
   const [guidelineImporting, setGuidelineImporting] = useState(false)
+  const [formOpen, setFormOpen] = useState(true)
   const guidelineFileInputRef = useRef(null)
 
   async function refreshTargets() {
@@ -187,7 +188,15 @@ export default function TargetForm() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold text-slate-800">캠페인 등록</h2>
+      <button
+        type="button"
+        onClick={() => setFormOpen((prev) => !prev)}
+        className="flex items-center gap-1 text-base font-semibold text-slate-800"
+      >
+        {formOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+        캠페인 등록
+      </button>
+      {formOpen && (
       <form
         onSubmit={handleSubmit}
         className="flex max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
@@ -413,6 +422,7 @@ export default function TargetForm() {
         {message && <p className="text-sm text-green-700">{message}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </form>
+      )}
 
       <TargetList targets={targets} onDelete={handleDelete} onUpdated={refreshTargets} />
     </div>

@@ -17,6 +17,11 @@ const CATEGORY_BADGE = {
   press: 'bg-blue-100 text-blue-700',
 }
 
+const GENDER_BADGE = {
+  male: 'bg-sky-100 text-sky-700',
+  female: 'bg-rose-100 text-rose-700',
+}
+
 export default function ReviewerCard({
   reviewer,
   onDeleteReviewer,
@@ -37,6 +42,11 @@ export default function ReviewerCard({
               {REVIEWER_CATEGORY_LABEL[reviewer.category]}
             </span>
             <h3 className="font-semibold text-slate-900">{reviewer.name}</h3>
+            {reviewer.gender && (
+              <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${GENDER_BADGE[reviewer.gender]}`}>
+                {GENDER_LABEL[reviewer.gender]}
+              </span>
+            )}
             <button
               onClick={() => onToggleActive(reviewer.id, !reviewer.is_active)}
               className={`rounded px-1.5 py-0.5 text-xs font-medium ${
@@ -52,11 +62,9 @@ export default function ReviewerCard({
           {reviewer.contact_info && (
             <p className="text-sm text-slate-600">연락처: {reviewer.contact_info}</p>
           )}
-          {reviewer.category === 'experience' && (reviewer.region || reviewer.age_group || reviewer.gender) && (
+          {reviewer.category === 'experience' && (reviewer.region || reviewer.age_group) && (
             <p className="text-xs text-slate-500">
-              {[reviewer.region, reviewer.age_group, reviewer.gender && GENDER_LABEL[reviewer.gender]]
-                .filter(Boolean)
-                .join(' · ')}
+              {[reviewer.region, reviewer.age_group].filter(Boolean).join(' · ')}
             </p>
           )}
         </div>

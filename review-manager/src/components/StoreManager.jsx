@@ -15,6 +15,9 @@ export default function StoreManager() {
   const [fetchError, setFetchError] = useState(null)
   const [fetched, setFetched] = useState(null) // { name, address, representative_hours, representative_product }
   const [productInput, setProductInput] = useState('')
+  const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState('')
+  const [representativeName, setRepresentativeName] = useState('')
+  const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [editingStore, setEditingStore] = useState(null)
 
@@ -39,6 +42,9 @@ export default function StoreManager() {
     setFetched(null)
     setFetchError(null)
     setProductInput('')
+    setBusinessRegistrationNumber('')
+    setRepresentativeName('')
+    setPhone('')
   }
 
   async function handleFetchInfo() {
@@ -77,6 +83,9 @@ export default function StoreManager() {
         representative_hours: fetched.representative_hours || null,
         representative_product: productInput.trim() || null,
         cooldown_days: Number(form.cooldown_days),
+        business_registration_number: businessRegistrationNumber.trim() || null,
+        representative_name: representativeName.trim() || null,
+        phone: phone.trim() || null,
       })
       setStores((prev) => [...prev, store].sort((a, b) => a.name.localeCompare(b.name)))
       resetForm()
@@ -170,6 +179,10 @@ export default function StoreManager() {
               아래 내용은 네이버에서 가져온 정보라 직접 수정할 수 없어요 (대표상품 제외). URL이
               잘못됐다면 위에서 URL을 고치고 "입력완료"를 다시 눌러주세요.
             </p>
+            <p className="text-xs text-slate-400">
+              아래 정보는 영수증 제작시 사용되는 정보입니다. 시간은 영업시간 내라면 무시하셔도
+              됩니다.
+            </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
                 <span className="block text-xs text-slate-500">매장명</span>
@@ -183,22 +196,45 @@ export default function StoreManager() {
                 <span className="block text-xs text-slate-500">대표시간</span>
                 <p className="text-sm text-slate-800">{fetched.representative_hours || '-'}</p>
               </div>
-              <div className="sm:col-span-3">
-                <span className="block text-xs text-slate-500">
-                  대표상품{' '}
-                  {fetched.representative_product ? '' : '(못 찾음 — 직접 입력 가능)'}
-                </span>
-                {fetched.representative_product ? (
-                  <p className="text-sm text-slate-800">{fetched.representative_product}</p>
-                ) : (
-                  <input
-                    value={productInput}
-                    onChange={(e) => setProductInput(e.target.value)}
-                    placeholder="예: 메뉴, 객실정보, 시술종류 등 업종에 맞게 입력"
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  />
-                )}
-              </div>
+            </div>
+
+            <div className="space-y-2 border-t border-slate-200 pt-3">
+              <p className="text-xs text-slate-500">영수증 생성에 쓰이는 사업자 정보 (선택)</p>
+              <input
+                value={businessRegistrationNumber}
+                onChange={(e) => setBusinessRegistrationNumber(e.target.value)}
+                placeholder="사업자번호 (예: 250-07-00453)"
+                className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+              />
+              <input
+                value={representativeName}
+                onChange={(e) => setRepresentativeName(e.target.value)}
+                placeholder="대표자명"
+                className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+              />
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="전화번호 (예: 0507-1412-5171)"
+                className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+              />
+            </div>
+
+            <div>
+              <span className="block text-xs text-slate-500">
+                대표상품{' '}
+                {fetched.representative_product ? '' : '(못 찾음 — 직접 입력 가능)'}
+              </span>
+              {fetched.representative_product ? (
+                <p className="text-sm text-slate-800">{fetched.representative_product}</p>
+              ) : (
+                <input
+                  value={productInput}
+                  onChange={(e) => setProductInput(e.target.value)}
+                  placeholder="예: 아메리카노 4500원, 카페라떼 5000원"
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                />
+              )}
             </div>
             <button
               type="button"
