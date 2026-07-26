@@ -15,6 +15,7 @@ class ReviewAccountCreate(BaseModel):
     label: str
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
+    has_login_issue: bool = False
 
 
 class ReviewAccountUpdate(BaseModel):
@@ -22,6 +23,7 @@ class ReviewAccountUpdate(BaseModel):
     label: Optional[str] = None
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
+    has_login_issue: Optional[bool] = None
 
 
 class ReviewAccountOut(BaseModel):
@@ -33,6 +35,7 @@ class ReviewAccountOut(BaseModel):
     label: str
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
+    has_login_issue: bool = False
     created_at: datetime.datetime
 
 
@@ -150,6 +153,8 @@ class ReviewTargetCreate(BaseModel):
     # creation time (see crud.create_review_target).
     work_days: Optional[list[int]] = None
     daily_limit: Optional[int] = None  # 하루 최대 클레임 허용 건수; None = 제한 없음
+    start_date: Optional[datetime.date] = None  # 작업 기간 시작일; None = 등록 즉시부터
+    end_date: Optional[datetime.date] = None  # 작업 기간 종료일; None = 무기한
     # 리뷰 원고 자료
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
@@ -167,6 +172,8 @@ class ReviewTargetOut(BaseModel):
     sale_price: Optional[int] = None
     claim_time_limit_minutes: int
     daily_limit: Optional[int] = None
+    start_date: Optional[datetime.date] = None
+    end_date: Optional[datetime.date] = None
     created_at: datetime.datetime
 
     # denormalized, filled in by the router

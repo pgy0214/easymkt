@@ -161,6 +161,7 @@ def create_account(
         label=data.label,
         profile_url=data.profile_url,
         ip_address=data.ip_address,
+        has_login_issue=data.has_login_issue,
     )
     db.add(account)
     db.commit()
@@ -187,6 +188,8 @@ def update_account(
         account.profile_url = data.profile_url
     if data.ip_address is not None:
         account.ip_address = data.ip_address
+    if data.has_login_issue is not None:
+        account.has_login_issue = data.has_login_issue
     db.commit()
     db.refresh(account)
     return account
@@ -357,6 +360,8 @@ def create_review_target(
         claim_time_limit_minutes=claim_minutes,
         work_days_raw=encode_work_days(data.work_days),
         daily_limit=data.daily_limit,
+        start_date=data.start_date,
+        end_date=data.end_date,
         guideline=data.guideline,
         regional_features=data.regional_features,
         menu_items_json=encode_menu_items(data.menu_items),
@@ -558,6 +563,10 @@ def _kst_weekday() -> int:
     return (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).weekday()
 
 
+def _kst_today_date() -> datetime.date:
+    return (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).date()
+
+
 def _kst_today_utc_range() -> tuple[datetime.datetime, datetime.datetime]:
     """[start, end) of "today" in KST, expressed back in UTC (since claimed_at
     is stored as naive UTC) — used to count how many of a campaign's tasks
@@ -575,13 +584,27 @@ def get_open_pool_tasks(db: Session, platforms: list[str]) -> list[models.Task]:
         .order_by(models.Task.created_at)
         .all()
     )
-    today = _kst_weekday()
+    weekday = _kst_weekday()
     tasks = [
         t
         for t in tasks
         if not t.review_target.work_days_raw
-        or today in decode_work_days(t.review_target.work_days_raw)
+        or weekday in decode_work_days(t.review_target.work_days_raw)
     ]
+
+    # start_date/end_date: campaign's overall working period (both null =
+    # unrestricted, matches the old always-open behavior)
+    today = _kst_today_date()
+
+    def within_campaign_period(t: models.Task) -> bool:
+        target = t.review_target
+        if target.start_date is not None and today < target.start_date:
+            return False
+        if target.end_date is not None and today > target.end_date:
+            return False
+        return True
+
+    tasks = [t for t in tasks if within_campaign_period(t)]
 
     # daily_limit: once N tasks from a campaign have been claimed today
     # (KST), hide the rest of that campaign's open tasks from the pool until

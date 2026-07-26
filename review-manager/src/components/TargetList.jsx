@@ -1,7 +1,11 @@
-import { Trash2 } from 'lucide-react'
-import { formatDateTime, formatKRW, formatWorkDays, PLATFORM_LABEL } from '../lib/format.js'
+import { FileText, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { formatDateRange, formatDateTime, formatKRW, formatWorkDays, PLATFORM_LABEL } from '../lib/format.js'
+import TargetDataModal from './TargetDataModal.jsx'
 
 export default function TargetList({ targets, onDelete }) {
+  const [dataModalTargetId, setDataModalTargetId] = useState(null)
+
   if (targets.length === 0) {
     return <p className="text-sm text-slate-400">등록된 캠페인이 없습니다</p>
   }
@@ -19,6 +23,7 @@ export default function TargetList({ targets, onDelete }) {
             <th className="px-3 py-2">작업 제한</th>
             <th className="px-3 py-2">1일 갯수</th>
             <th className="px-3 py-2">노출요일</th>
+            <th className="px-3 py-2">작업 기간</th>
             <th className="px-3 py-2">등록일</th>
             <th className="px-3 py-2" />
           </tr>
@@ -43,20 +48,35 @@ export default function TargetList({ targets, onDelete }) {
               <td className="px-3 py-2">{target.claim_time_limit_minutes}분</td>
               <td className="px-3 py-2">{target.daily_limit != null ? `${target.daily_limit}건` : '제한없음'}</td>
               <td className="px-3 py-2">{formatWorkDays(target.work_days)}</td>
+              <td className="px-3 py-2 text-slate-500">
+                {formatDateRange(target.start_date, target.end_date)}
+              </td>
               <td className="px-3 py-2 text-slate-500">{formatDateTime(target.created_at)}</td>
               <td className="px-3 py-2">
-                <button
-                  onClick={() => onDelete(target.id)}
-                  className="text-slate-400 hover:text-red-600"
-                  title="캠페인 삭제"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setDataModalTargetId(target.id)}
+                    className="flex items-center gap-1 rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
+                  >
+                    <FileText size={12} />
+                    작업데이터
+                  </button>
+                  <button
+                    onClick={() => onDelete(target.id)}
+                    className="text-slate-400 hover:text-red-600"
+                    title="캠페인 삭제"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {dataModalTargetId != null && (
+        <TargetDataModal targetId={dataModalTargetId} onClose={() => setDataModalTargetId(null)} />
+      )}
     </div>
   )
 }

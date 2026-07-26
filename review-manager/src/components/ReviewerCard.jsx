@@ -120,10 +120,7 @@ export default function ReviewerCard({
         ))}
       </div>
 
-      <AccountForm
-        onCreate={(data) => onCreateAccount(reviewer.id, data)}
-        showIp={reviewer.category === 'admin'}
-      />
+      <AccountForm onCreate={(data) => onCreateAccount(reviewer.id, data)} />
 
       {assigning && (
         <AssignTaskModal

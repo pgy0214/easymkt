@@ -35,6 +35,12 @@ def run_migrations(engine) -> None:
 
         # review_accounts: ip_address — IP assigned per admin-owned account
         _add_column_if_missing(conn, "review_accounts", "ip_address", "ip_address TEXT")
+        _add_column_if_missing(
+            conn,
+            "review_accounts",
+            "has_login_issue",
+            "has_login_issue BOOLEAN NOT NULL DEFAULT 0",
+        )
 
         # settings: default claim-time presets, now in minutes (was hours). Add
         # the new columns, copy over converted values, then drop the old ones —
@@ -136,6 +142,11 @@ def run_migrations(engine) -> None:
 
         # tasks: receipt_image_path — 영수증 이미지, naver_available_date가 정해지면 자동 생성
         _add_column_if_missing(conn, "tasks", "receipt_image_path", "receipt_image_path TEXT")
+
+        # review_targets: start_date/end_date — 캠페인이 실제로 작업되는 기간(둘 다
+        # null이면 기존과 동일하게 무기한). 오픈풀 노출 필터에도 적용됨.
+        _add_column_if_missing(conn, "review_targets", "start_date", "start_date DATE")
+        _add_column_if_missing(conn, "review_targets", "end_date", "end_date DATE")
 
         # review_targets: store_name/store_url columns replaced by a store_id FK
         # to the new stores table (stores are now a reusable list, not re-typed

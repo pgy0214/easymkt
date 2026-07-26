@@ -14,6 +14,8 @@ const EMPTY = {
   unit_price: 0,
   sale_price: '',
   daily_limit: '',
+  start_date: '',
+  end_date: '',
   work_days: ALL_DAYS,
   guideline: '',
   regional_features: '',
@@ -100,6 +102,8 @@ export default function TargetForm() {
         sale_price: form.sale_price === '' ? null : Number(form.sale_price),
         work_days: form.work_days,
         daily_limit: form.daily_limit === '' ? null : Number(form.daily_limit),
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
         guideline: form.guideline.trim() || null,
         regional_features: form.regional_features.trim() || null,
         menu_items: menuItems.length > 0 ? menuItems : null,
@@ -203,6 +207,26 @@ export default function TargetForm() {
             placeholder="비워두면 제한 없음"
             className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
           />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500">
+            작업 기간 (선택 — 비워두면 시작일 즉시부터 무기한)
+          </label>
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              type="date"
+              value={form.start_date}
+              onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+              className="rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+            <span className="text-xs text-slate-400">~</span>
+            <input
+              type="date"
+              value={form.end_date}
+              onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+              className="rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
         </div>
         <div>
           <label className="block text-xs text-slate-500">작업요일 (선택한 요일에만 오픈풀에 노출)</label>

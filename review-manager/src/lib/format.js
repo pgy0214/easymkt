@@ -40,6 +40,17 @@ export const BLIND_STATUS_LABEL = {
 // backend's work_days encoding
 export const WEEKDAY_LABELS = ['월', '화', '수', '목', '금', '토', '일']
 
+export function formatDateRange(startDate, endDate) {
+  if (!startDate && !endDate) return '무기한'
+  const start = startDate ?? '시작일 미지정'
+  const end = endDate ?? '종료일 미지정'
+  if (startDate && endDate) {
+    const days = Math.round((new Date(endDate) - new Date(startDate)) / 86400000) + 1
+    return `${start} ~ ${end} (${days}일간)`
+  }
+  return `${start} ~ ${end}`
+}
+
 export function formatWorkDays(days) {
   if (!days || days.length === 0 || days.length === 7) return '매일'
   return [...days]

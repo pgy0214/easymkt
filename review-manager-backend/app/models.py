@@ -48,6 +48,7 @@ class ReviewAccount(Base):
     label = Column(String, nullable=False)
     profile_url = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)  # 관리자(자체보유) 계정에 배정된 IP
+    has_login_issue = Column(Boolean, nullable=False, default=False)  # 로그인 불가 등 문제 발생 시 관리자 체크용
     created_at = Column(DateTime, default=utcnow)
 
     reviewer = relationship("Reviewer", back_populates="accounts")
@@ -86,6 +87,8 @@ class ReviewTarget(Base):
     claim_time_limit_minutes = Column(Integer, nullable=False, default=1440)
     work_days_raw = Column(String, nullable=True)  # CSV weekday ints (0=Mon..6=Sun); null = every day
     daily_limit = Column(Integer, nullable=True)  # 하루 최대 노출/클레임 허용 건수; null = 제한 없음
+    start_date = Column(Date, nullable=True)  # 작업 기간 시작일; null = 제한 없음(등록 즉시 시작)
+    end_date = Column(Date, nullable=True)  # 작업 기간 종료일; null = 제한 없음(무기한)
 
     # 리뷰 원고 자료 — 리뷰어가 포털에서 조회 (v2 "리뷰 자료 보기")
     guideline = Column(String, nullable=True)  # 원고 작성 가이드라인
