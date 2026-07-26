@@ -207,7 +207,7 @@ export default function ReviewerManager() {
       {loading && <p className="text-sm text-slate-400">불러오는 중...</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-slate-500">
           전체 {nonAdminReviewers.length}명 · 연락가능 {nonAdminReviewers.filter((r) => r.is_active).length}명
         </span>
@@ -217,7 +217,7 @@ export default function ReviewerManager() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="이름/연락처 검색"
-            className="w-48 rounded border border-slate-300 py-1 pl-7 pr-2 text-sm"
+            className="w-full max-w-[16rem] rounded border border-slate-300 py-1 pl-7 pr-2 text-sm sm:w-48"
           />
         </div>
         <select

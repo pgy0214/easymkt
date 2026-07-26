@@ -67,7 +67,7 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
         <p className="text-sm text-slate-400">조건에 맞는 캠페인이 없습니다</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[1100px] text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
               <tr>
                 <th className="px-3 py-2">플랫폼</th>

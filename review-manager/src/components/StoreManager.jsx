@@ -262,7 +262,7 @@ export default function StoreManager() {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-slate-50 text-left text-xs text-slate-500">
             <tr>
               <th className="px-3 py-2">플랫폼</th>

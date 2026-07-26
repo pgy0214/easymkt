@@ -32,7 +32,7 @@ export default function SettingsPanel() {
   return (
     <form
       onSubmit={handleSave}
-      className="max-w-md space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+      className="mx-auto max-w-md space-y-4 rounded-lg border border-slate-200 bg-white p-4"
     >
       <div>
         <label className="block text-sm font-medium text-slate-700">

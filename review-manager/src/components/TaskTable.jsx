@@ -59,7 +59,7 @@ export default function TaskTable({
             </button>
             {!isCollapsed && (
               <div className="max-h-[420px] overflow-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[800px] text-sm">
                   <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs text-slate-500">
                     <tr>
                       <th className="px-3 py-2">
