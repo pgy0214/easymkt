@@ -4,7 +4,7 @@ const TABS = [
   { id: 'reviewers', label: '리뷰어 관리', icon: Users },
   { id: 'admin-accounts', label: '관리자 계정', icon: ShieldCheck },
   { id: 'stores', label: '매장 관리', icon: Building2 },
-  { id: 'targets', label: '캠페인 등록', icon: Store },
+  { id: 'targets', label: '캠페인 등록/목록', icon: Store },
   { id: 'tasks', label: '작업 현황', icon: ClipboardList },
   { id: 'settlement', label: '정산 요약', icon: Wallet },
   { id: 'settings', label: '설정', icon: Settings2 },

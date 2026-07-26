@@ -3,6 +3,7 @@ import json
 import os
 import secrets
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -270,6 +271,18 @@ def get_targets(db: Session) -> list[models.ReviewTarget]:
     return db.query(models.ReviewTarget).order_by(models.ReviewTarget.id.desc()).all()
 
 
+def get_completed_task_counts(db: Session) -> dict[int, int]:
+    """캠페인 목록의 진행중/완료 상태 판정에 쓰는 매장별 완료 건수 — target당 개별
+    쿼리 대신 한 번의 group-by로 계산한다."""
+    rows = (
+        db.query(models.Task.review_target_id, func.count(models.Task.id))
+        .filter(models.Task.status == "completed")
+        .group_by(models.Task.review_target_id)
+        .all()
+    )
+    return {target_id: count for target_id, count in rows}
+
+
 def encode_work_days(days: list[int] | None) -> str | None:
     if not days:
         return None
@@ -331,6 +344,37 @@ def delete_target(db: Session, target: models.ReviewTarget) -> None:
         )
     db.delete(target)
     db.commit()
+
+
+def update_target(
+    db: Session, target: models.ReviewTarget, data: schemas.ReviewTargetUpdate
+) -> models.ReviewTarget:
+    """캠페인 수정 — platform/store_id/required_count는 Task 생성 시점에 이미
+    확정된 구조적 값이라 여기서 바꾸지 않는다(잘못 등록했으면 삭제 후 재등록).
+    unit_price/sale_price를 바꿔도 이미 생성된 Task의 settlement_amount/
+    sale_amount 스냅샷은 소급 변경되지 않는다 — 새로 등록하는 캠페인과 동일하게
+    생성 시점 값을 그대로 쓰는 기존 설계를 그대로 따른다."""
+    if data.unit_price is not None:
+        target.unit_price = data.unit_price
+    if data.sale_price is not None:
+        target.sale_price = data.sale_price
+    if data.daily_limit is not None:
+        target.daily_limit = data.daily_limit
+    if data.work_days is not None:
+        target.work_days_raw = encode_work_days(data.work_days)
+    if data.start_date is not None:
+        target.start_date = data.start_date
+    if data.end_date is not None:
+        target.end_date = data.end_date
+    if data.guideline is not None:
+        target.guideline = data.guideline
+    if data.regional_features is not None:
+        target.regional_features = data.regional_features
+    if data.menu_items is not None:
+        target.menu_items_json = encode_menu_items(data.menu_items)
+    db.commit()
+    db.refresh(target)
+    return target
 
 
 def create_review_target(

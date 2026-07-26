@@ -161,6 +161,26 @@ class ReviewTargetCreate(BaseModel):
     menu_items: Optional[list[MenuItemIn]] = None  # 최대 3개, 영수증 생성에도 사용
 
 
+class ReviewTargetUpdate(BaseModel):
+    # platform/store_id/required_count는 Task 생성 시점에 확정되는 구조적
+    # 값이라 수정 대상에서 제외 — 잘못 등록했으면 삭제 후 재등록
+    unit_price: Optional[int] = None
+    sale_price: Optional[int] = None
+    daily_limit: Optional[int] = None
+    work_days: Optional[list[int]] = None
+    start_date: Optional[datetime.date] = None
+    end_date: Optional[datetime.date] = None
+    guideline: Optional[str] = None
+    regional_features: Optional[str] = None
+    menu_items: Optional[list[MenuItemIn]] = None
+
+
+class TargetGuidelineParseOut(BaseModel):
+    guideline: Optional[str] = None
+    regional_features: Optional[str] = None
+    menu_items: Optional[list[MenuItemIn]] = None
+
+
 class ReviewTargetOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -190,6 +210,9 @@ class ReviewTargetOut(BaseModel):
     # parsed from menu_items_json by crud.target_to_out (same reasoning as work_days)
     menu_items: Optional[list[MenuItemIn]] = None
     reference_photo_path: Optional[str] = None
+
+    # denormalized, filled in by the router — 캠페인 목록의 진행중/완료 필터에 사용
+    completed_count: int = 0
 
 
 class ReviewTargetDetailOut(ReviewTargetOut):

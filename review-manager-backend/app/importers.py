@@ -53,6 +53,42 @@ def _first_matching(row: dict, header_candidates: set) -> str | None:
     return None
 
 
+GUIDELINE_HEADERS = {"가이드라인", "원고 가이드라인"}
+REGIONAL_FEATURES_HEADERS = {"지역특징", "지역적 특징"}
+MENU_NAME_HEADERS = [{"메뉴1명", "메뉴명1"}, {"메뉴2명", "메뉴명2"}, {"메뉴3명", "메뉴명3"}]
+MENU_PRICE_HEADERS = [{"메뉴1가격", "메뉴가격1"}, {"메뉴2가격", "메뉴가격2"}, {"메뉴3가격", "메뉴가격3"}]
+
+
+def parse_target_guideline_row(content: bytes, filename: str) -> dict:
+    """캠페인 등록 폼의 리뷰 원고 자료(가이드라인/지역특징/메뉴 3개)를 엑셀/CSV
+    한 줄로 미리 채워 넣기 위한 파서 — 캠페인 1건은 원고도 1건뿐이라 첫 데이터
+    행만 사용한다."""
+    if filename.lower().endswith(".csv"):
+        rows = _parse_csv(content)
+    else:
+        rows = _parse_xlsx(content)
+
+    if not rows:
+        return {"guideline": None, "regional_features": None, "menu_items": None}
+
+    row = rows[0]
+    menu_items = []
+    for name_headers, price_headers in zip(MENU_NAME_HEADERS, MENU_PRICE_HEADERS):
+        name = _first_matching(row, name_headers)
+        price_raw = _first_matching(row, price_headers)
+        if name and price_raw:
+            try:
+                menu_items.append({"name": name, "price": int(float(price_raw))})
+            except ValueError:
+                continue
+
+    return {
+        "guideline": _first_matching(row, GUIDELINE_HEADERS),
+        "regional_features": _first_matching(row, REGIONAL_FEATURES_HEADERS),
+        "menu_items": menu_items or None,
+    }
+
+
 def _parse_csv(content: bytes) -> list[dict]:
     text = content.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(text))

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app import crud, schemas
+from app import crud, importers, schemas
 from app.database import get_db
 
 router = APIRouter(prefix="/api/targets", tags=["targets"])
@@ -9,7 +9,13 @@ router = APIRouter(prefix="/api/targets", tags=["targets"])
 
 @router.get("", response_model=list[schemas.ReviewTargetOut])
 def list_targets(db: Session = Depends(get_db)):
-    return [crud.target_to_out(t) for t in crud.get_targets(db)]
+    completed_counts = crud.get_completed_task_counts(db)
+    results = []
+    for t in crud.get_targets(db):
+        out = crud.target_to_out(t)
+        out.completed_count = completed_counts.get(t.id, 0)
+        results.append(out)
+    return results
 
 
 @router.post("", response_model=schemas.ReviewTargetOut)
@@ -18,6 +24,25 @@ def create_target(data: schemas.ReviewTargetCreate, db: Session = Depends(get_db
         return crud.target_to_out(crud.create_review_target(db, data))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/parse-guideline", response_model=schemas.TargetGuidelineParseOut)
+async def parse_guideline(file: UploadFile = File(...)):
+    """캠페인 등록 폼의 원고 자료를 엑셀/CSV 업로드로 미리 채우기 위한 파서
+    (DB에 아무것도 쓰지 않음 — 폼 프리필 용도)."""
+    content = await file.read()
+    parsed = importers.parse_target_guideline_row(content, file.filename or "")
+    return schemas.TargetGuidelineParseOut(**parsed)
+
+
+@router.patch("/{target_id}", response_model=schemas.ReviewTargetOut)
+def update_target(
+    target_id: int, data: schemas.ReviewTargetUpdate, db: Session = Depends(get_db)
+):
+    target = crud.get_target(db, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    return crud.target_to_out(crud.update_target(db, target, data))
 
 
 @router.get("/{target_id}", response_model=schemas.ReviewTargetDetailOut)

@@ -1,6 +1,7 @@
-import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertTriangle, Plus, Search, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
+import Pagination from './Pagination.jsx'
 
 const EMPTY = {
   platform: 'naver',
@@ -17,6 +18,9 @@ export default function AdminAccountManager() {
   const [error, setError] = useState(null)
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
 
   function toRows(reviewers) {
     return reviewers.flatMap((r) =>
@@ -107,6 +111,22 @@ export default function AdminAccountManager() {
     }
   }
 
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return rows
+    return rows.filter((row) =>
+      [row.name, row.contact_info, row.label, row.ip_address]
+        .filter(Boolean)
+        .some((field) => field.toLowerCase().includes(query)),
+    )
+  }, [rows, search])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, pageSize])
+
+  const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize)
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-500">
@@ -192,6 +212,20 @@ export default function AdminAccountManager() {
       )}
 
       {!loading && rows.length > 0 && (
+        <>
+          <div className="relative w-64">
+            <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="이름/연락처/계정아이디/IP 검색"
+              className="w-full rounded border border-slate-300 py-1 pl-7 pr-2 text-sm"
+            />
+          </div>
+
+          {filteredRows.length === 0 ? (
+            <p className="text-sm text-slate-400">조건에 맞는 계정이 없습니다</p>
+          ) : (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
@@ -207,7 +241,7 @@ export default function AdminAccountManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((row) => (
+              {visibleRows.map((row) => (
                 <tr key={`${row.reviewerId}-${row.id ?? 'none'}`}>
                   <td className="px-3 py-2">
                     {row.platform === 'naver' ? '네이버' : row.platform === 'kakao' ? '카카오' : '-'}
@@ -260,6 +294,18 @@ export default function AdminAccountManager() {
             </tbody>
           </table>
         </div>
+          )}
+
+          {filteredRows.length > pageSize && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalCount={filteredRows.length}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
+        </>
       )}
     </div>
   )

@@ -2,10 +2,9 @@ import { Download, Search, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import { GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
+import Pagination from './Pagination.jsx'
 import ReviewerCard from './ReviewerCard.jsx'
 import ReviewerForm from './ReviewerForm.jsx'
-
-const MAX_VISIBLE = 50
 
 const REVIEWER_TEMPLATE = { filename: '리뷰어_일괄등록_양식.csv', headers: ['이름', '연락처', '메모'] }
 const EXPERIENCE_TEMPLATE = {
@@ -38,6 +37,8 @@ export default function ReviewerManager() {
   const [regionFilter, setRegionFilter] = useState('')
   const [ageGroupFilter, setAgeGroupFilter] = useState('')
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
   const fileInputRef = useRef(null)
 
   async function refresh() {
@@ -149,7 +150,11 @@ export default function ReviewerManager() {
     })
   }, [reviewers, statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search])
 
-  const visible = filtered.slice(0, MAX_VISIBLE)
+  useEffect(() => {
+    setPage(1)
+  }, [statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search, pageSize])
+
+  const visible = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   return (
     <div className="space-y-4">
@@ -282,11 +287,13 @@ export default function ReviewerManager() {
         </span>
       </div>
 
-      {filtered.length > MAX_VISIBLE && (
-        <p className="text-xs text-amber-600">
-          조건에 맞는 {filtered.length}명 중 {MAX_VISIBLE}명만 표시 중입니다. 검색으로 좁혀보세요.
-        </p>
-      )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalCount={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
 
       <div className="space-y-3">
         {visible.map((reviewer) => (
@@ -300,6 +307,16 @@ export default function ReviewerManager() {
           />
         ))}
       </div>
+
+      {filtered.length > pageSize && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          totalCount={filtered.length}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
     </div>
   )
 }

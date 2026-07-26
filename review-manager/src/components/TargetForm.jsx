@@ -1,7 +1,37 @@
-import { useEffect, useState } from 'react'
+import { Download, Upload } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import { WEEKDAY_LABELS } from '../lib/format.js'
 import TargetList from './TargetList.jsx'
+
+const GUIDELINE_TEMPLATE_HEADERS = [
+  '가이드라인',
+  '지역특징',
+  '메뉴1명',
+  '메뉴1가격',
+  '메뉴2명',
+  '메뉴2가격',
+  '메뉴3명',
+  '메뉴3가격',
+]
+
+function downloadGuidelineTemplate() {
+  const example = ['친절하고 자연스러운 톤으로 작성', '근처에 관광지가 있어요', '아메리카노', '4500', '라떼', '5000', '크로플', '6000']
+  const csv = '﻿' + GUIDELINE_TEMPLATE_HEADERS.join(',') + '\n' + example.join(',') + '\n'
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = '캠페인_원고_양식.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function daysBetween(start, end) {
+  if (!start || !end) return null
+  const days = Math.round((new Date(end) - new Date(start)) / 86400000) + 1
+  return days > 0 ? days : null
+}
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 
@@ -30,6 +60,8 @@ export default function TargetForm() {
   const [targets, setTargets] = useState([])
   const [stores, setStores] = useState([])
   const [photoFile, setPhotoFile] = useState(null)
+  const [guidelineImporting, setGuidelineImporting] = useState(false)
+  const guidelineFileInputRef = useRef(null)
 
   async function refreshTargets() {
     setTargets(await api.getTargets())
@@ -66,6 +98,29 @@ export default function TargetForm() {
       ...prev,
       menu_items: prev.menu_items.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     }))
+  }
+
+  async function handleGuidelineFileSelected(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setGuidelineImporting(true)
+    try {
+      const parsed = await api.parseTargetGuideline(file)
+      setForm((prev) => ({
+        ...prev,
+        guideline: parsed.guideline || prev.guideline,
+        regional_features: parsed.regional_features || prev.regional_features,
+        menu_items:
+          parsed.menu_items && parsed.menu_items.length > 0
+            ? [0, 1, 2].map((i) => parsed.menu_items[i] || { ...EMPTY_MENU_ITEM })
+            : prev.menu_items,
+      }))
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setGuidelineImporting(false)
+      e.target.value = ''
+    }
   }
 
   async function handleDelete(id) {
@@ -128,8 +183,11 @@ export default function TargetForm() {
     }
   }
 
+  const dayCount = daysBetween(form.start_date, form.end_date)
+
   return (
     <div className="space-y-4">
+      <h2 className="text-base font-semibold text-slate-800">캠페인 등록</h2>
       <form
         onSubmit={handleSubmit}
         className="flex max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
@@ -226,6 +284,9 @@ export default function TargetForm() {
               onChange={(e) => setForm({ ...form, end_date: e.target.value })}
               className="rounded border border-slate-300 px-2 py-1 text-sm"
             />
+            {dayCount != null && (
+              <span className="text-xs font-medium text-slate-500">{dayCount}일간</span>
+            )}
           </div>
         </div>
         <div>
@@ -248,9 +309,37 @@ export default function TargetForm() {
           </div>
         </div>
         <div className="space-y-3 border-t border-slate-100 pt-3">
-          <p className="text-xs font-medium text-slate-500">
-            리뷰 원고 자료 (리뷰어가 포털에서 "리뷰 자료 보기"로 확인)
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium text-slate-500">
+              리뷰 원고 자료 (리뷰어가 포털에서 "리뷰 자료 보기"로 확인)
+            </p>
+            <div className="flex items-center gap-1">
+              <input
+                ref={guidelineFileInputRef}
+                type="file"
+                accept=".xlsx,.csv"
+                onChange={handleGuidelineFileSelected}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => guidelineFileInputRef.current?.click()}
+                disabled={guidelineImporting}
+                className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <Upload size={12} />
+                {guidelineImporting ? '불러오는 중...' : '엑셀로 원고 불러오기'}
+              </button>
+              <button
+                type="button"
+                onClick={downloadGuidelineTemplate}
+                className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+              >
+                <Download size={12} />
+                샘플 양식
+              </button>
+            </div>
+          </div>
           <div>
             <label className="block text-xs text-slate-500">원고 가이드라인</label>
             <textarea
@@ -325,7 +414,7 @@ export default function TargetForm() {
         {error && <p className="text-sm text-red-600">{error}</p>}
       </form>
 
-      <TargetList targets={targets} onDelete={handleDelete} />
+      <TargetList targets={targets} onDelete={handleDelete} onUpdated={refreshTargets} />
     </div>
   )
 }

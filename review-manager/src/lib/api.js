@@ -69,12 +69,24 @@ export const api = {
 
   getTargets: () => request('/targets'),
   createTarget: (data) => request('/targets', { method: 'POST', body: JSON.stringify(data) }),
+  updateTarget: (id, data) =>
+    request(`/targets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   getTarget: (id) => request(`/targets/${id}`),
   deleteTarget: (id) => request(`/targets/${id}`, { method: 'DELETE' }),
   uploadTargetPhoto: async (id, file) => {
     const form = new FormData()
     form.append('file', file)
     const res = await fetch(`${BASE_URL}/targets/${id}/photo`, { method: 'POST', body: form })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.detail || `요청 실패 (${res.status})`)
+    }
+    return res.json()
+  },
+  parseTargetGuideline: async (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${BASE_URL}/targets/parse-guideline`, { method: 'POST', body: form })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       throw new Error(body.detail || `요청 실패 (${res.status})`)
