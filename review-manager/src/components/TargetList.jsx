@@ -1,4 +1,4 @@
-import { FileText, Pencil, Search, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, FileText, Pencil, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { formatDateRange, formatDateTime, formatKRW, formatWorkDays, PLATFORM_LABEL } from '../lib/format.js'
 import TargetDataModal from './TargetDataModal.jsx'
@@ -9,6 +9,7 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
   const [editingTarget, setEditingTarget] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all') // all | in_progress | completed
   const [storeSearch, setStoreSearch] = useState('')
+  const [listOpen, setListOpen] = useState(true)
 
   const filtered = useMemo(() => {
     const query = storeSearch.trim().toLowerCase()
@@ -28,8 +29,16 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-semibold text-slate-800">캠페인 목록</h2>
+      <button
+        type="button"
+        onClick={() => setListOpen((prev) => !prev)}
+        className="flex items-center gap-1 text-base font-semibold text-slate-800"
+      >
+        {listOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+        캠페인 목록
+      </button>
 
+      {listOpen && (
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -50,8 +59,9 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
           <option value="completed">완료</option>
         </select>
       </div>
+      )}
 
-      {targets.length === 0 ? (
+      {listOpen && (targets.length === 0 ? (
         <p className="text-sm text-slate-400">등록된 캠페인이 없습니다</p>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-slate-400">조건에 맞는 캠페인이 없습니다</p>
@@ -140,7 +150,7 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
             </tbody>
           </table>
         </div>
-      )}
+      ))}
 
       {dataModalTargetId != null && (
         <TargetDataModal targetId={dataModalTargetId} onClose={() => setDataModalTargetId(null)} />

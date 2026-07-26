@@ -199,7 +199,7 @@ export default function TargetForm() {
       {formOpen && (
       <form
         onSubmit={handleSubmit}
-        className="flex max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
+        className="mx-auto flex max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
       >
         <div>
           <label className="block text-xs text-slate-500">플랫폼</label>

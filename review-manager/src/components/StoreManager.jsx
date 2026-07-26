@@ -71,8 +71,11 @@ export default function StoreManager() {
     }
   }
 
+  const businessInfoComplete =
+    businessRegistrationNumber.trim() && representativeName.trim() && phone.trim()
+
   async function handleConfirm() {
-    if (!fetched || !fetched.name) return
+    if (!fetched || !fetched.name || !businessInfoComplete) return
     setSubmitting(true)
     try {
       const store = await api.createStore({
@@ -199,7 +202,7 @@ export default function StoreManager() {
             </div>
 
             <div className="space-y-2 border-t border-slate-200 pt-3">
-              <p className="text-xs text-slate-500">영수증 생성에 쓰이는 사업자 정보 (선택)</p>
+              <p className="text-xs text-slate-500">영수증 생성에 쓰이는 사업자 정보 (필수)</p>
               <input
                 value={businessRegistrationNumber}
                 onChange={(e) => setBusinessRegistrationNumber(e.target.value)}
@@ -221,29 +224,36 @@ export default function StoreManager() {
             </div>
 
             <div>
-              <span className="block text-xs text-slate-500">
-                대표상품{' '}
-                {fetched.representative_product ? '' : '(못 찾음 — 직접 입력 가능)'}
-              </span>
+              <span className="block text-xs text-slate-500">대표상품</span>
               {fetched.representative_product ? (
                 <p className="text-sm text-slate-800">{fetched.representative_product}</p>
               ) : (
-                <input
-                  value={productInput}
-                  onChange={(e) => setProductInput(e.target.value)}
-                  placeholder="예: 아메리카노 4500원, 카페라떼 5000원"
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                />
+                <>
+                  <p className="text-xs text-amber-600">
+                    *플레이스에 등록된 정보를 찾을 수가 없습니다 직접 입력해주세요.
+                  </p>
+                  <input
+                    value={productInput}
+                    onChange={(e) => setProductInput(e.target.value)}
+                    placeholder="예: 아메리카노 4500원, 카페라떼 5000원"
+                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  />
+                </>
               )}
             </div>
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={submitting || !fetched.name}
+              disabled={submitting || !fetched.name || !businessInfoComplete}
               className="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {submitting ? '등록 중...' : '확인, 이 정보로 매장 등록'}
             </button>
+            {!businessInfoComplete && (
+              <p className="text-xs text-slate-400">
+                사업자번호/대표자명/전화번호를 모두 입력해야 등록할 수 있어요.
+              </p>
+            )}
           </div>
         )}
       </div>
