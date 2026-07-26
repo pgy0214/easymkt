@@ -1,4 +1,4 @@
-import { Search, Upload } from 'lucide-react'
+import { Download, Search, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import { GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
@@ -7,12 +7,31 @@ import ReviewerForm from './ReviewerForm.jsx'
 
 const MAX_VISIBLE = 50
 
+const REVIEWER_TEMPLATE = { filename: '리뷰어_일괄등록_양식.csv', headers: ['이름', '연락처', '메모'] }
+const EXPERIENCE_TEMPLATE = {
+  filename: '체험단_일괄등록_양식.csv',
+  headers: ['이름', '연락처', '메모', '지역', '연령대', '성별'],
+}
+
+function downloadTemplate({ filename, headers }) {
+  // leading BOM so Excel opens the Korean headers as UTF-8 instead of guessing ANSI
+  const csv = '﻿' + headers.join(',') + '\n'
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function ReviewerManager() {
   const [reviewers, setReviewers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
+  const [importCategory, setImportCategory] = useState('reviewer')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [genderFilter, setGenderFilter] = useState('')
@@ -90,7 +109,7 @@ export default function ReviewerManager() {
     setImporting(true)
     setImportResult(null)
     try {
-      const result = await api.importReviewers(file)
+      const result = await api.importReviewers(file, importCategory)
       setImportResult(result)
       await refresh()
     } catch (err) {
@@ -100,6 +119,8 @@ export default function ReviewerManager() {
       e.target.value = ''
     }
   }
+
+  const nonAdminReviewers = useMemo(() => reviewers.filter((r) => r.category !== 'admin'), [reviewers])
 
   const regionOptions = useMemo(
     () => [...new Set(reviewers.map((r) => r.region).filter(Boolean))].sort(),
@@ -113,6 +134,8 @@ export default function ReviewerManager() {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return reviewers.filter((r) => {
+      // 관리자(자체보유계정)는 별도의 "관리자 계정" 탭에서 관리
+      if (r.category === 'admin') return false
       if (statusFilter === 'active' && !r.is_active) return false
       if (statusFilter === 'inactive' && r.is_active) return false
       if (categoryFilter && r.category !== categoryFilter) return false
@@ -132,7 +155,7 @@ export default function ReviewerManager() {
     <div className="space-y-4">
       <ReviewerForm onCreate={handleCreateReviewer} />
 
-      <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white p-3">
         <input
           ref={fileInputRef}
           type="file"
@@ -140,16 +163,33 @@ export default function ReviewerManager() {
           onChange={handleFileSelected}
           className="hidden"
         />
+        <select
+          value={importCategory}
+          onChange={(e) => setImportCategory(e.target.value)}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          <option value="reviewer">리뷰어</option>
+          <option value="experience">체험단</option>
+        </select>
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={importing}
           className="flex items-center gap-1 rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
         >
           <Upload size={14} />
-          {importing ? '업로드 중...' : '엑셀/CSV로 리뷰어 일괄 등록'}
+          {importing ? '업로드 중...' : '엑셀/CSV로 일괄 등록'}
+        </button>
+        <button
+          onClick={() =>
+            downloadTemplate(importCategory === 'experience' ? EXPERIENCE_TEMPLATE : REVIEWER_TEMPLATE)
+          }
+          className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+        >
+          <Download size={14} />
+          샘플 양식 다운로드
         </button>
         <span className="text-xs text-slate-400">
-          '리뷰어' 탭 기준: 이름/연락처 컬럼이 있는 .xlsx 또는 .csv 파일 (신규 등록은 연락불가 상태로 시작)
+          이름/연락처(+체험단은 지역/연령대/성별) 컬럼이 있는 .xlsx 또는 .csv 파일 (신규 등록은 연락불가 상태로 시작)
         </span>
         {importResult && (
           <span className="ml-auto text-xs text-slate-600">
@@ -164,7 +204,7 @@ export default function ReviewerManager() {
 
       <div className="flex items-center gap-2">
         <span className="text-xs text-slate-500">
-          전체 {reviewers.length}명 · 연락가능 {reviewers.filter((r) => r.is_active).length}명
+          전체 {nonAdminReviewers.length}명 · 연락가능 {nonAdminReviewers.filter((r) => r.is_active).length}명
         </span>
         <div className="relative ml-auto">
           <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -193,11 +233,13 @@ export default function ReviewerManager() {
           className="rounded border border-slate-300 px-2 py-1 text-sm"
         >
           <option value="">전체 카테고리</option>
-          {Object.entries(REVIEWER_CATEGORY_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
+          {Object.entries(REVIEWER_CATEGORY_LABEL)
+            .filter(([value]) => value !== 'admin')
+            .map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
         </select>
         <select
           value={genderFilter}

@@ -10,6 +10,7 @@ const EMPTY = {
   store_id: '',
   required_count: 1,
   unit_price: 0,
+  sale_price: '',
   work_days: ALL_DAYS,
 }
 
@@ -79,12 +80,13 @@ export default function TargetForm() {
         store_id: Number(form.store_id),
         required_count: Number(form.required_count),
         unit_price: Number(form.unit_price),
+        sale_price: form.sale_price === '' ? null : Number(form.sale_price),
         work_days: form.work_days,
       })
       setMessage(
         `"${target.store_name}" 등록 완료 — ${target.required_count}건이 오픈풀에 등록되었습니다. 리뷰어가 직접 클레임합니다.`,
       )
-      setForm((prev) => ({ ...prev, required_count: 1, unit_price: 0 }))
+      setForm((prev) => ({ ...prev, required_count: 1, unit_price: 0, sale_price: '' }))
       await refreshTargets()
     } catch (err) {
       setError(err.message)
@@ -137,7 +139,7 @@ export default function TargetForm() {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-xs text-slate-500">건당 단가 (원)</label>
+            <label className="block text-xs text-slate-500">건당 단가 (원, 리뷰어 정산)</label>
             <input
               type="number"
               min="0"
@@ -146,6 +148,19 @@ export default function TargetForm() {
               className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
             />
           </div>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500">
+            건당 판매금액 (원, 매장 청구 — 선택, 정산요약의 매출 집계에 사용)
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={form.sale_price}
+            onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
+            placeholder="비워두면 매출 집계에서 제외됩니다"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
         </div>
         <div>
           <label className="block text-xs text-slate-500">작업요일 (선택한 요일에만 오픈풀에 노출)</label>

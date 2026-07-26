@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
@@ -49,13 +49,17 @@ def delete_reviewer(reviewer_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/import", response_model=schemas.ReviewerImportResult)
-async def import_reviewers(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def import_reviewers(
+    file: UploadFile = File(...),
+    category: str = Form(default="reviewer"),
+    db: Session = Depends(get_db),
+):
     content = await file.read()
     try:
         rows = parse_reviewer_rows(content, file.filename or "")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"파일을 읽을 수 없습니다: {e}")
-    return crud.import_reviewers(db, rows)
+    return crud.import_reviewers(db, rows, category=category)
 
 
 @router.post("/{reviewer_id}/accounts", response_model=schemas.ReviewAccountOut)

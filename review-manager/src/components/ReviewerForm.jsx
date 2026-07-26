@@ -54,11 +54,14 @@ export default function ReviewerForm({ onCreate }) {
           onChange={(e) => setForm({ ...form, category: e.target.value })}
           className="rounded border border-slate-300 px-2 py-1 text-sm"
         >
-          {Object.entries(REVIEWER_CATEGORY_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
+          {/* 관리자(자체보유계정)는 "관리자 계정" 탭에서 별도로 등록 */}
+          {Object.entries(REVIEWER_CATEGORY_LABEL)
+            .filter(([value]) => value !== 'admin')
+            .map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
         </select>
       </div>
       <div>

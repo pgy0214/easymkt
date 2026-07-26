@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
+import DateRangePicker from './DateRangePicker.jsx'
 import TaskFilters from './TaskFilters.jsx'
 import TaskTable from './TaskTable.jsx'
+
+function todayInput() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
 const EMPTY_FILTERS = {
   reviewer_id: '',
@@ -16,6 +25,7 @@ const RECENTLY_EXPIRED_MS = 24 * 60 * 60 * 1000
 
 export default function TaskDashboard() {
   const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const [dateRange, setDateRange] = useState(() => ({ from: todayInput(), to: todayInput() }))
   const [tasks, setTasks] = useState([])
   const [reviewers, setReviewers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -27,7 +37,9 @@ export default function TaskDashboard() {
   async function refresh() {
     setLoading(true)
     try {
-      setTasks(await api.getTasks(filters))
+      setTasks(
+        await api.getTasks({ ...filters, created_from: dateRange.from, created_to: dateRange.to }),
+      )
       setError(null)
     } catch (err) {
       setError(err.message)
@@ -50,7 +62,7 @@ export default function TaskDashboard() {
     refresh()
     setSelectedIds(new Set())
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters])
+  }, [filters, dateRange])
 
   async function handleSubmitResult(taskId, link) {
     try {
@@ -79,11 +91,16 @@ export default function TaskDashboard() {
     })
   }
 
-  function toggleSelectAllCompleted() {
-    const completedIds = tasks.filter((t) => t.status === 'completed').map((t) => t.id)
-    setSelectedIds((prev) =>
-      completedIds.every((id) => prev.has(id)) ? new Set() : new Set(completedIds),
-    )
+  function toggleSelectAllCompleted(ids) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      const allSelected = ids.every((id) => next.has(id))
+      for (const id of ids) {
+        if (allSelected) next.delete(id)
+        else next.add(id)
+      }
+      return next
+    })
   }
 
   async function handleRecheckOne(taskId) {
@@ -118,13 +135,36 @@ export default function TaskDashboard() {
     }
   }
 
+  const totalCount = tasks.length
+  const remainingCount = tasks.filter((t) => t.status === 'open').length
+
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-slate-800 bg-slate-900 px-6 py-4 text-white">
+        <p className="text-xs text-slate-400">선택한 기간 기준 ({dateRange.from || '전체'} ~ {dateRange.to || '전체'})</p>
+        <div className="mt-1 flex items-center gap-8">
+          <div>
+            <p className="text-2xl font-bold tabular-nums">{totalCount}</p>
+            <p className="text-xs text-slate-400">총 작업</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold tabular-nums text-amber-400">{remainingCount}</p>
+            <p className="text-xs text-slate-400">잔여(오픈풀)</p>
+          </div>
+        </div>
+      </div>
+
       {recentlyExpiredCount > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           최근 24시간 내 {recentlyExpiredCount}건이 클레임 기한을 넘겨 오픈풀로 복귀했습니다.
         </div>
       )}
+
+      <div className="rounded-lg border border-slate-200 bg-white p-3">
+        <p className="mb-2 text-xs text-slate-500">기간별 조회 (등록일 기준)</p>
+        <DateRangePicker from={dateRange.from} to={dateRange.to} onChange={setDateRange} />
+      </div>
+
       <TaskFilters filters={filters} onChange={setFilters} reviewers={reviewers} />
 
       <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">

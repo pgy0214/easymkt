@@ -9,12 +9,18 @@ import openpyxl
 # individually once a reviewer is confirmed reachable and active.
 NAME_HEADERS = {"이름"}
 CONTACT_HEADERS = {"연락처"}
-NOTE_HEADERS = {"기존작업자"}
+NOTE_HEADERS = {"기존작업자", "메모"}
+REGION_HEADERS = {"지역"}
+AGE_GROUP_HEADERS = {"연령대"}
+GENDER_HEADERS = {"성별"}
+GENDER_VALUE_MAP = {"남": "male", "남성": "male", "male": "male", "여": "female", "여성": "female", "female": "female"}
 
 
 def parse_reviewer_rows(content: bytes, filename: str) -> list[dict]:
     """Parse an uploaded .xlsx or .csv file into normalized reviewer rows:
-    {name, contact_info, note}. Rows without a name are skipped."""
+    {name, contact_info, note, region, age_group, gender}. Rows without a
+    name are skipped. region/age_group/gender only matter for the 체험단
+    import path — they're just None if the sheet doesn't have those columns."""
     if filename.lower().endswith(".csv"):
         rows = _parse_csv(content)
     else:
@@ -25,11 +31,15 @@ def parse_reviewer_rows(content: bytes, filename: str) -> list[dict]:
         name = _first_matching(row, NAME_HEADERS)
         if not name:
             continue
+        gender_raw = _first_matching(row, GENDER_HEADERS)
         results.append(
             {
                 "name": name,
                 "contact_info": _first_matching(row, CONTACT_HEADERS),
                 "note": _first_matching(row, NOTE_HEADERS),
+                "region": _first_matching(row, REGION_HEADERS),
+                "age_group": _first_matching(row, AGE_GROUP_HEADERS),
+                "gender": GENDER_VALUE_MAP.get(gender_raw.strip().lower()) if gender_raw else None,
             }
         )
     return results

@@ -82,8 +82,10 @@ def update_reviewer(
     return reviewer
 
 
-def import_reviewers(db: Session, rows: list[dict]) -> schemas.ReviewerImportResult:
-    """Bulk-import from the '리뷰어' master-list sheet: name + contact only, no
+def import_reviewers(
+    db: Session, rows: list[dict], category: str = "reviewer"
+) -> schemas.ReviewerImportResult:
+    """Bulk-import from a name/contact(+체험단: region/age/gender) sheet, no
     accounts (that sheet has no account/URL data). Imported reviewers start
     inactive (연락불가) — the admin reviews and activates who's actually
     reachable before they become eligible for task assignment."""
@@ -110,9 +112,13 @@ def import_reviewers(db: Session, rows: list[dict]) -> schemas.ReviewerImportRes
 
         reviewer = models.Reviewer(
             name=name,
+            category=category,
             memo=row.get("note"),
             contact_info=contact_info,
             is_active=False,
+            region=row.get("region") if category == "experience" else None,
+            age_group=row.get("age_group") if category == "experience" else None,
+            gender=row.get("gender") if category == "experience" else None,
         )
         db.add(reviewer)
         created += 1
@@ -307,6 +313,7 @@ def create_review_target(
         platform=store.platform,
         required_count=data.required_count,
         unit_price=data.unit_price,
+        sale_price=data.sale_price,
         claim_time_limit_minutes=claim_minutes,
         work_days_raw=encode_work_days(data.work_days),
     )
@@ -320,6 +327,7 @@ def create_review_target(
             platform=store.platform,
             status="open",
             settlement_amount=data.unit_price,
+            sale_amount=data.sale_price,
         )
         db.add(task)
 
@@ -359,6 +367,8 @@ def get_tasks(
     blind_status: str | None = None,
     settlement_status: str | None = None,
     reviewer_category: str | None = None,
+    created_from: str | None = None,
+    created_to: str | None = None,
     sort: str | None = None,
 ) -> list[models.Task]:
     # outerjoin (not join) — 'open' pool tasks have no review_account_id yet and
@@ -383,6 +393,14 @@ def get_tasks(
         query = query.filter(models.Task.blind_status == blind_status)
     if settlement_status is not None:
         query = query.filter(models.Task.settlement_status == settlement_status)
+    if created_from is not None:
+        query = query.filter(
+            models.Task.created_at >= datetime.datetime.fromisoformat(created_from)
+        )
+    if created_to is not None:
+        # inclusive of the whole "to" day
+        end = datetime.datetime.fromisoformat(created_to) + datetime.timedelta(days=1)
+        query = query.filter(models.Task.created_at < end)
 
     sort_map = {
         "created_at": models.Task.created_at.asc(),
@@ -590,7 +608,8 @@ def run_claim_expiry_job(db: Session) -> int:
 
 
 def settlement_summary(db: Session) -> list[schemas.SettlementSummaryItem]:
-    reviewers = get_reviewers(db)
+    # 관리자(자체보유계정)는 우리 소유라 정산할 필요가 없어 미정산 목록에서 제외
+    reviewers = [r for r in get_reviewers(db) if r.category != "admin"]
     results = []
     for reviewer in reviewers:
         account_ids = [a.id for a in reviewer.accounts]
@@ -620,6 +639,28 @@ def settlement_summary(db: Session) -> list[schemas.SettlementSummaryItem]:
             )
         )
     return results
+
+
+def revenue_summary(
+    db: Session, date_from: str | None = None, date_to: str | None = None
+) -> schemas.RevenueSummaryOut:
+    """매출 = 매장에 청구한 금액(sale_amount), 완료된 작업 기준. 정산(리뷰어 지급)과는
+    별개 지표라 정산 여부와 무관하게 집계한다. sale_amount가 없는(캠페인 등록 시 판매금액을
+    안 넣은) 작업은 매출 계산에서 빠진다. 날짜는 완료일(completed_at) 기준 — 매출은
+    작업이 끝난 시점에 실현된다고 보는 게 등록일보다 더 정확함."""
+    query = db.query(models.Task).filter(
+        models.Task.status == "completed", models.Task.sale_amount.isnot(None)
+    )
+    if date_from is not None:
+        query = query.filter(models.Task.completed_at >= datetime.datetime.fromisoformat(date_from))
+    if date_to is not None:
+        end = datetime.datetime.fromisoformat(date_to) + datetime.timedelta(days=1)
+        query = query.filter(models.Task.completed_at < end)
+
+    tasks = query.all()
+    return schemas.RevenueSummaryOut(
+        total=sum(t.sale_amount for t in tasks), count=len(tasks)
+    )
 
 
 # --- Settings ---

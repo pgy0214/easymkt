@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AdminAccountManager from './components/AdminAccountManager.jsx'
 import Nav from './components/Nav.jsx'
 import ReviewerManager from './components/ReviewerManager.jsx'
 import SettingsPanel from './components/SettingsPanel.jsx'
@@ -18,6 +19,7 @@ export default function App() {
       <Nav active={tab} onChange={setTab} />
       <main className="mx-auto max-w-6xl px-4 py-6">
         {tab === 'reviewers' && <ReviewerManager />}
+        {tab === 'admin-accounts' && <AdminAccountManager />}
         {tab === 'stores' && <StoreManager />}
         {tab === 'targets' && <TargetForm />}
         {tab === 'tasks' && <TaskDashboard />}

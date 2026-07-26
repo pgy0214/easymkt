@@ -36,9 +36,10 @@ export const api = {
     request(`/reviewers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteReviewer: (id) => request(`/reviewers/${id}`, { method: 'DELETE' }),
 
-  importReviewers: async (file) => {
+  importReviewers: async (file, category = 'reviewer') => {
     const form = new FormData()
     form.append('file', file)
+    form.append('category', category)
     const res = await fetch(`${BASE_URL}/reviewers/import`, { method: 'POST', body: form })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
@@ -83,6 +84,8 @@ export const api = {
     request(`/tasks/${id}/assign`, { method: 'POST', body: JSON.stringify({ account_id: accountId }) }),
 
   getSettlementSummary: () => request('/settlement/summary'),
+  getRevenue: (dateFrom, dateTo) =>
+    request(`/settlement/revenue${toQueryString({ date_from: dateFrom, date_to: dateTo })}`),
 
   getSettings: () => request('/settings'),
   updateSettings: (data) =>

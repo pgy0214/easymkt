@@ -19,6 +19,8 @@ def list_tasks(
     blind_status: Optional[str] = None,
     settlement_status: Optional[str] = None,
     reviewer_category: Optional[str] = None,
+    created_from: Optional[str] = None,
+    created_to: Optional[str] = None,
     sort: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
@@ -31,6 +33,8 @@ def list_tasks(
         blind_status=blind_status,
         settlement_status=settlement_status,
         reviewer_category=reviewer_category,
+        created_from=created_from,
+        created_to=created_to,
         sort=sort,
     )
     return [crud.task_to_out(t) for t in tasks]

@@ -126,7 +126,8 @@ class StoreInfoFetchOut(BaseModel):
 class ReviewTargetCreate(BaseModel):
     store_id: int
     required_count: int
-    unit_price: int
+    unit_price: int  # 리뷰어 정산 단가
+    sale_price: Optional[int] = None  # 매장 판매 단가 ("매출"), 없으면 정산요약 매출 집계에서 제외
     # weekday ints (0=Mon..6=Sun) the campaign's tasks may appear in the open
     # pool; None/omitted = visible every day. claim_time_limit_minutes is no
     # longer set per campaign — it's always snapshotted from Settings at
@@ -142,6 +143,7 @@ class ReviewTargetOut(BaseModel):
     platform: Platform
     required_count: int
     unit_price: int
+    sale_price: Optional[int] = None
     claim_time_limit_minutes: int
     created_at: datetime.datetime
 
@@ -182,6 +184,7 @@ class TaskOut(BaseModel):
     settlement_amount: int
     settlement_status: str
     settlement_paid_at: Optional[datetime.datetime] = None
+    sale_amount: Optional[int] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -217,6 +220,11 @@ class SettlementSummaryItem(BaseModel):
     completed_count: int
     unpaid_amount: int
     paid_amount: int
+
+
+class RevenueSummaryOut(BaseModel):
+    total: int
+    count: int
 
 
 # --- Settings ---

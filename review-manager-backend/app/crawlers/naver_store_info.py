@@ -129,12 +129,18 @@ def _parse_hour_rows(soup) -> list[tuple[int, int]]:
 def _compute_representative_hours(ranges: list[tuple[int, int]]) -> str | None:
     """대표시간 = the time window that's open across every business day —
     e.g. Mon 10-18 / Tue 11-18 / Wed 10-18 → 11:00~18:00 (latest common
-    start, earliest common end). Returns None if there's no common window
-    (or nothing was parsed)."""
+    start, earliest common end). Minutes are truncated to the hour (08:40
+    becomes 08:00, 19:20 becomes 19:00) so the displayed range stays a
+    clean, easy-to-scan number rather than an exact-to-the-minute figure.
+    Returns None if there's no common window (or nothing was parsed)."""
     if not ranges:
         return None
     start = max(r[0] for r in ranges)
     end = min(r[1] for r in ranges)
+    if start >= end:
+        return None
+    start = (start // 60) * 60
+    end = (end // 60) * 60
     if start >= end:
         return None
     return f"{_minutes_to_text(start)}~{_minutes_to_text(end)}"

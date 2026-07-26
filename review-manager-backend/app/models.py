@@ -77,7 +77,8 @@ class ReviewTarget(Base):
     store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     platform = Column(String, nullable=False)  # 'naver' | 'kakao', copied from store at creation
     required_count = Column(Integer, nullable=False)
-    unit_price = Column(Integer, nullable=False)
+    unit_price = Column(Integer, nullable=False)  # 리뷰어에게 지급하는 건당 정산 금액
+    sale_price = Column(Integer, nullable=True)  # 매장에 청구하는 건당 판매 금액 ("매출")
     claim_time_limit_minutes = Column(Integer, nullable=False, default=1440)
     work_days_raw = Column(String, nullable=True)  # CSV weekday ints (0=Mon..6=Sun); null = every day
     created_at = Column(DateTime, default=utcnow)
@@ -118,9 +119,10 @@ class Task(Base):
     snapshot_date_text = Column(String, nullable=True)
     snapshot_content = Column(String, nullable=True)
 
-    settlement_amount = Column(Integer, nullable=False, default=0)
+    settlement_amount = Column(Integer, nullable=False, default=0)  # 리뷰어에게 지급할 금액
     settlement_status = Column(String, nullable=False, default="unpaid")  # unpaid|paid
     settlement_paid_at = Column(DateTime, nullable=True)
+    sale_amount = Column(Integer, nullable=True)  # 매장에 청구한 금액 ("매출"), target.sale_price 스냅샷
 
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)

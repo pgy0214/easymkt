@@ -64,10 +64,7 @@ export default function TaskRow({
           <div className="mt-1 text-xs font-medium text-amber-700">기한초과로 오픈풀 복귀됨</div>
         )}
       </td>
-      <td className="px-3 py-2">
-        <div className="text-xs text-slate-500">{PLATFORM_LABEL[task.platform]}</div>
-        <div className="text-slate-700">{task.store_name}</div>
-      </td>
+      <td className="px-3 py-2 text-slate-600">{PLATFORM_LABEL[task.platform]}</td>
       <td className="px-3 py-2 text-slate-600">{STATUS_LABEL[task.status] ?? task.status}</td>
       <td className="px-3 py-2 text-xs">
         {task.platform === 'naver' && (

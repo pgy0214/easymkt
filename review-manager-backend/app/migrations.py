@@ -99,6 +99,14 @@ def run_migrations(engine) -> None:
         # tasks show up in the open pool (null = every day)
         _add_column_if_missing(conn, "review_targets", "work_days_raw", "work_days_raw TEXT")
 
+        # review_targets/tasks: sale_price/sale_amount are the amount charged
+        # to the STORE (매출), separate from unit_price/settlement_amount
+        # which is what's paid OUT to the reviewer — existing rows have no
+        # sale price on record, so they're just left null (excluded from
+        # revenue totals rather than guessed)
+        _add_column_if_missing(conn, "review_targets", "sale_price", "sale_price INTEGER")
+        _add_column_if_missing(conn, "tasks", "sale_amount", "sale_amount INTEGER")
+
         # review_targets: store_name/store_url columns replaced by a store_id FK
         # to the new stores table (stores are now a reusable list, not re-typed
         # per campaign), and claim_time_limit_hours renamed to _minutes. Same
