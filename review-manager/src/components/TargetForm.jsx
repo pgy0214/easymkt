@@ -97,7 +97,7 @@ export default function TargetForm() {
     <div className="space-y-4">
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-6"
+        className="flex max-w-md flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
       >
         <div>
           <label className="block text-xs text-slate-500">플랫폼</label>
@@ -110,7 +110,7 @@ export default function TargetForm() {
             <option value="kakao">카카오맵</option>
           </select>
         </div>
-        <div className="sm:col-span-3">
+        <div>
           <label className="block text-xs text-slate-500">매장</label>
           <select
             value={form.store_id}
@@ -125,27 +125,29 @@ export default function TargetForm() {
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-xs text-slate-500">건수</label>
-          <input
-            type="number"
-            min="1"
-            value={form.required_count}
-            onChange={(e) => setForm({ ...form, required_count: e.target.value })}
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-          />
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="block text-xs text-slate-500">건수</label>
+            <input
+              type="number"
+              min="1"
+              value={form.required_count}
+              onChange={(e) => setForm({ ...form, required_count: e.target.value })}
+              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-slate-500">건당 단가 (원)</label>
+            <input
+              type="number"
+              min="0"
+              value={form.unit_price}
+              onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
+              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
         </div>
         <div>
-          <label className="block text-xs text-slate-500">건당 단가 (원)</label>
-          <input
-            type="number"
-            min="0"
-            value={form.unit_price}
-            onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-          />
-        </div>
-        <div className="sm:col-span-6">
           <label className="block text-xs text-slate-500">작업요일 (선택한 요일에만 오픈풀에 노출)</label>
           <div className="mt-1 flex gap-1">
             {WEEKDAY_LABELS.map((label, day) => (
@@ -164,7 +166,7 @@ export default function TargetForm() {
             ))}
           </div>
         </div>
-        <div className="flex items-end sm:col-span-6">
+        <div>
           <button
             type="submit"
             disabled={submitting || !form.store_id}
@@ -173,14 +175,14 @@ export default function TargetForm() {
             등록 (오픈풀에 공개)
           </button>
         </div>
-        <p className="text-xs text-slate-400 sm:col-span-6">
+        <p className="text-xs text-slate-400">
           매장 목록에 없다면 먼저 "매장 관리" 탭에서 등록해주세요. 등록된 작업은 자동
-          배정되지 않고 오픈풀에 공개되며, 리뷰어가 셀프서비스 포털에서 직접 "할게요"를
-          눌러 클레임합니다. 작업 제한시간(리뷰어가 클레임 후 결과 링크를 제출해야 하는
-          시간)은 "설정" 탭에서 관리합니다.
+          배정되지 않고 오픈풀에 공개되며, 리뷰어가 셀프서비스 포털의 "가능한 작업 (오픈풀)"
+          목록에서 직접 "할게요"를 눌러 클레임합니다. 작업 제한시간(리뷰어가 클레임 후 결과
+          링크를 제출해야 하는 시간)은 "설정" 탭에서 관리합니다.
         </p>
-        {message && <p className="text-sm text-green-700 sm:col-span-6">{message}</p>}
-        {error && <p className="text-sm text-red-600 sm:col-span-6">{error}</p>}
+        {message && <p className="text-sm text-green-700">{message}</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
       </form>
 
       <TargetList targets={targets} onDelete={handleDelete} />

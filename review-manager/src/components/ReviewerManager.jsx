@@ -1,6 +1,7 @@
 import { Search, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
+import { GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
 import ReviewerCard from './ReviewerCard.jsx'
 import ReviewerForm from './ReviewerForm.jsx'
 
@@ -13,6 +14,10 @@ export default function ReviewerManager() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [genderFilter, setGenderFilter] = useState('')
+  const [regionFilter, setRegionFilter] = useState('')
+  const [ageGroupFilter, setAgeGroupFilter] = useState('')
   const [search, setSearch] = useState('')
   const fileInputRef = useRef(null)
 
@@ -96,17 +101,30 @@ export default function ReviewerManager() {
     }
   }
 
+  const regionOptions = useMemo(
+    () => [...new Set(reviewers.map((r) => r.region).filter(Boolean))].sort(),
+    [reviewers],
+  )
+  const ageGroupOptions = useMemo(
+    () => [...new Set(reviewers.map((r) => r.age_group).filter(Boolean))].sort(),
+    [reviewers],
+  )
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return reviewers.filter((r) => {
       if (statusFilter === 'active' && !r.is_active) return false
       if (statusFilter === 'inactive' && r.is_active) return false
+      if (categoryFilter && r.category !== categoryFilter) return false
+      if (genderFilter && r.gender !== genderFilter) return false
+      if (regionFilter && r.region !== regionFilter) return false
+      if (ageGroupFilter && r.age_group !== ageGroupFilter) return false
       if (query && !r.name.toLowerCase().includes(query) && !r.contact_info?.includes(query)) {
         return false
       }
       return true
     })
-  }, [reviewers, statusFilter, search])
+  }, [reviewers, statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search])
 
   const visible = filtered.slice(0, MAX_VISIBLE)
 
@@ -166,6 +184,60 @@ export default function ReviewerManager() {
           <option value="active">연락가능만</option>
           <option value="inactive">연락불가만</option>
         </select>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          <option value="">전체 카테고리</option>
+          {Object.entries(REVIEWER_CATEGORY_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={genderFilter}
+          onChange={(e) => setGenderFilter(e.target.value)}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          <option value="">전체 성별</option>
+          {Object.entries(GENDER_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={regionFilter}
+          onChange={(e) => setRegionFilter(e.target.value)}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          <option value="">전체 지역</option>
+          {regionOptions.map((region) => (
+            <option key={region} value={region}>
+              {region}
+            </option>
+          ))}
+        </select>
+        <select
+          value={ageGroupFilter}
+          onChange={(e) => setAgeGroupFilter(e.target.value)}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          <option value="">전체 연령대</option>
+          {ageGroupOptions.map((age) => (
+            <option key={age} value={age}>
+              {age}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-slate-400">
+          성별/지역/연령대는 체험단에만 적용됩니다
+        </span>
       </div>
 
       {filtered.length > MAX_VISIBLE && (

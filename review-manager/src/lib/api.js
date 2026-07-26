@@ -79,6 +79,8 @@ export const api = {
   updateTaskSettlement: (id, data) =>
     request(`/tasks/${id}/settlement`, { method: 'PATCH', body: JSON.stringify(data) }),
   recheckBlind: (id) => request(`/tasks/${id}/recheck-blind`, { method: 'POST' }),
+  assignTask: (id, accountId) =>
+    request(`/tasks/${id}/assign`, { method: 'POST', body: JSON.stringify({ account_id: accountId }) }),
 
   getSettlementSummary: () => request('/settlement/summary'),
 

@@ -4,6 +4,8 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict
 
 Platform = Literal["naver", "kakao"]
+ReviewerCategory = Literal["admin", "reviewer", "experience", "press"]
+Gender = Literal["male", "female"]
 
 
 # --- ReviewAccount ---
@@ -35,16 +37,25 @@ class ReviewAccountOut(BaseModel):
 
 class ReviewerCreate(BaseModel):
     name: str
+    category: ReviewerCategory = "reviewer"
     memo: Optional[str] = None
     contact_info: Optional[str] = None
     is_active: bool = True
+    # 체험단 전용
+    region: Optional[str] = None
+    age_group: Optional[str] = None
+    gender: Optional[Gender] = None
 
 
 class ReviewerUpdate(BaseModel):
     name: Optional[str] = None
+    category: Optional[ReviewerCategory] = None
     memo: Optional[str] = None
     contact_info: Optional[str] = None
     is_active: Optional[bool] = None
+    region: Optional[str] = None
+    age_group: Optional[str] = None
+    gender: Optional[Gender] = None
 
 
 class ReviewerOut(BaseModel):
@@ -52,9 +63,13 @@ class ReviewerOut(BaseModel):
 
     id: int
     name: str
+    category: ReviewerCategory
     memo: Optional[str] = None
     contact_info: Optional[str] = None
     is_active: bool
+    region: Optional[str] = None
+    age_group: Optional[str] = None
+    gender: Optional[Gender] = None
     created_at: datetime.datetime
     accounts: list[ReviewAccountOut] = []
 
@@ -66,17 +81,17 @@ class StoreCreate(BaseModel):
     name: str
     url: str
     address: Optional[str] = None
-    business_hours: Optional[str] = None
-    menu: Optional[str] = None
+    representative_hours: Optional[str] = None  # 대표시간
+    representative_product: Optional[str] = None  # 대표상품
     cooldown_days: int = 90
 
 
 class StoreUpdate(BaseModel):
-    # name/address/business_hours are crawled facts about the real place and
-    # are intentionally not editable after creation — fix a wrong value by
-    # deleting the store and re-registering it with the right URL.
+    # name/address/representative_hours are crawled facts about the real
+    # place and are intentionally not editable after creation — fix a wrong
+    # value by deleting the store and re-registering it with the right URL.
     url: Optional[str] = None
-    menu: Optional[str] = None
+    representative_product: Optional[str] = None
     cooldown_days: Optional[int] = None
 
 
@@ -88,10 +103,11 @@ class StoreOut(BaseModel):
     name: str
     url: str
     address: Optional[str] = None
-    business_hours: Optional[str] = None
-    menu: Optional[str] = None
+    representative_hours: Optional[str] = None
+    representative_product: Optional[str] = None
     cooldown_days: int
     created_at: datetime.datetime
+    updated_at: Optional[datetime.datetime] = None
 
 
 class StoreInfoFetchIn(BaseModel):
@@ -101,8 +117,8 @@ class StoreInfoFetchIn(BaseModel):
 class StoreInfoFetchOut(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
-    business_hours: Optional[str] = None
-    menu: Optional[str] = None
+    representative_hours: Optional[str] = None
+    representative_product: Optional[str] = None
 
 
 # --- ReviewTarget ---
@@ -173,6 +189,7 @@ class TaskOut(BaseModel):
     reviewer_id: Optional[int] = None
     reviewer_name: Optional[str] = None
     reviewer_contact_info: Optional[str] = None
+    reviewer_category: Optional[str] = None
     account_label: Optional[str] = None
     store_id: Optional[int] = None
     store_name: Optional[str] = None
@@ -244,6 +261,12 @@ class OtpVerifyOut(BaseModel):
 
 
 class PortalClaimIn(BaseModel):
+    account_id: int
+
+
+# --- Admin-side direct assignment (개별연락 후 배정) ---
+
+class TaskAssignIn(BaseModel):
     account_id: int
 
 

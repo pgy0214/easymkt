@@ -23,9 +23,13 @@ class Reviewer(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    category = Column(String, nullable=False, default="reviewer")  # admin|reviewer|experience|press
     memo = Column(String, nullable=True)
     contact_info = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)  # 연락가능(작업배정 대상) 여부
+    region = Column(String, nullable=True)  # 체험단 전용
+    age_group = Column(String, nullable=True)  # 체험단 전용
+    gender = Column(String, nullable=True)  # 체험단 전용, male|female
     otp_code = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
@@ -57,10 +61,11 @@ class Store(Base):
     name = Column(String, nullable=False)
     url = Column(String, nullable=False)
     address = Column(String, nullable=True)
-    business_hours = Column(String, nullable=True)
-    menu = Column(String, nullable=True)
+    representative_hours = Column(String, nullable=True)  # "대표시간" — common hours across business days
+    representative_product = Column(String, nullable=True)  # "대표상품" — menu/rooms/services depending on category
     cooldown_days = Column(Integer, nullable=False, default=90)  # 계정당 재작업 가능 주기
     created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     targets = relationship("ReviewTarget", back_populates="store")
 

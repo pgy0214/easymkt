@@ -23,6 +23,16 @@ def run_migrations(engine) -> None:
             conn, "reviewers", "otp_expires_at", "otp_expires_at DATETIME"
         )
 
+        # reviewers: category distinguishes 관리자(자체보유계정)/리뷰어/체험단/기자단 —
+        # existing rows default to 'reviewer' (that's what they all were before
+        # this column existed). region/age_group/gender are 체험단-only fields.
+        _add_column_if_missing(
+            conn, "reviewers", "category", "category TEXT NOT NULL DEFAULT 'reviewer'"
+        )
+        _add_column_if_missing(conn, "reviewers", "region", "region TEXT")
+        _add_column_if_missing(conn, "reviewers", "age_group", "age_group TEXT")
+        _add_column_if_missing(conn, "reviewers", "gender", "gender TEXT")
+
         # settings: default claim-time presets, now in minutes (was hours). Add
         # the new columns, copy over converted values, then drop the old ones —
         # settings only ever has one row and it's worth preserving in place
@@ -62,11 +72,28 @@ def run_migrations(engine) -> None:
             if "kakao_default_claim_hours" in settings_columns:
                 conn.execute(text("ALTER TABLE settings DROP COLUMN kakao_default_claim_hours"))
 
-        # stores: address/business_hours/menu are optional columns filled in
-        # by the URL auto-fill crawler (or left blank and typed manually)
+        # stores: address is an optional column filled in by the URL
+        # auto-fill crawler. business_hours/menu were renamed to
+        # representative_hours/representative_product (대표시간/대표상품) —
+        # copy over any existing values before dropping the old columns.
         _add_column_if_missing(conn, "stores", "address", "address TEXT")
-        _add_column_if_missing(conn, "stores", "business_hours", "business_hours TEXT")
-        _add_column_if_missing(conn, "stores", "menu", "menu TEXT")
+        _add_column_if_missing(conn, "stores", "updated_at", "updated_at DATETIME")
+
+        store_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(stores)"))}
+        if "representative_hours" not in store_columns:
+            conn.execute(text("ALTER TABLE stores ADD COLUMN representative_hours TEXT"))
+            if "business_hours" in store_columns:
+                conn.execute(
+                    text("UPDATE stores SET representative_hours = business_hours")
+                )
+        if "representative_product" not in store_columns:
+            conn.execute(text("ALTER TABLE stores ADD COLUMN representative_product TEXT"))
+            if "menu" in store_columns:
+                conn.execute(text("UPDATE stores SET representative_product = menu"))
+        if "business_hours" in store_columns:
+            conn.execute(text("ALTER TABLE stores DROP COLUMN business_hours"))
+        if "menu" in store_columns:
+            conn.execute(text("ALTER TABLE stores DROP COLUMN menu"))
 
         # review_targets: work_days_raw restricts which weekdays a campaign's
         # tasks show up in the open pool (null = every day)

@@ -47,3 +47,17 @@ export function formatWorkDays(days) {
     .map((d) => WEEKDAY_LABELS[d])
     .join(',')
 }
+
+export const REVIEWER_CATEGORY_LABEL = {
+  admin: '관리자',
+  reviewer: '리뷰어',
+  experience: '체험단',
+  press: '기자단',
+}
+
+export const GENDER_LABEL = {
+  male: '남성',
+  female: '여성',
+}
+
+export const AGE_GROUP_OPTIONS = ['10대', '20대', '30대', '40대', '50대', '60대 이상']

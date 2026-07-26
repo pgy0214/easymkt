@@ -18,6 +18,7 @@ def list_tasks(
     status: Optional[str] = None,
     blind_status: Optional[str] = None,
     settlement_status: Optional[str] = None,
+    reviewer_category: Optional[str] = None,
     sort: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
@@ -29,6 +30,7 @@ def list_tasks(
         status=status,
         blind_status=blind_status,
         settlement_status=settlement_status,
+        reviewer_category=reviewer_category,
         sort=sort,
     )
     return [crud.task_to_out(t) for t in tasks]
@@ -62,6 +64,22 @@ def update_settlement(
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
     task = crud.update_task_settlement(db, task, data)
     return crud.task_to_out(task)
+
+
+@router.post("/{task_id}/assign", response_model=schemas.TaskOut)
+def assign_task(task_id: int, data: schemas.TaskAssignIn, db: Session = Depends(get_db)):
+    """관리자가 리뷰어를 직접 골라 오픈풀 작업을 배정 (개별연락 후 배정) —
+    포털 셀프클레임과 동일한 검증(플랫폼 일치, 쿨다운)을 그대로 재사용한다."""
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
+    account = crud.get_account(db, data.account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
+    try:
+        return crud.task_to_out(crud.claim_task(db, task, account))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/{task_id}/recheck-blind", response_model=schemas.TaskOut)

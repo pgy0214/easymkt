@@ -44,9 +44,13 @@ def verify_otp(db: Session, reviewer: models.Reviewer, code: str) -> bool:
 def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewer:
     reviewer = models.Reviewer(
         name=data.name,
+        category=data.category,
         memo=data.memo,
         contact_info=data.contact_info,
         is_active=data.is_active,
+        region=data.region,
+        age_group=data.age_group,
+        gender=data.gender,
     )
     db.add(reviewer)
     db.commit()
@@ -59,12 +63,20 @@ def update_reviewer(
 ) -> models.Reviewer:
     if data.name is not None:
         reviewer.name = data.name
+    if data.category is not None:
+        reviewer.category = data.category
     if data.memo is not None:
         reviewer.memo = data.memo
     if data.contact_info is not None:
         reviewer.contact_info = data.contact_info
     if data.is_active is not None:
         reviewer.is_active = data.is_active
+    if data.region is not None:
+        reviewer.region = data.region
+    if data.age_group is not None:
+        reviewer.age_group = data.age_group
+    if data.gender is not None:
+        reviewer.gender = data.gender
     db.commit()
     db.refresh(reviewer)
     return reviewer
@@ -195,8 +207,8 @@ def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
         name=data.name,
         url=data.url,
         address=data.address,
-        business_hours=data.business_hours,
-        menu=data.menu,
+        representative_hours=data.representative_hours,
+        representative_product=data.representative_product,
         cooldown_days=data.cooldown_days,
     )
     db.add(store)
@@ -206,12 +218,12 @@ def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
 
 
 def update_store(db: Session, store: models.Store, data: schemas.StoreUpdate) -> models.Store:
-    # name/address/business_hours are intentionally not in StoreUpdate — see
-    # the comment there
+    # name/address/representative_hours are intentionally not in StoreUpdate
+    # — see the comment there
     if data.url is not None:
         store.url = data.url
-    if data.menu is not None:
-        store.menu = data.menu
+    if data.representative_product is not None:
+        store.representative_product = data.representative_product
     if data.cooldown_days is not None:
         store.cooldown_days = data.cooldown_days
     db.commit()
@@ -328,6 +340,7 @@ def task_to_out(task: models.Task) -> schemas.TaskOut:
         out.reviewer_id = reviewer.id
         out.reviewer_name = reviewer.name
         out.reviewer_contact_info = reviewer.contact_info
+        out.reviewer_category = reviewer.category
     if account is not None:
         out.account_label = account.label
     if target is not None and target.store is not None:
@@ -345,6 +358,7 @@ def get_tasks(
     status: str | None = None,
     blind_status: str | None = None,
     settlement_status: str | None = None,
+    reviewer_category: str | None = None,
     sort: str | None = None,
 ) -> list[models.Task]:
     # outerjoin (not join) — 'open' pool tasks have no review_account_id yet and
@@ -353,6 +367,10 @@ def get_tasks(
         models.ReviewAccount, models.Task.review_account_id == models.ReviewAccount.id
     )
 
+    if reviewer_category is not None:
+        query = query.outerjoin(
+            models.Reviewer, models.ReviewAccount.reviewer_id == models.Reviewer.id
+        ).filter(models.Reviewer.category == reviewer_category)
     if reviewer_id is not None:
         query = query.filter(models.ReviewAccount.reviewer_id == reviewer_id)
     if account_id is not None:

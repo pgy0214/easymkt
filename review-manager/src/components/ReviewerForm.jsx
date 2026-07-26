@@ -1,12 +1,23 @@
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
+import { AGE_GROUP_OPTIONS, GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
 
-const EMPTY = { name: '', memo: '', contact_info: '' }
+const EMPTY = {
+  category: 'reviewer',
+  name: '',
+  memo: '',
+  contact_info: '',
+  region: '',
+  age_group: '',
+  gender: '',
+}
 
 export default function ReviewerForm({ onCreate }) {
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+
+  const isExperience = form.category === 'experience'
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -15,11 +26,15 @@ export default function ReviewerForm({ onCreate }) {
     setError(null)
     try {
       await onCreate({
+        category: form.category,
         name: form.name.trim(),
         memo: form.memo.trim() || null,
         contact_info: form.contact_info.trim() || null,
+        region: isExperience ? form.region.trim() || null : null,
+        age_group: isExperience ? form.age_group || null : null,
+        gender: isExperience ? form.gender || null : null,
       })
-      setForm(EMPTY)
+      setForm({ ...EMPTY, category: form.category })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -32,6 +47,20 @@ export default function ReviewerForm({ onCreate }) {
       onSubmit={handleSubmit}
       className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-white p-4"
     >
+      <div>
+        <label className="block text-xs text-slate-500">카테고리</label>
+        <select
+          value={form.category}
+          onChange={(e) => setForm({ ...form, category: e.target.value })}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          {Object.entries(REVIEWER_CATEGORY_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
       <div>
         <label className="block text-xs text-slate-500">이름</label>
         <input
@@ -56,6 +85,49 @@ export default function ReviewerForm({ onCreate }) {
           className="w-56 rounded border border-slate-300 px-2 py-1 text-sm"
         />
       </div>
+      {isExperience && (
+        <>
+          <div>
+            <label className="block text-xs text-slate-500">지역</label>
+            <input
+              value={form.region}
+              onChange={(e) => setForm({ ...form, region: e.target.value })}
+              placeholder="예: 서울 강남구"
+              className="w-32 rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500">연령대</label>
+            <select
+              value={form.age_group}
+              onChange={(e) => setForm({ ...form, age_group: e.target.value })}
+              className="rounded border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="">선택안함</option>
+              {AGE_GROUP_OPTIONS.map((age) => (
+                <option key={age} value={age}>
+                  {age}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500">성별</label>
+            <select
+              value={form.gender}
+              onChange={(e) => setForm({ ...form, gender: e.target.value })}
+              className="rounded border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="">선택안함</option>
+              {Object.entries(GENDER_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
       <button
         type="submit"
         disabled={submitting}

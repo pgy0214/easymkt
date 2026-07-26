@@ -9,6 +9,7 @@ const EMPTY_FILTERS = {
   status: '',
   blind_status: '',
   settlement_status: '',
+  reviewer_category: '',
 }
 
 const RECENTLY_EXPIRED_MS = 24 * 60 * 60 * 1000

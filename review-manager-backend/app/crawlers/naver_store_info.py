@@ -2,26 +2,45 @@ import re
 import time as time_module
 
 from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
 
 from app.crawlers.base import chrome_driver, logger
 
 # NOTE: unlike the review crawlers (adapted from a working legacy script),
-# there was no existing reference code for scraping store name/address/menu,
-# so these selectors are best-effort guesses at Naver Place's current DOM.
-# If a field consistently comes back empty, open the store page with
+# there was no existing reference code for scraping store info, so these
+# selectors are best-effort guesses at Naver Place's current DOM. If a field
+# consistently comes back empty, open the store page with
 # CRAWLER_HEADLESS=false, inspect the real class names, and update the lists
 # below — the rest of the flow (partial results, admin fills in the gaps)
 # doesn't need to change.
 NAME_SELECTORS = ["h1#_header", "div.V4UO6 span.IY7ZX", "span.GHAhO"]
 ADDRESS_SELECTORS = ["span.LDgIH", ".PkgBl .LDgIH", "div.O8qbU span.place_bluelink"]
-# only a live "영업 중 · 21:00에 영업 종료" style status line, not the full
-# weekly schedule (that's behind a click-to-expand toggle on the page) — good
-# enough to tell the admin whether hours are registered at all
-BUSINESS_HOURS_SELECTORS = ["div.A_cdD"]
+
+DAY_NAME_TO_INDEX = {
+    "월요일": 0,
+    "화요일": 1,
+    "수요일": 2,
+    "목요일": 3,
+    "금요일": 4,
+    "토요일": 5,
+    "일요일": 6,
+}
+TIME_RANGE_PATTERN = re.compile(r"(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})")
+
+# only verified against restaurant/cafe-style pages — accommodation, hair
+# salons, etc. likely use a different sub-page entirely (Naver Place tabs
+# differ by business category) and are not covered yet. When a store's
+# category doesn't match one we recognize, representative_product just comes
+# back empty rather than risk scraping the wrong section (a genuine mistake
+# caught during testing: this store's generic "가격표" block on /home turned
+# out to be promotional taglines, not real prices, for a non-restaurant
+# category — so we only trust the dedicated /menu/list sub-page).
 MENU_ITEM_SELECTORS = ["li.E2jtL", "li.gHmZ_"]
 MENU_NAME_SELECTORS = ["span.lPzHi", "span.MI3iK"]
 MENU_PRICE_SELECTORS = ["div.GXS1X em", "div.GXS1X"]
 MAX_MENU_ITEMS = 30
+
+RESTAURANT_LIKE_CATEGORIES = {"restaurant", "cafe", "bakery", "bar"}
 
 
 def _first_text(soup, selectors: list[str]) -> str | None:
@@ -62,14 +81,77 @@ def _extract_address(soup) -> str | None:
     return _first_text(soup, ADDRESS_SELECTORS)
 
 
-def _extract_business_hours(soup) -> str | None:
-    for sel in BUSINESS_HOURS_SELECTORS:
-        el = soup.select_one(sel)
-        if el:
-            text = el.get_text(" ", strip=True)
-            if text:
-                return text
-    return None
+def _extract_business_category(current_url: str, soup) -> str | None:
+    match = re.search(r"businessCategory=([a-zA-Z_]+)", current_url)
+    if match:
+        return match.group(1)
+    match = re.search(r'"businessCategory"\s*:\s*"([a-zA-Z_]+)"', str(soup))
+    return match.group(1) if match else None
+
+
+def _to_minutes(text: str) -> int | None:
+    try:
+        h, m = text.split(":")
+        return int(h) * 60 + int(m)
+    except ValueError:
+        return None
+
+
+def _minutes_to_text(minutes: int) -> str:
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def _parse_hour_rows(soup) -> list[tuple[int, int]]:
+    """Parse the expanded per-day schedule (span.i8cJw day label followed by
+    a sibling div.H3ua4 time range) into (start_minutes, end_minutes) pairs
+    for days the store is actually open. "매일" expands to all 7 days;
+    unrecognized labels (브레이크타임/정기휴무/공휴일 등) are skipped — they
+    aren't a business day's open hours."""
+    ranges = []
+    for label_el in soup.select("span.i8cJw"):
+        label = label_el.get_text(strip=True)
+        time_el = label_el.find_next("div", class_="H3ua4")
+        if not time_el:
+            continue
+        match = TIME_RANGE_PATTERN.search(time_el.get_text(strip=True))
+        if not match:
+            continue
+        start, end = _to_minutes(match.group(1)), _to_minutes(match.group(2))
+        if start is None or end is None or end <= start:
+            continue
+        if label == "매일":
+            ranges.extend([(start, end)] * 7)
+        elif label in DAY_NAME_TO_INDEX:
+            ranges.append((start, end))
+    return ranges
+
+
+def _compute_representative_hours(ranges: list[tuple[int, int]]) -> str | None:
+    """대표시간 = the time window that's open across every business day —
+    e.g. Mon 10-18 / Tue 11-18 / Wed 10-18 → 11:00~18:00 (latest common
+    start, earliest common end). Returns None if there's no common window
+    (or nothing was parsed)."""
+    if not ranges:
+        return None
+    start = max(r[0] for r in ranges)
+    end = min(r[1] for r in ranges)
+    if start >= end:
+        return None
+    return f"{_minutes_to_text(start)}~{_minutes_to_text(end)}"
+
+
+def _extract_representative_hours(driver) -> str | None:
+    try:
+        toggle = driver.find_element(
+            By.XPATH, "//*[normalize-space(text())='펼쳐보기']/ancestor::a[1]"
+        )
+        driver.execute_script("arguments[0].click()", toggle)
+        time_module.sleep(1.5)
+    except Exception:
+        return None  # no expandable hours section on this page at all
+
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    return _compute_representative_hours(_parse_hour_rows(soup))
 
 
 # matches the numeric place id out of any of Naver's URL shapes for a store
@@ -78,7 +160,12 @@ PLACE_ID_PATTERN = re.compile(r"/(?:place|restaurant|accommodation|entry/place)/
 
 
 def fetch_store_info(store_url: str) -> dict:
-    result: dict = {"name": None, "address": None, "business_hours": None, "menu": None}
+    result: dict = {
+        "name": None,
+        "address": None,
+        "representative_hours": None,
+        "representative_product": None,
+    }
 
     with chrome_driver() as driver:
         driver.get(store_url)
@@ -97,36 +184,40 @@ def fetch_store_info(store_url: str) -> dict:
         soup = BeautifulSoup(driver.page_source, "html.parser")
         result["name"] = _extract_name(soup)
         result["address"] = _extract_address(soup)
-        result["business_hours"] = _extract_business_hours(soup)
+        category = _extract_business_category(driver.current_url, soup)
+        result["representative_hours"] = _extract_representative_hours(driver)
 
-        try:
-            menu_url = (
-                f"https://m.place.naver.com/place/{place_id}/menu/list"
-                if place_id
-                else store_url.split("?")[0].rstrip("/") + "/menu/list"
-            )
-            driver.get(menu_url)
-            time_module.sleep(2)
-            menu_soup = BeautifulSoup(driver.page_source, "html.parser")
+        if category in RESTAURANT_LIKE_CATEGORIES or category is None:
+            try:
+                menu_url = (
+                    f"https://m.place.naver.com/place/{place_id}/menu/list"
+                    if place_id
+                    else store_url.split("?")[0].rstrip("/") + "/menu/list"
+                )
+                driver.get(menu_url)
+                time_module.sleep(2)
+                menu_soup = BeautifulSoup(driver.page_source, "html.parser")
 
-            items: list = []
-            for sel in MENU_ITEM_SELECTORS:
-                found = menu_soup.select(sel)
-                if found:
-                    items = found
-                    break
+                items: list = []
+                for sel in MENU_ITEM_SELECTORS:
+                    found = menu_soup.select(sel)
+                    if found:
+                        items = found
+                        break
 
-            menu_lines = []
-            for item in items[:MAX_MENU_ITEMS]:
-                name = _first_text(item, MENU_NAME_SELECTORS)
-                if not name:
-                    continue
-                price = _first_text(item, MENU_PRICE_SELECTORS) or ""
-                menu_lines.append(f"{name} {price}".strip())
+                lines = []
+                for item in items[:MAX_MENU_ITEMS]:
+                    name = _first_text(item, MENU_NAME_SELECTORS)
+                    if not name:
+                        continue
+                    price = _first_text(item, MENU_PRICE_SELECTORS) or ""
+                    lines.append(f"{name} {price}".strip())
 
-            if menu_lines:
-                result["menu"] = ", ".join(menu_lines)
-        except Exception:
-            logger.exception("네이버 매장 메뉴 크롤링 실패: %s", store_url)
+                if lines:
+                    result["representative_product"] = ", ".join(lines)
+            except Exception:
+                logger.exception("네이버 매장 대표상품 크롤링 실패: %s", store_url)
+        # other categories (숙박/미용실 등) don't have a verified selector
+        # yet — leave representative_product empty rather than guess wrong
 
     return result

@@ -1,10 +1,20 @@
-import { Trash2 } from 'lucide-react'
+import { Send, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
 import AccountForm from './AccountForm.jsx'
 import AccountStoreBadges from './AccountStoreBadges.jsx'
+import AssignTaskModal from './AssignTaskModal.jsx'
 
 const PLATFORM_BADGE = {
   naver: 'bg-green-100 text-green-700',
   kakao: 'bg-yellow-100 text-yellow-700',
+}
+
+const CATEGORY_BADGE = {
+  admin: 'bg-purple-100 text-purple-700',
+  reviewer: 'bg-slate-100 text-slate-600',
+  experience: 'bg-pink-100 text-pink-700',
+  press: 'bg-blue-100 text-blue-700',
 }
 
 export default function ReviewerCard({
@@ -14,11 +24,18 @@ export default function ReviewerCard({
   onCreateAccount,
   onDeleteAccount,
 }) {
+  const [assigning, setAssigning] = useState(false)
+
   return (
     <div className={`rounded-lg border bg-white p-4 ${reviewer.is_active ? 'border-slate-200' : 'border-slate-200 opacity-70'}`}>
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
+            <span
+              className={`rounded px-1.5 py-0.5 text-xs font-medium ${CATEGORY_BADGE[reviewer.category]}`}
+            >
+              {REVIEWER_CATEGORY_LABEL[reviewer.category]}
+            </span>
             <h3 className="font-semibold text-slate-900">{reviewer.name}</h3>
             <button
               onClick={() => onToggleActive(reviewer.id, !reviewer.is_active)}
@@ -35,14 +52,30 @@ export default function ReviewerCard({
           {reviewer.contact_info && (
             <p className="text-sm text-slate-600">연락처: {reviewer.contact_info}</p>
           )}
+          {reviewer.category === 'experience' && (reviewer.region || reviewer.age_group || reviewer.gender) && (
+            <p className="text-xs text-slate-500">
+              {[reviewer.region, reviewer.age_group, reviewer.gender && GENDER_LABEL[reviewer.gender]]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
         </div>
-        <button
-          onClick={() => onDeleteReviewer(reviewer.id)}
-          className="text-slate-400 hover:text-red-600"
-          title="리뷰어 삭제"
-        >
-          <Trash2 size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAssigning(true)}
+            className="text-slate-400 hover:text-blue-600"
+            title="작업 배정"
+          >
+            <Send size={16} />
+          </button>
+          <button
+            onClick={() => onDeleteReviewer(reviewer.id)}
+            className="text-slate-400 hover:text-red-600"
+            title="리뷰어 삭제"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="mt-3 space-y-1">
@@ -83,6 +116,14 @@ export default function ReviewerCard({
       </div>
 
       <AccountForm onCreate={(data) => onCreateAccount(reviewer.id, data)} />
+
+      {assigning && (
+        <AssignTaskModal
+          reviewer={reviewer}
+          onClose={() => setAssigning(false)}
+          onAssigned={() => setAssigning(false)}
+        />
+      )}
     </div>
   )
 }

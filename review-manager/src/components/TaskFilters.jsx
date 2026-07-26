@@ -1,4 +1,4 @@
-import { BLIND_STATUS_LABEL, PLATFORM_LABEL, STATUS_LABEL } from '../lib/format.js'
+import { BLIND_STATUS_LABEL, PLATFORM_LABEL, REVIEWER_CATEGORY_LABEL, STATUS_LABEL } from '../lib/format.js'
 
 export default function TaskFilters({ filters, onChange, reviewers }) {
   function set(key, value) {
@@ -16,6 +16,19 @@ export default function TaskFilters({ filters, onChange, reviewers }) {
         {reviewers.map((r) => (
           <option key={r.id} value={r.id}>
             {r.name}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={filters.reviewer_category}
+        onChange={(e) => set('reviewer_category', e.target.value)}
+        className="rounded border border-slate-300 px-2 py-1 text-sm"
+      >
+        <option value="">전체 카테고리</option>
+        {Object.entries(REVIEWER_CATEGORY_LABEL).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
           </option>
         ))}
       </select>
