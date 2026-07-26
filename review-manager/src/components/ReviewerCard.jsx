@@ -1,6 +1,6 @@
 import { Trash2 } from 'lucide-react'
 import AccountForm from './AccountForm.jsx'
-import AccountStoreMatrix from './AccountStoreMatrix.jsx'
+import AccountStoreBadges from './AccountStoreBadges.jsx'
 
 const PLATFORM_BADGE = {
   naver: 'bg-green-100 text-green-700',
@@ -54,7 +54,7 @@ export default function ReviewerCard({
             key={account.id}
             className="flex items-center justify-between rounded border border-slate-100 bg-slate-50 px-3 py-1.5 text-sm"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${PLATFORM_BADGE[account.platform]}`}>
                 {account.platform === 'naver' ? '네이버' : '카카오'}
               </span>
@@ -69,10 +69,11 @@ export default function ReviewerCard({
                   프로필
                 </a>
               )}
+              <AccountStoreBadges accountId={account.id} />
             </div>
             <button
               onClick={() => onDeleteAccount(reviewer.id, account.id)}
-              className="text-slate-400 hover:text-red-600"
+              className="shrink-0 text-slate-400 hover:text-red-600"
               title="계정 삭제"
             >
               <Trash2 size={14} />
@@ -80,8 +81,6 @@ export default function ReviewerCard({
           </div>
         ))}
       </div>
-
-      <AccountStoreMatrix accounts={reviewer.accounts} />
 
       <AccountForm onCreate={(data) => onCreateAccount(reviewer.id, data)} />
     </div>
