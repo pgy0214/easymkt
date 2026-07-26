@@ -1,0 +1,353 @@
+# -*- coding: utf-8 -*-
+"""Receipt (카드결제승인) image generator.
+
+Adapted from the legacy `영수증개발 코드\\1. 영수증 생성 후 업로드\\V1페이히어.py`
+script (and the cleaner `runner_V1(체리베이스먼트).py` parametrization pattern
+it's normally driven by). The rendering routine below — fonts, canvas size,
+layout, dashed separators, card-approval randomization table — is copied
+unchanged from that script on purpose: the receipt's visual appearance must
+stay exactly as validated before. The only things that differ from the
+legacy version are:
+  - store name/address/business info and menu come from this app's Store /
+    ReviewTarget records instead of a per-store runner_V1(...).py file that
+    had to be hand-copied for every new store
+  - the date/time is the task's actual assigned date (+ a random time within
+    the store's representative business hours) instead of the legacy
+    script's own random day-offset cycle
+"""
+import os
+import random
+import re
+from datetime import datetime
+
+from PIL import Image, ImageDraw, ImageFont
+
+UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+
+# 폰트 경로 — 레거시 코드와 동일 (건드리지 말 것)
+PATH_SANDOLL = r"C:\Users\PARK GWANYONG\AppData\Local\Microsoft\Windows\Fonts\AppleSDGothicNeoL.ttf"
+PATH_ARIAL = r"C:\Windows\Fonts\Arial.ttf"
+
+# ============================ RULES (레거시 그대로) ============================
+RULES_TEXT = r"""
+카드번호1/4	카드번호2/4	승인번호(8자리)	매입사	카드종류
+4678	5600	"8"+7자리랜덤	우리	우리카드
+5289	3600	"8"+7자리랜덤	우리	우리카드
+5317	6400	"8"+7자리랜덤	우리	우리카드
+5376	9900	"8"+7자리랜덤	우리	우리카드
+5387	3300	"8"+7자리랜덤	우리	우리카드
+6573	3225	"7"+7자리랜덤	비씨	부산비씨체크
+9440	3255	"7"+7자리랜덤	비씨	부산비씨체크
+5388	3255	"7"+7자리랜덤	비씨	부산비씨체크
+9420	3255	"7"+7자리랜덤	비씨	부산비씨체크
+9417	2400	"7"+7자리랜덤	비씨	우리비씨체크
+5370	4460	"7"+7자리랜덤	비씨	우리비씨체크
+9421	2000	"7"+7자리랜덤	비씨	우리비씨체크
+9425	2090	"7"+7자리랜덤	비씨	우리카드
+9425	2090	"7"+7자리랜덤	비씨	우리카드
+5389	0382	"7"+7자리랜덤	비씨	IBK체크카드
+9446	0360	"7"+7자리랜덤	비씨	IBK체크카드
+4048	0328	"7"+7자리랜덤	비씨	IBK비씨카드
+9490	1928	"00"+6자리	현대	현대
+5531	4200	"00"+6자리	현대	현대마스타
+4025	9600	"00"+6자리	현대	현대비자
+4033	0201	"00"+6자리	현대	현대비자
+4033	0200	"00"+6자리	현대	현대비자
+4033	0202	"00"+6자리	현대	현대비자
+4574	9380	"00"+6자리	현대	현대비자
+9490	1300	"00"+6자리	현대	현대체크
+4045	7700	"00"+6자리	현대	현대카드
+4045	7700	"00"+6자리	현대	현대카드
+4045	7700	"00"+6자리	현대	현대카드
+4232	1000	"00"+6자리	현대	현대카드
+4640	2200	"00"+6자리	현대	현대카드
+4890	1681	"00"+6자리	현대	현대카드
+4890	1602	"00"+6자리	현대	현대카드
+4890	1600	"00"+6자리	현대	현대카드
+5288	1500	"00"+6자리	현대	현대카드
+5288	1500	"00"+6자리	현대	현대카드
+4265	8692	"300"+4자리	KB국민	KB국민카드
+4579	7356	"300"+4자리	KB국민	KB국민카드
+4579	7389	"300"+4자리	KB국민	KB국민카드
+4602	0500	"300"+4자리	KB국민	KB국민카드
+5409	2600	"300"+4자리	KB국민	KB국민카드
+5570	4206	"300"+4자리	KB국민	KB국민카드
+5570	4293	"300"+4자리	KB국민	KB국민카드
+5570	4289	"300"+4자리	KB국민	KB국민카드
+5570	4202	"300"+4자리	KB국민	KB국민카드
+5570	4272	"300"+4자리	KB국민	KB국민카드
+5365	1050	"2"+7자리	KB국민	카카오체크
+5365	1076	"2"+7자리	KB국민	카카오체크
+5365	1039	"2"+7자리	KB국민	카카오체크
+5365	1051	"2"+7자리	KB국민	카카오체크
+5365	1036	"2"+7자리	KB국민	카카오체크
+5365	1070	"2"+7자리	KB국민	카카오체크
+5365	1063	"2"+7자리	KB국민	카카오체크
+5365	1015	"2"+7자리	KB국민	카카오체크
+5365	1037	"2"+7자리	KB국민	카카오체크
+5365	1081	"2"+7자리	KB국민	카카오체크
+5365	1091	"2"+7자리	KB국민	카카오체크
+5365	1050	"2"+7자리	KB국민	카카오체크
+5365	1055	"2"+7자리	KB국민	카카오체크
+5173	3258	"300"+4자리	KB국민	KB국민체크
+5173	3254	"300"+4자리	KB국민	KB국민체크
+5173	3258	"300"+4자리	KB국민	KB국민체크
+5173	3254	"300"+4자리	KB국민	KB국민체크
+5173	3277	"300"+4자리	KB국민	KB국민체크
+5173	3283	"300"+4자리	KB국민	KB국민체크
+5272	8945	"300"+4자리	KB국민	KB국민체크
+5272	8925	"300"+4자리	KB국민	KB국민체크
+5272	8927	"300"+4자리	KB국민	KB국민체크
+5272	8920	"300"+4자리	KB국민	KB국민체크
+5272	8946	"300"+4자리	KB국민	KB국민체크
+5272	8991	"300"+4자리	KB국민	KB국민체크
+9490	9402	"300"+4자리	KB국민	KB국민체크
+9490	9400	"300"+4자리	KB국민	KB국민체크
+9490	9493	"300"+4자리	KB국민	KB국민체크
+9490	9400	"300"+4자리	KB국민	KB국민체크
+9490	9433	"300"+4자리	KB국민	KB국민체크
+""".strip()
+
+_digit_token_re = re.compile(r"[0-9,.:/\-]+")
+
+
+def is_num_token(p: str) -> bool:
+    return _digit_token_re.fullmatch(p) is not None
+
+
+def rand_digits(n: int) -> str:
+    return "".join(str(random.randint(0, 9)) for _ in range(n))
+
+
+def parse_rules(text: str):
+    rules = []
+    rows = [r for r in text.splitlines() if r.strip()]
+    for idx, raw in enumerate(rows):
+        if idx == 0:
+            continue
+        parts = [p.strip() for p in raw.split("\t")]
+        while len(parts) < 5:
+            parts.append("")
+        rules.append(
+            {"g1": parts[0], "g2": parts[1], "approval_rule": parts[2], "acquirer": parts[3], "cardtype": parts[4]}
+        )
+    return rules
+
+
+RULES = parse_rules(RULES_TEXT)
+
+
+def gen_card_by_rule(rule: dict) -> str:
+    g1 = (re.sub(r"\D", "", rule.get("g1", "")) or rand_digits(4))[:4].ljust(4, "0")
+    g2 = (re.sub(r"\D", "", rule.get("g2", "")) or rand_digits(4))[:4].ljust(4, "0")
+    return f"{g1}-{g2}-****-****"
+
+
+def gen_approval(rule: dict) -> str:
+    r = (rule.get("approval_rule") or "").strip()
+    m = re.search(r'"(\d+)"', r)
+    if m:
+        prefix = m.group(1)
+        return (prefix + rand_digits(8 - len(prefix)))[:8]
+    if r.isdigit():
+        return (r + rand_digits(8 - len(r)))[:8]
+    return rand_digits(8)
+
+
+# ============================ RENDER UTILS (레거시 그대로) ============================
+def text_mixed_width(draw, text, base_font, digit_font):
+    parts = re.findall(r"[0-9,.:/\-]+|[^0-9,.:/\-]+", text)
+    total = 0
+    for p in parts:
+        total += draw.textlength(p, font=digit_font if is_num_token(p) else base_font)
+    return total
+
+
+def draw_mixed(draw, x, y, text, base_font, digit_font, fill="black"):
+    parts = re.findall(r"[0-9,.:/\-]+|[^0-9,.:/\-]+", text)
+    cx = x
+    ba, _ = base_font.getmetrics()
+    for p in parts:
+        font = digit_font if is_num_token(p) else base_font
+        oa, _ = font.getmetrics()
+        draw.text((cx, y + (ba - oa)), p, font=font, fill=fill)
+        cx += draw.textlength(p, font=font)
+
+
+def draw_mixed_right(draw, x_right, y, text, base_font, digit_font, fill="black"):
+    w = text_mixed_width(draw, text, base_font, digit_font)
+    draw_mixed(draw, x_right - w, y, text, base_font, digit_font, fill=fill)
+
+
+def dashed(draw, x0, y, count=42, dash_len=7.8, gap=5):
+    cx = x0
+    for _ in range(count):
+        draw.line((cx, y, cx + dash_len, y), fill="black", width=2)
+        cx += dash_len + gap
+    return y + 6
+
+
+# ============================ ORDER SELECTION ============================
+def _pick_random_order(menu_items: list[dict]) -> tuple[list[str], list[int], list[int]]:
+    """레거시 runner의 '방/메뉴 조합을 랜덤으로 골라 자연스러운 합계를 만드는' 방식과
+    동일한 취지 — 입력된 메뉴(최대 3개) 중 1개~전체를 랜덤으로 골라 수량(1~2)도
+    랜덤으로 매긴다."""
+    num = random.randint(1, len(menu_items))
+    chosen = random.sample(menu_items, num)
+    names = [m["name"] for m in chosen]
+    prices = [m["price"] for m in chosen]
+    quantities = [random.randint(1, 2) for _ in chosen]
+    return names, prices, quantities
+
+
+def _random_time_in_range(hours_range: str | None) -> tuple[int, int, int]:
+    """"16:00~21:00" 같은 대표시간 문자열 안에서 랜덤 시:분:초를 고른다.
+    파싱 실패 시 레거시 기본값(17~21시)으로 대체."""
+    if hours_range:
+        m = re.match(r"(\d{1,2}):(\d{2})~(\d{1,2}):(\d{2})", hours_range)
+        if m:
+            start_h, start_m, end_h, end_m = map(int, m.groups())
+            start_total, end_total = start_h * 60 + start_m, end_h * 60 + end_m
+            if end_total > start_total:
+                total = random.randint(start_total, end_total - 1)
+                return total // 60, total % 60, random.randint(0, 59)
+    return random.randint(17, 21), random.randint(0, 59), random.randint(0, 59)
+
+
+# ============================ MAIN ROUTINE (레거시 make_one_receipt 이식) ============================
+def generate_receipt(
+    *,
+    store_name: str,
+    business_registration_number: str | None,
+    representative_name: str | None,
+    phone: str | None,
+    address: str | None,
+    menu_items: list[dict],
+    dt: datetime,
+    output_path: str,
+) -> str:
+    if not menu_items:
+        raise ValueError("메뉴 정보가 없어 영수증을 만들 수 없습니다.")
+
+    가게이름 = store_name
+    사업자번호 = business_registration_number or ""
+    대표명 = representative_name or ""
+    연락처 = phone or ""
+    주소 = address or ""
+
+    승인일 = dt.strftime("%y%m%d")
+    표시일시 = dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    l_메뉴, l_단가, l_수량 = _pick_random_order(menu_items)
+    총액 = sum(p * q for p, q in zip(l_단가, l_수량))
+    공급가액, 부가세 = (총액 * 10) // 11, 총액 - (총액 * 10) // 11
+
+    rule = random.choice(RULES)
+    카드번호_표시 = gen_card_by_rule(rule)
+    승인번호 = gen_approval(rule)
+
+    # 캔버스 세팅 — 레거시와 동일 (건드리지 말 것)
+    W, H, P, FS = 630, 2000, 50, 26
+    R = W - P
+    img = Image.new("RGB", (W, H), "white")
+    d = ImageDraw.Draw(img)
+    f_text, f_digit = ImageFont.truetype(PATH_SANDOLL, FS), ImageFont.truetype(PATH_ARIAL, FS)
+    f_big, f_big_d = ImageFont.truetype(PATH_SANDOLL, 35), ImageFont.truetype(PATH_ARIAL, 35)
+
+    y = 28
+    draw_mixed(d, (W - text_mixed_width(d, "카드결제승인", f_big, f_big_d)) // 2, y, "카드결제승인", f_big, f_big_d)
+    y += 53
+    y = dashed(d, P, y)
+    y += 16
+
+    draw_mixed(d, P, y, f"[{가게이름}]", f_text, f_digit)
+    y += 34
+    draw_mixed(d, P, y, f"{사업자번호}  TEL: {연락처}", f_text, f_digit)
+    draw_mixed_right(d, R, y, 대표명, f_text, f_digit)
+    y += 34
+    for addr in 주소.split("\n"):
+        draw_mixed(d, P, y, addr, f_text, f_digit)
+        y += 34
+    y = dashed(d, P, y)
+    y += 6
+    draw_mixed(d, P, y, "거래 일시", f_text, f_digit)
+    draw_mixed_right(d, R, y, 표시일시, f_text, f_digit)
+    y += 36
+    y = dashed(d, P, y)
+    y += 6
+
+    draw_mixed(d, P, y, "상품명", f_text, f_digit)
+    draw_mixed_right(d, R, y, "금액", f_text, f_digit)
+    draw_mixed_right(d, R - 120, y, "수량", f_text, f_digit)
+    draw_mixed_right(d, R - 190, y, "단가", f_text, f_digit)
+    y += 40
+    y = dashed(d, P, y)
+    y += 6
+    for n, p, q in zip(l_메뉴, l_단가, l_수량):
+        draw_mixed(d, P, y, n, f_text, f_digit)
+        draw_mixed_right(d, R - 190, y, f"{p:,}원", f_text, f_digit)
+        draw_mixed_right(d, R - 120, y, str(q), f_text, f_digit)
+        draw_mixed_right(d, R, y, f"{p * q:,}원", f_text, f_digit)
+        y += 40
+    y = dashed(d, P, y)
+    y += 12
+
+    draw_mixed(d, P, y, "공급가액", f_text, f_digit)
+    draw_mixed_right(d, R, y, f"{공급가액:,}원", f_text, f_digit)
+    y += 34
+    draw_mixed(d, P, y, "부가세", f_text, f_digit)
+    draw_mixed_right(d, R, y, f"{부가세:,}원", f_text, f_digit)
+    y += 40
+    y = dashed(d, P, y)
+    y += 10
+    draw_mixed(d, P, y, "결 제 금 액", f_big, f_big_d)
+    draw_mixed_right(d, 570, y, f"{총액:,}원", f_big, f_big_d)
+    y += 60
+    y = dashed(d, P, y)
+    y += 10
+
+    infos = [
+        ("승인일시", 표시일시),
+        ("할부", "일시불"),
+        ("카드번호", 카드번호_표시),
+        ("가맹점번호", "00080365021"),
+        ("승인번호", 승인번호),
+        ("매입사명", rule.get("acquirer", "")),
+        ("카드종류", rule.get("cardtype", "")),
+    ]
+    for label, val in infos:
+        draw_mixed(d, P, y, label, f_text, f_digit)
+        draw_mixed_right(d, R, y, val, f_text, f_digit)
+        y += 34
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    img.crop((0, 0, W, y + 30)).save(output_path)
+    return output_path
+
+
+def generate_receipt_for_task(task, store, menu_items: list[dict] | None) -> str | None:
+    """작업(Task)의 확정된 영수증 날짜(naver_available_date)로 영수증 이미지를 생성.
+    메뉴가 등록 안 된 캠페인은 건너뛰고 None을 반환 — 이 경우 관리자가 캠페인에
+    메뉴를 채운 뒤 나중에 다시 시도해야 함."""
+    if not menu_items:
+        return None
+    if not task.naver_available_date:
+        return None
+
+    hour, minute, second = _random_time_in_range(store.representative_hours)
+    dt = datetime.combine(task.naver_available_date, datetime.min.time()).replace(
+        hour=hour, minute=minute, second=second
+    )
+
+    output_path = os.path.join(UPLOADS_DIR, "receipts", f"task_{task.id}.jpg")
+    generate_receipt(
+        store_name=store.name,
+        business_registration_number=store.business_registration_number,
+        representative_name=store.representative_name,
+        phone=store.phone,
+        address=store.address,
+        menu_items=menu_items,
+        dt=dt,
+        output_path=output_path,
+    )
+    return f"/uploads/receipts/task_{task.id}.jpg"

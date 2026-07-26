@@ -47,6 +47,7 @@ class ReviewAccount(Base):
     platform = Column(String, nullable=False)  # 'naver' | 'kakao'
     label = Column(String, nullable=False)
     profile_url = Column(String, nullable=True)
+    ip_address = Column(String, nullable=True)  # 관리자(자체보유) 계정에 배정된 IP
     created_at = Column(DateTime, default=utcnow)
 
     reviewer = relationship("Reviewer", back_populates="accounts")
@@ -63,6 +64,9 @@ class Store(Base):
     address = Column(String, nullable=True)
     representative_hours = Column(String, nullable=True)  # "대표시간" — common hours across business days
     representative_product = Column(String, nullable=True)  # "대표상품" — menu/rooms/services depending on category
+    business_registration_number = Column(String, nullable=True)  # 사업자번호, 영수증 생성용
+    representative_name = Column(String, nullable=True)  # 대표자명, 영수증 생성용
+    phone = Column(String, nullable=True)  # 연락처, 영수증 생성용
     cooldown_days = Column(Integer, nullable=False, default=90)  # 계정당 재작업 가능 주기
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
@@ -81,6 +85,14 @@ class ReviewTarget(Base):
     sale_price = Column(Integer, nullable=True)  # 매장에 청구하는 건당 판매 금액 ("매출")
     claim_time_limit_minutes = Column(Integer, nullable=False, default=1440)
     work_days_raw = Column(String, nullable=True)  # CSV weekday ints (0=Mon..6=Sun); null = every day
+    daily_limit = Column(Integer, nullable=True)  # 하루 최대 노출/클레임 허용 건수; null = 제한 없음
+
+    # 리뷰 원고 자료 — 리뷰어가 포털에서 조회 (v2 "리뷰 자료 보기")
+    guideline = Column(String, nullable=True)  # 원고 작성 가이드라인
+    regional_features = Column(String, nullable=True)  # 지역적 특징
+    menu_items_json = Column(String, nullable=True)  # JSON: [{"name":..,"price":..}, ...] 최대 3개
+    reference_photo_path = Column(String, nullable=True)  # 참고 이미지 (선택)
+
     created_at = Column(DateTime, default=utcnow)
 
     store = relationship("Store", back_populates="targets")
@@ -109,6 +121,7 @@ class Task(Base):
     naver_available_date = Column(Date, nullable=True)  # "영수증 날짜"
     result_link = Column(String, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+    receipt_image_path = Column(String, nullable=True)  # naver_available_date가 정해지면 자동 생성
 
     review_posted_date = Column(Date, nullable=True)  # 실제 리뷰 "작성일"
 

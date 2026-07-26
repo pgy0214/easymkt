@@ -149,3 +149,24 @@ def submit_my_result(
     if not task or not task.review_account or task.review_account.reviewer_id != reviewer.id:
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
     return crud.task_to_out(crud.update_task_result(db, task, data.result_link))
+
+
+@router.get("/tasks/{task_id}/brief", response_model=schemas.TaskBriefOut)
+def get_task_brief(
+    task_id: int,
+    reviewer: models.Reviewer = Depends(get_current_reviewer),
+    db: Session = Depends(get_db),
+):
+    """리뷰어가 자기 작업의 원고 자료(가이드라인/지역특징/메뉴/참고이미지)와
+    영수증 이미지를 조회 — 본인이 클레임한 작업만 조회 가능."""
+    task = crud.get_task(db, task_id)
+    if not task or not task.review_account or task.review_account.reviewer_id != reviewer.id:
+        raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
+    target = task.review_target
+    return schemas.TaskBriefOut(
+        guideline=target.guideline if target else None,
+        regional_features=target.regional_features if target else None,
+        menu_items=crud.decode_menu_items(target.menu_items_json) if target else None,
+        reference_photo_path=target.reference_photo_path if target else None,
+        receipt_image_path=task.receipt_image_path,
+    )

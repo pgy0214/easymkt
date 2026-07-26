@@ -14,12 +14,14 @@ class ReviewAccountCreate(BaseModel):
     platform: Platform
     label: str
     profile_url: Optional[str] = None
+    ip_address: Optional[str] = None
 
 
 class ReviewAccountUpdate(BaseModel):
     platform: Optional[Platform] = None
     label: Optional[str] = None
     profile_url: Optional[str] = None
+    ip_address: Optional[str] = None
 
 
 class ReviewAccountOut(BaseModel):
@@ -30,6 +32,7 @@ class ReviewAccountOut(BaseModel):
     platform: Platform
     label: str
     profile_url: Optional[str] = None
+    ip_address: Optional[str] = None
     created_at: datetime.datetime
 
 
@@ -93,6 +96,11 @@ class StoreUpdate(BaseModel):
     url: Optional[str] = None
     representative_product: Optional[str] = None
     cooldown_days: Optional[int] = None
+    # not crawlable — admin enters these once, reused by every campaign at
+    # this store for receipt-image generation
+    business_registration_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class StoreOut(BaseModel):
@@ -105,6 +113,9 @@ class StoreOut(BaseModel):
     address: Optional[str] = None
     representative_hours: Optional[str] = None
     representative_product: Optional[str] = None
+    business_registration_number: Optional[str] = None
+    representative_name: Optional[str] = None
+    phone: Optional[str] = None
     cooldown_days: int
     created_at: datetime.datetime
     updated_at: Optional[datetime.datetime] = None
@@ -123,6 +134,11 @@ class StoreInfoFetchOut(BaseModel):
 
 # --- ReviewTarget ---
 
+class MenuItemIn(BaseModel):
+    name: str
+    price: int
+
+
 class ReviewTargetCreate(BaseModel):
     store_id: int
     required_count: int
@@ -133,6 +149,11 @@ class ReviewTargetCreate(BaseModel):
     # longer set per campaign — it's always snapshotted from Settings at
     # creation time (see crud.create_review_target).
     work_days: Optional[list[int]] = None
+    daily_limit: Optional[int] = None  # 하루 최대 클레임 허용 건수; None = 제한 없음
+    # 리뷰 원고 자료
+    guideline: Optional[str] = None
+    regional_features: Optional[str] = None
+    menu_items: Optional[list[MenuItemIn]] = None  # 최대 3개, 영수증 생성에도 사용
 
 
 class ReviewTargetOut(BaseModel):
@@ -145,6 +166,7 @@ class ReviewTargetOut(BaseModel):
     unit_price: int
     sale_price: Optional[int] = None
     claim_time_limit_minutes: int
+    daily_limit: Optional[int] = None
     created_at: datetime.datetime
 
     # denormalized, filled in by the router
@@ -155,6 +177,12 @@ class ReviewTargetOut(BaseModel):
     # (kept off the ORM-matching attribute name to avoid a from_attributes
     # type mismatch — see crud.decode_work_days)
     work_days: Optional[list[int]] = None
+
+    guideline: Optional[str] = None
+    regional_features: Optional[str] = None
+    # parsed from menu_items_json by crud.target_to_out (same reasoning as work_days)
+    menu_items: Optional[list[MenuItemIn]] = None
+    reference_photo_path: Optional[str] = None
 
 
 class ReviewTargetDetailOut(ReviewTargetOut):
@@ -185,6 +213,7 @@ class TaskOut(BaseModel):
     settlement_status: str
     settlement_paid_at: Optional[datetime.datetime] = None
     sale_amount: Optional[int] = None
+    receipt_image_path: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -270,6 +299,14 @@ class OtpVerifyOut(BaseModel):
 
 class PortalClaimIn(BaseModel):
     account_id: int
+
+
+class TaskBriefOut(BaseModel):
+    guideline: Optional[str] = None
+    regional_features: Optional[str] = None
+    menu_items: Optional[list[MenuItemIn]] = None
+    reference_photo_path: Optional[str] = None
+    receipt_image_path: Optional[str] = None
 
 
 # --- Admin-side direct assignment (개별연락 후 배정) ---

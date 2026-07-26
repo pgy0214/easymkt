@@ -8,6 +8,11 @@ export default function StoreEditModal({ store, onClose, onSaved }) {
     store.representative_product || '',
   )
   const [cooldownDays, setCooldownDays] = useState(store.cooldown_days)
+  const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState(
+    store.business_registration_number || '',
+  )
+  const [representativeName, setRepresentativeName] = useState(store.representative_name || '')
+  const [phone, setPhone] = useState(store.phone || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
@@ -19,6 +24,9 @@ export default function StoreEditModal({ store, onClose, onSaved }) {
         url: url.trim(),
         representative_product: representativeProduct.trim() || null,
         cooldown_days: Number(cooldownDays),
+        business_registration_number: businessRegistrationNumber.trim() || null,
+        representative_name: representativeName.trim() || null,
+        phone: phone.trim() || null,
       })
       onSaved(updated)
     } catch (err) {
@@ -71,6 +79,28 @@ export default function StoreEditModal({ store, onClose, onSaved }) {
             value={representativeProduct}
             onChange={(e) => setRepresentativeProduct(e.target.value)}
             placeholder="예: 아메리카노 4500원, 카페라떼 5000원"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
+
+        <div className="space-y-2 border-t border-slate-100 pt-3">
+          <p className="text-xs text-slate-500">영수증 생성에 쓰이는 사업자 정보 (선택)</p>
+          <input
+            value={businessRegistrationNumber}
+            onChange={(e) => setBusinessRegistrationNumber(e.target.value)}
+            placeholder="사업자번호 (예: 250-07-00453)"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+          <input
+            value={representativeName}
+            onChange={(e) => setRepresentativeName(e.target.value)}
+            placeholder="대표자명"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="전화번호 (예: 0507-1412-5171)"
             className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>

@@ -17,6 +17,7 @@ export default function TargetList({ targets, onDelete }) {
             <th className="px-3 py-2">단가(정산)</th>
             <th className="px-3 py-2">판매금액</th>
             <th className="px-3 py-2">작업 제한</th>
+            <th className="px-3 py-2">1일 갯수</th>
             <th className="px-3 py-2">노출요일</th>
             <th className="px-3 py-2">등록일</th>
             <th className="px-3 py-2" />
@@ -40,6 +41,7 @@ export default function TargetList({ targets, onDelete }) {
               <td className="px-3 py-2">{formatKRW(target.unit_price)}</td>
               <td className="px-3 py-2">{target.sale_price != null ? formatKRW(target.sale_price) : '-'}</td>
               <td className="px-3 py-2">{target.claim_time_limit_minutes}분</td>
+              <td className="px-3 py-2">{target.daily_limit != null ? `${target.daily_limit}건` : '제한없음'}</td>
               <td className="px-3 py-2">{formatWorkDays(target.work_days)}</td>
               <td className="px-3 py-2 text-slate-500">{formatDateTime(target.created_at)}</td>
               <td className="px-3 py-2">

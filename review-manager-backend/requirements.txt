@@ -10,3 +10,4 @@ python-multipart
 requests
 pyjwt
 python-dotenv
+Pillow

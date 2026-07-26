@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -6,11 +7,16 @@ load_dotenv()  # must run before routers/sms/auth modules read env vars at impor
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app import scheduler
 from app.database import Base, engine
 from app.migrations import run_migrations
 from app.routers import accounts, portal, reviewers, settings, settlement, stores, targets, tasks
+
+UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+os.makedirs(os.path.join(UPLOADS_DIR, "campaigns"), exist_ok=True)
+os.makedirs(os.path.join(UPLOADS_DIR, "receipts"), exist_ok=True)
 
 
 @asynccontextmanager
@@ -24,6 +30,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Review Manager API", lifespan=lifespan)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

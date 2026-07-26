@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
@@ -30,8 +30,24 @@ def get_target(target_id: int, db: Session = Depends(get_db)):
         out.store_name = target.store.name
         out.store_url = target.store.url
     out.work_days = crud.decode_work_days(target.work_days_raw)
+    out.menu_items = crud.decode_menu_items(target.menu_items_json)
     out.tasks = [crud.task_to_out(t) for t in target.tasks]
     return out
+
+
+@router.post("/{target_id}/photo", response_model=schemas.ReviewTargetOut)
+async def upload_reference_photo(
+    target_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)
+):
+    target = crud.get_target(db, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    content = await file.read()
+    try:
+        crud.save_reference_photo(db, target, content, file.filename or "photo.jpg")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return crud.target_to_out(target)
 
 
 @router.delete("/{target_id}")

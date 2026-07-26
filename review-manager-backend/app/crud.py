@@ -1,9 +1,14 @@
 import datetime
+import json
+import os
 import secrets
 
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+
+UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+ALLOWED_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 
 # --- Reviewer ---
@@ -155,6 +160,7 @@ def create_account(
         platform=data.platform,
         label=data.label,
         profile_url=data.profile_url,
+        ip_address=data.ip_address,
     )
     db.add(account)
     db.commit()
@@ -179,6 +185,8 @@ def update_account(
         account.label = data.label
     if data.profile_url is not None:
         account.profile_url = data.profile_url
+    if data.ip_address is not None:
+        account.ip_address = data.ip_address
     db.commit()
     db.refresh(account)
     return account
@@ -232,6 +240,12 @@ def update_store(db: Session, store: models.Store, data: schemas.StoreUpdate) ->
         store.representative_product = data.representative_product
     if data.cooldown_days is not None:
         store.cooldown_days = data.cooldown_days
+    if data.business_registration_number is not None:
+        store.business_registration_number = data.business_registration_number
+    if data.representative_name is not None:
+        store.representative_name = data.representative_name
+    if data.phone is not None:
+        store.phone = data.phone
     db.commit()
     db.refresh(store)
     return store
@@ -265,12 +279,25 @@ def decode_work_days(raw: str | None) -> list[int] | None:
     return sorted(int(d) for d in raw.split(",") if d.strip() != "")
 
 
+def encode_menu_items(items: list["schemas.MenuItemIn"] | None) -> str | None:
+    if not items:
+        return None
+    return json.dumps([{"name": i.name, "price": i.price} for i in items[:3]], ensure_ascii=False)
+
+
+def decode_menu_items(raw: str | None) -> list[dict] | None:
+    if not raw:
+        return None
+    return json.loads(raw)
+
+
 def target_to_out(target: models.ReviewTarget) -> schemas.ReviewTargetOut:
     out = schemas.ReviewTargetOut.model_validate(target)
     if target.store is not None:
         out.store_name = target.store.name
         out.store_url = target.store.url
     out.work_days = decode_work_days(target.work_days_raw)
+    out.menu_items = decode_menu_items(target.menu_items_json)
     return out
 
 
@@ -278,6 +305,19 @@ def get_target(db: Session, target_id: int) -> models.ReviewTarget | None:
     return (
         db.query(models.ReviewTarget).filter(models.ReviewTarget.id == target_id).first()
     )
+
+
+def save_reference_photo(
+    db: Session, target: models.ReviewTarget, content: bytes, filename: str
+) -> None:
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError(f"지원하지 않는 이미지 형식입니다: {ext or '(확장자 없음)'}")
+    dest = os.path.join(UPLOADS_DIR, "campaigns", f"target_{target.id}{ext}")
+    with open(dest, "wb") as f:
+        f.write(content)
+    target.reference_photo_path = f"/uploads/campaigns/target_{target.id}{ext}"
+    db.commit()
 
 
 def delete_target(db: Session, target: models.ReviewTarget) -> None:
@@ -316,6 +356,10 @@ def create_review_target(
         sale_price=data.sale_price,
         claim_time_limit_minutes=claim_minutes,
         work_days_raw=encode_work_days(data.work_days),
+        daily_limit=data.daily_limit,
+        guideline=data.guideline,
+        regional_features=data.regional_features,
+        menu_items_json=encode_menu_items(data.menu_items),
     )
     db.add(target)
     db.flush()
@@ -514,6 +558,16 @@ def _kst_weekday() -> int:
     return (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).weekday()
 
 
+def _kst_today_utc_range() -> tuple[datetime.datetime, datetime.datetime]:
+    """[start, end) of "today" in KST, expressed back in UTC (since claimed_at
+    is stored as naive UTC) — used to count how many of a campaign's tasks
+    were claimed today for the daily_limit throttle."""
+    now_kst = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
+    start_kst = datetime.datetime(now_kst.year, now_kst.month, now_kst.day)
+    start_utc = start_kst - datetime.timedelta(hours=9)
+    return start_utc, start_utc + datetime.timedelta(days=1)
+
+
 def get_open_pool_tasks(db: Session, platforms: list[str]) -> list[models.Task]:
     tasks = (
         db.query(models.Task)
@@ -522,12 +576,36 @@ def get_open_pool_tasks(db: Session, platforms: list[str]) -> list[models.Task]:
         .all()
     )
     today = _kst_weekday()
-    return [
+    tasks = [
         t
         for t in tasks
         if not t.review_target.work_days_raw
         or today in decode_work_days(t.review_target.work_days_raw)
     ]
+
+    # daily_limit: once N tasks from a campaign have been claimed today
+    # (KST), hide the rest of that campaign's open tasks from the pool until
+    # tomorrow — a soft pacing cap, not a hard cutoff on the campaign itself
+    start_utc, end_utc = _kst_today_utc_range()
+    claimed_today_by_target: dict[int, int] = {}
+
+    def under_daily_limit(t: models.Task) -> bool:
+        target = t.review_target
+        if target.daily_limit is None:
+            return True
+        if target.id not in claimed_today_by_target:
+            claimed_today_by_target[target.id] = (
+                db.query(models.Task)
+                .filter(
+                    models.Task.review_target_id == target.id,
+                    models.Task.claimed_at >= start_utc,
+                    models.Task.claimed_at < end_utc,
+                )
+                .count()
+            )
+        return claimed_today_by_target[target.id] < target.daily_limit
+
+    return [t for t in tasks if under_daily_limit(t)]
 
 
 def get_reviewer_tasks(db: Session, reviewer_id: int) -> list[models.Task]:

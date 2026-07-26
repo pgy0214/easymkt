@@ -33,6 +33,9 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "reviewers", "age_group", "age_group TEXT")
         _add_column_if_missing(conn, "reviewers", "gender", "gender TEXT")
 
+        # review_accounts: ip_address — IP assigned per admin-owned account
+        _add_column_if_missing(conn, "review_accounts", "ip_address", "ip_address TEXT")
+
         # settings: default claim-time presets, now in minutes (was hours). Add
         # the new columns, copy over converted values, then drop the old ones —
         # settings only ever has one row and it's worth preserving in place
@@ -79,6 +82,15 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "stores", "address", "address TEXT")
         _add_column_if_missing(conn, "stores", "updated_at", "updated_at DATETIME")
 
+        # stores: business_registration_number/representative_name/phone are
+        # admin-entered facts needed to render a realistic receipt image —
+        # not scraped (business registration numbers aren't public on Naver)
+        _add_column_if_missing(
+            conn, "stores", "business_registration_number", "business_registration_number TEXT"
+        )
+        _add_column_if_missing(conn, "stores", "representative_name", "representative_name TEXT")
+        _add_column_if_missing(conn, "stores", "phone", "phone TEXT")
+
         store_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(stores)"))}
         if "representative_hours" not in store_columns:
             conn.execute(text("ALTER TABLE stores ADD COLUMN representative_hours TEXT"))
@@ -106,6 +118,24 @@ def run_migrations(engine) -> None:
         # revenue totals rather than guessed)
         _add_column_if_missing(conn, "review_targets", "sale_price", "sale_price INTEGER")
         _add_column_if_missing(conn, "tasks", "sale_amount", "sale_amount INTEGER")
+
+        # review_targets: daily_limit caps how many of a campaign's tasks may
+        # be claimed per (KST) day — null means unlimited (today's behavior)
+        _add_column_if_missing(conn, "review_targets", "daily_limit", "daily_limit INTEGER")
+
+        # review_targets: 원고 자료(가이드라인/지역특징/메뉴/참고이미지) — 리뷰어가
+        # 포털에서 조회하는 캠페인 자료
+        _add_column_if_missing(conn, "review_targets", "guideline", "guideline TEXT")
+        _add_column_if_missing(
+            conn, "review_targets", "regional_features", "regional_features TEXT"
+        )
+        _add_column_if_missing(conn, "review_targets", "menu_items_json", "menu_items_json TEXT")
+        _add_column_if_missing(
+            conn, "review_targets", "reference_photo_path", "reference_photo_path TEXT"
+        )
+
+        # tasks: receipt_image_path — 영수증 이미지, naver_available_date가 정해지면 자동 생성
+        _add_column_if_missing(conn, "tasks", "receipt_image_path", "receipt_image_path TEXT")
 
         # review_targets: store_name/store_url columns replaced by a store_id FK
         # to the new stores table (stores are now a reusable list, not re-typed

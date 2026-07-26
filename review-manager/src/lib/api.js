@@ -1,4 +1,5 @@
 const BASE_URL = 'http://localhost:8000/api'
+export const API_ORIGIN = 'http://localhost:8000'
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -70,6 +71,16 @@ export const api = {
   createTarget: (data) => request('/targets', { method: 'POST', body: JSON.stringify(data) }),
   getTarget: (id) => request(`/targets/${id}`),
   deleteTarget: (id) => request(`/targets/${id}`, { method: 'DELETE' }),
+  uploadTargetPhoto: async (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${BASE_URL}/targets/${id}/photo`, { method: 'POST', body: form })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.detail || `요청 실패 (${res.status})`)
+    }
+    return res.json()
+  },
 
   getTasks: (params = {}) => request(`/tasks${toQueryString(params)}`),
   updateTaskResult: (id, resultLink) =>
@@ -105,6 +116,7 @@ export const portalApi = {
 
   getPool: (token) => authedRequest('/portal/pool', token),
   getMyTasks: (token) => authedRequest('/portal/tasks/mine', token),
+  getTaskBrief: (token, taskId) => authedRequest(`/portal/tasks/${taskId}/brief`, token),
   claimTask: (token, taskId, accountId) =>
     authedRequest(`/portal/tasks/${taskId}/claim`, token, {
       method: 'POST',

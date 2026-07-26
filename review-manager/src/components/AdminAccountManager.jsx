@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
 import ReviewerCard from './ReviewerCard.jsx'
 
-const EMPTY = { name: '', memo: '', contact_info: '' }
+const EMPTY = { name: '', contact_info: '' }
 
 export default function AdminAccountManager() {
   const [reviewers, setReviewers] = useState([])
@@ -37,7 +37,6 @@ export default function AdminAccountManager() {
       const reviewer = await api.createReviewer({
         category: 'admin',
         name: form.name.trim(),
-        memo: form.memo.trim() || null,
         contact_info: form.contact_info.trim() || null,
       })
       setReviewers((prev) => [...prev, reviewer])
@@ -95,7 +94,7 @@ export default function AdminAccountManager() {
     <div className="space-y-4">
       <p className="text-sm text-slate-500">
         여기 등록된 계정은 리뷰어가 아니라 우리(회사)가 직접 소유한 계정입니다. "리뷰어 관리"
-        목록에는 나타나지 않습니다.
+        목록에는 나타나지 않습니다. 계정마다 배정된 IP는 계정 추가 시 입력합니다.
       </p>
 
       <form
@@ -108,14 +107,6 @@ export default function AdminAccountManager() {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="w-32 rounded border border-slate-300 px-2 py-1 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-slate-500">메모</label>
-          <input
-            value={form.memo}
-            onChange={(e) => setForm({ ...form, memo: e.target.value })}
-            className="w-40 rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
         <div>

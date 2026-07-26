@@ -4,7 +4,7 @@ import time as time_module
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 
-from app import models
+from app import crud, models, receipt_generator
 from app.crawlers.base import chrome_driver, logger
 
 CHECK_WINDOW_DAYS = 7
@@ -85,4 +85,26 @@ def run_job(db) -> None:
 
         task.naver_available_date = date
         task.status = "ready" if date else "claimed"
+        db.commit()
+
+        if date:
+            _generate_receipt_if_possible(db, task)
+
+
+def _generate_receipt_if_possible(db, task: models.Task) -> None:
+    """네이버 영수증 날짜가 정해지면(=ready) 영수증 이미지를 만들어둔다. 캠페인에
+    메뉴가 등록 안 됐으면 조용히 건너뛴다 — 관리자가 나중에 메뉴를 채우고
+    수동으로 다시 시도할 수 있다(현재는 별도 재시도 버튼 없음, 알려진 제약)."""
+    target = task.review_target
+    store = target.store if target else None
+    if not store:
+        return
+    menu_items = crud.decode_menu_items(target.menu_items_json)
+    try:
+        path = receipt_generator.generate_receipt_for_task(task, store, menu_items)
+    except Exception:
+        logger.exception("Task %s 영수증 생성 실패", task.id)
+        return
+    if path:
+        task.receipt_image_path = path
         db.commit()

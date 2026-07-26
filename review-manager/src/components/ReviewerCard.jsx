@@ -102,6 +102,11 @@ export default function ReviewerCard({
                   프로필
                 </a>
               )}
+              {account.ip_address && (
+                <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[11px] text-slate-600">
+                  IP {account.ip_address}
+                </span>
+              )}
               <AccountStoreBadges account={account} />
             </div>
             <button
@@ -115,7 +120,10 @@ export default function ReviewerCard({
         ))}
       </div>
 
-      <AccountForm onCreate={(data) => onCreateAccount(reviewer.id, data)} />
+      <AccountForm
+        onCreate={(data) => onCreateAccount(reviewer.id, data)}
+        showIp={reviewer.category === 'admin'}
+      />
 
       {assigning && (
         <AssignTaskModal

@@ -146,7 +146,12 @@ def _compute_representative_hours(ranges: list[tuple[int, int]]) -> str | None:
     return f"{_minutes_to_text(start)}~{_minutes_to_text(end)}"
 
 
-def _extract_representative_hours(driver) -> str | None:
+# fallback when Naver has no registered hours at all (common for accommodation
+# etc.) — a fixed placeholder rather than leaving it blank, per admin request
+DEFAULT_REPRESENTATIVE_HOURS = "16:00~21:00"
+
+
+def _extract_representative_hours(driver) -> str:
     try:
         toggle = driver.find_element(
             By.XPATH, "//*[normalize-space(text())='펼쳐보기']/ancestor::a[1]"
@@ -154,10 +159,10 @@ def _extract_representative_hours(driver) -> str | None:
         driver.execute_script("arguments[0].click()", toggle)
         time_module.sleep(1.5)
     except Exception:
-        return None  # no expandable hours section on this page at all
+        return DEFAULT_REPRESENTATIVE_HOURS  # no expandable hours section at all
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
-    return _compute_representative_hours(_parse_hour_rows(soup))
+    return _compute_representative_hours(_parse_hour_rows(soup)) or DEFAULT_REPRESENTATIVE_HOURS
 
 
 # matches the numeric place id out of any of Naver's URL shapes for a store

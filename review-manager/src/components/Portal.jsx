@@ -1,6 +1,6 @@
 import { LogOut, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { portalApi } from '../lib/api.js'
+import { API_ORIGIN, portalApi } from '../lib/api.js'
 import { formatDateTime, formatKRW, PLATFORM_LABEL } from '../lib/format.js'
 import AccountForm from './AccountForm.jsx'
 
@@ -258,7 +258,7 @@ function PortalHome({ token, onLogout }) {
         <h2 className="font-medium text-slate-800">내 작업</h2>
         {myTasks.length === 0 && <p className="text-sm text-slate-400">진행 중인 작업이 없습니다.</p>}
         {myTasks.map((task) => (
-          <MyTaskRow key={task.id} task={task} onSubmitResult={handleSubmitResult} />
+          <MyTaskRow key={task.id} task={task} token={token} onSubmitResult={handleSubmitResult} />
         ))}
       </section>
     </div>
@@ -311,19 +311,30 @@ function PoolTaskRow({ task, myAccounts, onClaim }) {
   )
 }
 
-function MyTaskRow({ task, onSubmitResult }) {
+function MyTaskRow({ task, token, onSubmitResult }) {
   const [link, setLink] = useState('')
+  const [showBrief, setShowBrief] = useState(false)
   const canSubmit = task.status === 'ready' || (task.platform === 'kakao' && task.status === 'claimed')
 
   return (
     <div className="rounded border border-slate-100 px-3 py-2 text-sm">
       <div className="flex items-center justify-between">
         <div className="font-medium text-slate-700">{task.store_name}</div>
-        <span className="text-xs text-slate-500">{PLATFORM_LABEL[task.platform]}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">{PLATFORM_LABEL[task.platform]}</span>
+          <button
+            type="button"
+            onClick={() => setShowBrief(true)}
+            className="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
+          >
+            리뷰 자료 보기
+          </button>
+        </div>
       </div>
       {task.claim_deadline && task.status !== 'completed' && (
         <div className="text-xs text-slate-500">기한: {formatDateTime(task.claim_deadline)}</div>
       )}
+      {showBrief && <TaskBriefModal token={token} taskId={task.id} onClose={() => setShowBrief(false)} />}
       {task.status === 'completed' ? (
         <a href={task.result_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">
           제출한 결과 보기
@@ -348,6 +359,110 @@ function MyTaskRow({ task, onSubmitResult }) {
           {task.platform === 'naver' ? '날짜 확인 중이에요, 잠시만 기다려주세요' : '진행 중'}
         </div>
       )}
+    </div>
+  )
+}
+
+function TaskBriefModal({ token, taskId, onClose }) {
+  const [brief, setBrief] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    portalApi
+      .getTaskBrief(token, taskId)
+      .then(setBrief)
+      .catch((err) => setError(err.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId])
+
+  const hasNothing =
+    brief &&
+    !brief.guideline &&
+    !brief.regional_features &&
+    !brief.menu_items?.length &&
+    !brief.reference_photo_path &&
+    !brief.receipt_image_path
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-medium text-slate-800">리뷰 자료</h3>
+          <button onClick={onClose} className="text-sm text-slate-400 hover:text-slate-700">
+            닫기
+          </button>
+        </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {!brief && !error && <p className="text-sm text-slate-400">불러오는 중...</p>}
+
+        {brief && (
+          <div className="space-y-3 text-sm">
+            {hasNothing && (
+              <p className="text-slate-400">아직 등록된 원고 자료가 없습니다.</p>
+            )}
+
+            {brief.guideline && (
+              <div>
+                <p className="text-xs font-medium text-slate-500">원고 가이드라인</p>
+                <p className="whitespace-pre-wrap text-slate-700">{brief.guideline}</p>
+              </div>
+            )}
+
+            {brief.regional_features && (
+              <div>
+                <p className="text-xs font-medium text-slate-500">지역적 특징</p>
+                <p className="whitespace-pre-wrap text-slate-700">{brief.regional_features}</p>
+              </div>
+            )}
+
+            {brief.menu_items?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-slate-500">메뉴</p>
+                <ul className="text-slate-700">
+                  {brief.menu_items.map((item, i) => (
+                    <li key={i}>
+                      {item.name} — {formatKRW(item.price)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {brief.reference_photo_path && (
+              <div>
+                <p className="text-xs font-medium text-slate-500">참고 이미지</p>
+                <img
+                  src={`${API_ORIGIN}${brief.reference_photo_path}`}
+                  alt="참고 이미지"
+                  className="mt-1 max-h-64 rounded border border-slate-200"
+                />
+              </div>
+            )}
+
+            {brief.receipt_image_path ? (
+              <div>
+                <p className="text-xs font-medium text-slate-500">영수증 이미지</p>
+                <img
+                  src={`${API_ORIGIN}${brief.receipt_image_path}`}
+                  alt="영수증 이미지"
+                  className="mt-1 max-h-96 rounded border border-slate-200"
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                영수증 이미지는 네이버 날짜 확인이 끝나면 자동으로 생성됩니다.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

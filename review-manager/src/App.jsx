@@ -14,7 +14,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white px-4 py-4">
-        <h1 className="text-lg font-semibold text-slate-900">리뷰 관리 시스템</h1>
+        <h1 className="text-lg font-semibold text-slate-900">
+          리뷰몬 <span className="font-normal text-slate-400">(관리자모드)</span>
+        </h1>
       </header>
       <Nav active={tab} onChange={setTab} />
       <main className="mx-auto max-w-6xl px-4 py-6">

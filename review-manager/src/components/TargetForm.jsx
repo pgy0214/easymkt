@@ -5,13 +5,19 @@ import TargetList from './TargetList.jsx'
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 
+const EMPTY_MENU_ITEM = { name: '', price: '' }
+
 const EMPTY = {
   platform: 'naver',
   store_id: '',
   required_count: 1,
   unit_price: 0,
   sale_price: '',
+  daily_limit: '',
   work_days: ALL_DAYS,
+  guideline: '',
+  regional_features: '',
+  menu_items: [{ ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }],
 }
 
 export default function TargetForm() {
@@ -21,6 +27,7 @@ export default function TargetForm() {
   const [message, setMessage] = useState(null)
   const [targets, setTargets] = useState([])
   const [stores, setStores] = useState([])
+  const [photoFile, setPhotoFile] = useState(null)
 
   async function refreshTargets() {
     setTargets(await api.getTargets())
@@ -52,6 +59,13 @@ export default function TargetForm() {
     }))
   }
 
+  function updateMenuItem(index, field, value) {
+    setForm((prev) => ({
+      ...prev,
+      menu_items: prev.menu_items.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+    }))
+  }
+
   async function handleDelete(id) {
     if (!confirm('이 캠페인을 삭제할까요? (클레임되었거나 완료된 작업이 있으면 삭제할 수 없습니다)')) return
     try {
@@ -76,17 +90,32 @@ export default function TargetForm() {
     setError(null)
     setMessage(null)
     try {
+      const menuItems = form.menu_items
+        .filter((item) => item.name.trim() && item.price !== '')
+        .map((item) => ({ name: item.name.trim(), price: Number(item.price) }))
       const target = await api.createTarget({
         store_id: Number(form.store_id),
         required_count: Number(form.required_count),
         unit_price: Number(form.unit_price),
         sale_price: form.sale_price === '' ? null : Number(form.sale_price),
         work_days: form.work_days,
+        daily_limit: form.daily_limit === '' ? null : Number(form.daily_limit),
+        guideline: form.guideline.trim() || null,
+        regional_features: form.regional_features.trim() || null,
+        menu_items: menuItems.length > 0 ? menuItems : null,
       })
+      if (photoFile) {
+        await api.uploadTargetPhoto(target.id, photoFile)
+      }
       setMessage(
         `"${target.store_name}" 등록 완료 — ${target.required_count}건이 오픈풀에 등록되었습니다. 리뷰어가 직접 클레임합니다.`,
       )
-      setForm((prev) => ({ ...prev, required_count: 1, unit_price: 0, sale_price: '' }))
+      setForm((prev) => ({
+        ...EMPTY,
+        platform: prev.platform,
+        store_id: prev.store_id,
+      }))
+      setPhotoFile(null)
       await refreshTargets()
     } catch (err) {
       setError(err.message)
@@ -99,7 +128,7 @@ export default function TargetForm() {
     <div className="space-y-4">
       <form
         onSubmit={handleSubmit}
-        className="flex max-w-md flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
+        className="flex max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
       >
         <div>
           <label className="block text-xs text-slate-500">플랫폼</label>
@@ -163,6 +192,19 @@ export default function TargetForm() {
           />
         </div>
         <div>
+          <label className="block text-xs text-slate-500">
+            1일 작업 갯수 (선택 — 하루에 이만큼만 오픈풀에서 클레임 가능)
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={form.daily_limit}
+            onChange={(e) => setForm({ ...form, daily_limit: e.target.value })}
+            placeholder="비워두면 제한 없음"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
+        <div>
           <label className="block text-xs text-slate-500">작업요일 (선택한 요일에만 오픈풀에 노출)</label>
           <div className="mt-1 flex gap-1">
             {WEEKDAY_LABELS.map((label, day) => (
@@ -179,6 +221,65 @@ export default function TargetForm() {
                 {label}
               </button>
             ))}
+          </div>
+        </div>
+        <div className="space-y-3 border-t border-slate-100 pt-3">
+          <p className="text-xs font-medium text-slate-500">
+            리뷰 원고 자료 (리뷰어가 포털에서 "리뷰 자료 보기"로 확인)
+          </p>
+          <div>
+            <label className="block text-xs text-slate-500">원고 가이드라인</label>
+            <textarea
+              value={form.guideline}
+              onChange={(e) => setForm({ ...form, guideline: e.target.value })}
+              rows={3}
+              placeholder="리뷰 작성 시 포함해야 할 내용, 톤앤매너 등"
+              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500">지역적 특징</label>
+            <textarea
+              value={form.regional_features}
+              onChange={(e) => setForm({ ...form, regional_features: e.target.value })}
+              rows={2}
+              placeholder="예: 근처 관광지, 교통 접근성 등 리뷰에 녹일 수 있는 지역 특징"
+              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500">
+              메뉴 3개 (영수증 이미지 생성에도 사용됩니다)
+            </label>
+            <div className="space-y-1">
+              {form.menu_items.map((item, i) => (
+                <div key={i} className="flex gap-1">
+                  <input
+                    value={item.name}
+                    onChange={(e) => updateMenuItem(i, 'name', e.target.value)}
+                    placeholder={`메뉴명 ${i + 1}`}
+                    className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    value={item.price}
+                    onChange={(e) => updateMenuItem(i, 'price', e.target.value)}
+                    placeholder="가격"
+                    className="w-28 rounded border border-slate-300 px-2 py-1 text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500">참고 이미지 (선택)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setPhotoFile(e.target.files[0] || null)}
+              className="w-full text-sm"
+            />
           </div>
         </div>
         <div>

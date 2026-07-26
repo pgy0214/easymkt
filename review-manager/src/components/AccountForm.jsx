@@ -1,9 +1,9 @@
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
-const EMPTY = { platform: 'naver', label: '', profile_url: '' }
+const EMPTY = { platform: 'naver', label: '', profile_url: '', ip_address: '' }
 
-export default function AccountForm({ onCreate }) {
+export default function AccountForm({ onCreate, showIp = false }) {
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -18,6 +18,7 @@ export default function AccountForm({ onCreate }) {
         platform: form.platform,
         label: form.label.trim(),
         profile_url: form.profile_url.trim() || null,
+        ip_address: showIp ? form.ip_address.trim() || null : null,
       })
       setForm(EMPTY)
     } catch (err) {
@@ -59,6 +60,18 @@ export default function AccountForm({ onCreate }) {
             onChange={(e) => setForm({ ...form, profile_url: e.target.value })}
             placeholder="https://m.place.naver.com/my/..."
             className="w-64 rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
+      )}
+
+      {showIp && (
+        <div>
+          <label className="block text-xs text-slate-500">IP</label>
+          <input
+            value={form.ip_address}
+            onChange={(e) => setForm({ ...form, ip_address: e.target.value })}
+            placeholder="예: 123.45.67.89"
+            className="w-36 rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
       )}
