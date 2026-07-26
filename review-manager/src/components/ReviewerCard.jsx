@@ -69,7 +69,7 @@ export default function ReviewerCard({
                   프로필
                 </a>
               )}
-              <AccountStoreBadges accountId={account.id} />
+              <AccountStoreBadges account={account} />
             </div>
             <button
               onClick={() => onDeleteAccount(reviewer.id, account.id)}
