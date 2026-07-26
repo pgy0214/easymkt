@@ -194,6 +194,8 @@ def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
         platform=data.platform,
         name=data.name,
         url=data.url,
+        address=data.address,
+        menu=data.menu,
         cooldown_days=data.cooldown_days,
     )
     db.add(store)
@@ -207,6 +209,10 @@ def update_store(db: Session, store: models.Store, data: schemas.StoreUpdate) ->
         store.name = data.name
     if data.url is not None:
         store.url = data.url
+    if data.address is not None:
+        store.address = data.address
+    if data.menu is not None:
+        store.menu = data.menu
     if data.cooldown_days is not None:
         store.cooldown_days = data.cooldown_days
     db.commit()

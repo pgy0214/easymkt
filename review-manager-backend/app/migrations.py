@@ -62,6 +62,11 @@ def run_migrations(engine) -> None:
             if "kakao_default_claim_hours" in settings_columns:
                 conn.execute(text("ALTER TABLE settings DROP COLUMN kakao_default_claim_hours"))
 
+        # stores: address/menu are new optional columns filled in by the
+        # URL auto-fill crawler (or left blank and typed manually)
+        _add_column_if_missing(conn, "stores", "address", "address TEXT")
+        _add_column_if_missing(conn, "stores", "menu", "menu TEXT")
+
         # review_targets: store_name/store_url columns replaced by a store_id FK
         # to the new stores table (stores are now a reusable list, not re-typed
         # per campaign), and claim_time_limit_hours renamed to _minutes. Same

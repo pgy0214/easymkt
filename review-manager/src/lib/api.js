@@ -62,6 +62,8 @@ export const api = {
   updateStore: (id, data) =>
     request(`/stores/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteStore: (id) => request(`/stores/${id}`, { method: 'DELETE' }),
+  fetchStoreInfo: (url) =>
+    request('/stores/fetch-info', { method: 'POST', body: JSON.stringify({ url }) }),
 
   getTargets: () => request('/targets'),
   createTarget: (data) => request('/targets', { method: 'POST', body: JSON.stringify(data) }),

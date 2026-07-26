@@ -65,12 +65,16 @@ class StoreCreate(BaseModel):
     platform: Platform
     name: str
     url: str
+    address: Optional[str] = None
+    menu: Optional[str] = None
     cooldown_days: int = 90
 
 
 class StoreUpdate(BaseModel):
     name: Optional[str] = None
     url: Optional[str] = None
+    address: Optional[str] = None
+    menu: Optional[str] = None
     cooldown_days: Optional[int] = None
 
 
@@ -81,8 +85,20 @@ class StoreOut(BaseModel):
     platform: Platform
     name: str
     url: str
+    address: Optional[str] = None
+    menu: Optional[str] = None
     cooldown_days: int
     created_at: datetime.datetime
+
+
+class StoreInfoFetchIn(BaseModel):
+    url: str
+
+
+class StoreInfoFetchOut(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    menu: Optional[str] = None
 
 
 # --- ReviewTarget ---

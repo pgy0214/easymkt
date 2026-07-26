@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
 import { formatDateTime, PLATFORM_LABEL } from '../lib/format.js'
 
-const EMPTY = { platform: 'naver', name: '', url: '', cooldown_days: 90 }
+const EMPTY = { platform: 'naver', name: '', url: '', address: '', menu: '', cooldown_days: 90 }
 
 export default function StoreManager() {
   const [stores, setStores] = useState([])
@@ -11,6 +11,8 @@ export default function StoreManager() {
   const [error, setError] = useState(null)
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
+  const [autoFilling, setAutoFilling] = useState(false)
+  const [autoFillNote, setAutoFillNote] = useState(null)
 
   async function refresh() {
     setLoading(true)
@@ -37,14 +39,47 @@ export default function StoreManager() {
         ...form,
         name: form.name.trim(),
         url: form.url.trim(),
+        address: form.address.trim() || null,
+        menu: form.menu.trim() || null,
         cooldown_days: Number(form.cooldown_days),
       })
       setStores((prev) => [...prev, store].sort((a, b) => a.name.localeCompare(b.name)))
       setForm(EMPTY)
+      setAutoFillNote(null)
     } catch (err) {
       alert(err.message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleUrlBlur(e) {
+    const url = e.target.value.trim()
+    if (!url || form.platform !== 'naver') return
+    setAutoFilling(true)
+    setAutoFillNote(null)
+    try {
+      const info = await api.fetchStoreInfo(url)
+      setForm((prev) => ({
+        ...prev,
+        url,
+        name: prev.name.trim() || info.name || prev.name,
+        address: prev.address.trim() || info.address || prev.address,
+        menu: prev.menu.trim() || info.menu || prev.menu,
+      }))
+      const missing = []
+      if (!info.name) missing.push('매장명')
+      if (!info.address) missing.push('주소')
+      if (!info.menu) missing.push('메뉴')
+      setAutoFillNote(
+        missing.length > 0
+          ? `자동으로 못 찾은 정보(직접 입력해주세요): ${missing.join(', ')}`
+          : '매장명/주소/메뉴를 자동으로 채웠어요. 확인 후 등록해주세요.',
+      )
+    } catch (err) {
+      setAutoFillNote(`자동 입력 실패: ${err.message} — 직접 입력해주세요.`)
+    } finally {
+      setAutoFilling(false)
     }
   }
 
@@ -86,18 +121,20 @@ export default function StoreManager() {
           </select>
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-xs text-slate-500">매장명</label>
-          <input
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-          />
-        </div>
-        <div className="sm:col-span-2">
           <label className="block text-xs text-slate-500">매장 URL</label>
           <input
             value={form.url}
             onChange={(e) => setForm({ ...form, url: e.target.value })}
+            onBlur={handleUrlBlur}
+            placeholder="네이버 플레이스 URL을 입력하면 자동으로 채워요"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs text-slate-500">매장명 {autoFilling && '(자동 입력 중...)'}</label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
@@ -111,7 +148,23 @@ export default function StoreManager() {
             className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
-        <div className="flex items-end sm:col-span-4">
+        <div className="sm:col-span-3">
+          <label className="block text-xs text-slate-500">매장주소</label>
+          <input
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs text-slate-500">매장메뉴 (선택)</label>
+          <input
+            value={form.menu}
+            onChange={(e) => setForm({ ...form, menu: e.target.value })}
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
+        <div className="flex items-end sm:col-span-5">
           <button
             type="submit"
             disabled={submitting}
@@ -121,10 +174,14 @@ export default function StoreManager() {
             매장 등록
           </button>
         </div>
+        {autoFillNote && (
+          <p className="text-xs text-amber-600 sm:col-span-5">{autoFillNote}</p>
+        )}
         <p className="text-xs text-slate-400 sm:col-span-5">
           같은 매장을 여러 번 캠페인에 쓰려면 여기서 한 번만 등록해두세요. "캠페인 등록"에서는
           이 목록 중에서 골라 캠페인을 만듭니다. 재작업 가능 주기는 같은 계정이 이 매장을 다시
-          리뷰할 수 있기까지 걸리는 기간입니다.
+          리뷰할 수 있기까지 걸리는 기간입니다. 네이버 매장은 URL 입력 후 다른 칸을 클릭하면
+          매장명/주소/메뉴를 자동으로 긁어옵니다(카카오는 아직 지원하지 않아요).
         </p>
       </form>
 
@@ -138,6 +195,8 @@ export default function StoreManager() {
               <th className="px-3 py-2">플랫폼</th>
               <th className="px-3 py-2">매장명</th>
               <th className="px-3 py-2">URL</th>
+              <th className="px-3 py-2">주소</th>
+              <th className="px-3 py-2">메뉴</th>
               <th className="px-3 py-2">재작업 주기(일)</th>
               <th className="px-3 py-2">등록일</th>
               <th className="px-3 py-2" />
@@ -165,6 +224,21 @@ export default function StoreManager() {
                       <ExternalLink size={14} />
                     </a>
                   </div>
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    defaultValue={store.address || ''}
+                    onBlur={(e) => handleFieldChange(store, 'address', e.target.value.trim())}
+                    className="w-32 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <input
+                    defaultValue={store.menu || ''}
+                    title={store.menu || ''}
+                    onBlur={(e) => handleFieldChange(store, 'menu', e.target.value.trim())}
+                    className="w-32 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+                  />
                 </td>
                 <td className="px-3 py-2">
                   <input

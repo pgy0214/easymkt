@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
+from app.crawlers import naver_store_info
 from app.database import get_db
 
 router = APIRouter(prefix="/api/stores", tags=["stores"])
@@ -17,6 +18,15 @@ def list_stores(platform: Optional[str] = None, db: Session = Depends(get_db)):
 @router.post("", response_model=schemas.StoreOut)
 def create_store(data: schemas.StoreCreate, db: Session = Depends(get_db)):
     return crud.create_store(db, data)
+
+
+@router.post("/fetch-info", response_model=schemas.StoreInfoFetchOut)
+def fetch_store_info(data: schemas.StoreInfoFetchIn):
+    try:
+        info = naver_store_info.fetch_store_info(data.url)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"매장 정보를 가져오지 못했습니다: {e}")
+    return info
 
 
 @router.patch("/{store_id}", response_model=schemas.StoreOut)

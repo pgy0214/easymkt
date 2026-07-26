@@ -56,6 +56,8 @@ class Store(Base):
     platform = Column(String, nullable=False)  # 'naver' | 'kakao'
     name = Column(String, nullable=False)
     url = Column(String, nullable=False)
+    address = Column(String, nullable=True)
+    menu = Column(String, nullable=True)
     cooldown_days = Column(Integer, nullable=False, default=90)  # 계정당 재작업 가능 주기
     created_at = Column(DateTime, default=utcnow)
 
