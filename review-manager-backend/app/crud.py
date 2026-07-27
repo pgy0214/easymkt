@@ -208,6 +208,8 @@ def import_admin_accounts(db: Session, rows: list[dict]) -> schemas.ReviewerImpo
             category="admin",
             contact_info=_normalize_phone(contact_info),
             is_active=True,
+            gender=row.get("gender"),
+            birth_date=row.get("birth_date"),
         )
         db.add(reviewer)
         db.flush()

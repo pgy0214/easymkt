@@ -24,6 +24,8 @@ const GENDER_BADGE = {
 
 export default function ReviewerCard({
   reviewer,
+  selected = false,
+  onToggleSelect,
   onDeleteReviewer,
   onToggleActive,
   onCreateAccount,
@@ -36,6 +38,13 @@ export default function ReviewerCard({
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
+            {onToggleSelect && (
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onToggleSelect(reviewer.id)}
+              />
+            )}
             <span
               className={`rounded px-1.5 py-0.5 text-xs font-medium ${CATEGORY_BADGE[reviewer.category]}`}
             >

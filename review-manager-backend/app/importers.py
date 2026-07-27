@@ -1,4 +1,5 @@
 import csv
+import datetime
 import io
 
 import openpyxl
@@ -53,6 +54,22 @@ def _first_matching(row: dict, header_candidates: set) -> str | None:
     return None
 
 
+BIRTH_DATE_HEADERS = {"생년월일", "생일"}
+_BIRTH_DATE_FORMATS = ("%Y-%m-%d", "%Y.%m.%d", "%Y/%m/%d", "%Y%m%d", "%Y-%m-%d %H:%M:%S")
+
+
+def _parse_birth_date(raw: str | None) -> datetime.date | None:
+    if not raw:
+        return None
+    text = raw.strip()
+    for fmt in _BIRTH_DATE_FORMATS:
+        try:
+            return datetime.datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
 PLATFORM_HEADERS = {"플랫폼"}
 LABEL_HEADERS = {"계정아이디", "계정 아이디"}
 PROFILE_URL_HEADERS = {"네이버마이플레이스URL", "네이버 마이플레이스 URL", "URL", "마이플레이스URL"}
@@ -81,6 +98,7 @@ def parse_admin_account_rows(content: bytes, filename: str) -> list[dict]:
             continue
         platform_raw = _first_matching(row, PLATFORM_HEADERS)
         platform = PLATFORM_VALUE_MAP.get(platform_raw.strip().lower()) if platform_raw else "naver"
+        gender_raw = _first_matching(row, GENDER_HEADERS)
         results.append(
             {
                 "name": _first_matching(row, NAME_HEADERS),
@@ -90,6 +108,8 @@ def parse_admin_account_rows(content: bytes, filename: str) -> list[dict]:
                 "profile_url": _first_matching(row, PROFILE_URL_HEADERS),
                 "ip_address": _first_matching(row, IP_HEADERS),
                 "password": _first_matching(row, PASSWORD_HEADERS),
+                "gender": GENDER_VALUE_MAP.get(gender_raw.strip().lower()) if gender_raw else None,
+                "birth_date": _parse_birth_date(_first_matching(row, BIRTH_DATE_HEADERS)),
             }
         )
     return results

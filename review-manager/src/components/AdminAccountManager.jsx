@@ -24,12 +24,12 @@ const EMPTY = {
   ip_address: '',
 }
 
-const TEMPLATE_HEADERS = ['플랫폼', '이름', '연락처', '계정아이디', '비밀번호', '네이버마이플레이스URL', 'IP']
+const TEMPLATE_HEADERS = ['플랫폼', 'IP', '이름', '성별', '생년월일', '연락처', '계정아이디', '비밀번호', '네이버마이플레이스URL']
 
 function downloadTemplate() {
-  const example = ['네이버', '홍길동', '010-1234-5678', 'acct_01', 'p@ssw0rd', 'https://m.place.naver.com/my/...', '123.45.67.89']
-  // leading BOM so Excel opens the Korean headers as UTF-8 instead of guessing ANSI
-  const csv = '﻿' + TEMPLATE_HEADERS.join(',') + '\n' + example.join(',') + '\n'
+  // leading BOM so Excel opens the Korean headers as UTF-8 instead of guessing ANSI.
+  // 예시 데이터 행은 넣지 않는다 — 지우지 않고 그대로 업로드하면 가짜 계정이 등록되기 때문
+  const csv = '﻿' + TEMPLATE_HEADERS.join(',') + '\n'
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -56,7 +56,21 @@ export default function AdminAccountManager() {
   const [storeFilter, setStoreFilter] = useState('')
   const [ineligibleForStore, setIneligibleForStore] = useState(new Set())
   const [checkingEligibility, setCheckingEligibility] = useState(false)
+  const [selectedKeys, setSelectedKeys] = useState(new Set())
   const fileInputRef = useRef(null)
+
+  function rowKey(row) {
+    return `${row.reviewerId}-${row.id ?? 'none'}`
+  }
+
+  function toggleSelected(key) {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   function toRows(reviewers) {
     return reviewers.flatMap((r) =>
@@ -212,6 +226,11 @@ export default function AdminAccountManager() {
         await api.deleteReviewer(row.reviewerId)
       }
       setRows((prev) => prev.filter((r) => !(r.reviewerId === row.reviewerId && r.id === row.id)))
+      setSelectedKeys((prev) => {
+        const next = new Set(prev)
+        next.delete(rowKey(row))
+        return next
+      })
     } catch (err) {
       alert(err.message)
     }
@@ -377,9 +396,8 @@ export default function AdminAccountManager() {
           샘플 양식 다운로드
         </button>
         <span className="text-xs text-slate-400">
-          플랫폼/이름/연락처/계정아이디/비밀번호/URL/IP 컬럼이 있는 .xlsx 또는 .csv 파일 (이름과
-          계정아이디가 둘 다 있는 행만 등록됩니다. 성별/생년월일은 일괄등록에는 아직 지원되지
-          않아 등록 후 개별 수정으로 입력해야 합니다)
+          플랫폼/IP/이름/성별/생년월일/연락처/계정아이디/비밀번호/URL 컬럼이 있는 .xlsx 또는
+          .csv 파일 (이름과 계정아이디가 둘 다 있는 행만 등록됩니다)
         </span>
         {importResult && (
           <span className="ml-auto text-xs text-slate-600">
@@ -428,19 +446,41 @@ export default function AdminAccountManager() {
                 {selectedStore.name}에서 지금 작업 가능한 계정만 표시 중
               </span>
             )}
+            {selectedKeys.size > 0 && (
+              <span className="text-xs text-slate-500">선택 {selectedKeys.size}건</span>
+            )}
           </div>
 
           {filteredRows.length === 0 ? (
             <p className="text-sm text-slate-400">조건에 맞는 계정이 없습니다</p>
           ) : (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full min-w-[1100px] text-sm">
+          <table className="w-full min-w-[1150px] text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
               <tr>
+                <th className="px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={visibleRows.length > 0 && visibleRows.every((r) => selectedKeys.has(rowKey(r)))}
+                    onChange={() =>
+                      setSelectedKeys((prev) => {
+                        const allSelected = visibleRows.every((r) => prev.has(rowKey(r)))
+                        const next = new Set(prev)
+                        visibleRows.forEach((r) => {
+                          if (allSelected) next.delete(rowKey(r))
+                          else next.add(rowKey(r))
+                        })
+                        return next
+                      })
+                    }
+                    title="현재 페이지 전체 선택"
+                  />
+                </th>
                 <th className="px-3 py-2">#</th>
                 <th className="px-3 py-2">플랫폼</th>
                 <th className="px-3 py-2">IP</th>
                 <th className="px-3 py-2">이름</th>
+                <th className="px-3 py-2">성별</th>
                 <th className="px-3 py-2">생년월일</th>
                 <th className="px-3 py-2">연락처</th>
                 <th className="px-3 py-2">계정 아이디</th>
@@ -452,21 +492,28 @@ export default function AdminAccountManager() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {visibleRows.map((row, index) => (
-                <tr key={`${row.reviewerId}-${row.id ?? 'none'}`}>
+                <tr key={rowKey(row)}>
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedKeys.has(rowKey(row))}
+                      onChange={() => toggleSelected(rowKey(row))}
+                    />
+                  </td>
                   <td className="px-3 py-2 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
                   <td className="px-3 py-2">
                     {row.platform === 'naver' ? '네이버' : row.platform === 'kakao' ? '카카오' : '-'}
                   </td>
                   <td className="px-3 py-2 text-slate-500">{row.ip_address || '-'}</td>
+                  <td className="px-3 py-2">{row.name}</td>
                   <td className="px-3 py-2">
-                    <span className="inline-flex items-center gap-1">
-                      {row.name}
-                      {row.gender && (
-                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GENDER_BADGE[row.gender]}`}>
-                          {GENDER_LABEL[row.gender]}
-                        </span>
-                      )}
-                    </span>
+                    {row.gender ? (
+                      <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GENDER_BADGE[row.gender]}`}>
+                        {GENDER_LABEL[row.gender]}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
                   </td>
                   <td className="px-3 py-2 text-slate-500">
                     {row.birth_date ? formatDate(row.birth_date) : '-'}

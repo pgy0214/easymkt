@@ -43,7 +43,17 @@ export default function ReviewerManager() {
   const [storeFilter, setStoreFilter] = useState('')
   const [eligibleReviewerIds, setEligibleReviewerIds] = useState(null)
   const [checkingEligibility, setCheckingEligibility] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
   const fileInputRef = useRef(null)
+
+  function toggleSelected(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   async function refresh() {
     setLoading(true)
@@ -142,6 +152,27 @@ export default function ReviewerManager() {
     [reviewers],
   )
 
+  // 카테고리/성별/지역/연령대/검색까지 먼저 적용한 결과 — 매장 필터는 이 결과 위에 마지막으로
+  // 얹는다("체험단+여성+20대"까지 고른 다음 매장을 고르면 그 조건의 리뷰어 중 작업 가능한
+  // 사람만 남도록). 쿨다운 조회 대상도 이 목록으로 좁혀서 불필요한 API 호출을 줄인다.
+  const baseFiltered = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return reviewers.filter((r) => {
+      // 관리자(자체보유계정)는 별도의 "관리자 계정" 탭에서 관리
+      if (r.category === 'admin') return false
+      if (statusFilter === 'active' && !r.is_active) return false
+      if (statusFilter === 'inactive' && r.is_active) return false
+      if (categoryFilter && r.category !== categoryFilter) return false
+      if (genderFilter && r.gender !== genderFilter) return false
+      if (regionFilter && r.region !== regionFilter) return false
+      if (ageGroupFilter && r.age_group !== ageGroupFilter) return false
+      if (query && !r.name.toLowerCase().includes(query) && !r.contact_info?.includes(query)) {
+        return false
+      }
+      return true
+    })
+  }, [reviewers, statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search])
+
   useEffect(() => {
     if (!selectedStore) {
       setEligibleReviewerIds(null)
@@ -149,7 +180,7 @@ export default function ReviewerManager() {
     }
     let cancelled = false
     const candidates = []
-    for (const r of nonAdminReviewers) {
+    for (const r of baseFiltered) {
       for (const a of r.accounts) {
         if (a.platform === selectedStore.platform) candidates.push({ reviewerId: r.id, accountId: a.id })
       }
@@ -172,26 +203,12 @@ export default function ReviewerManager() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStore, nonAdminReviewers])
+  }, [selectedStore, baseFiltered])
 
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return reviewers.filter((r) => {
-      // 관리자(자체보유계정)는 별도의 "관리자 계정" 탭에서 관리
-      if (r.category === 'admin') return false
-      if (statusFilter === 'active' && !r.is_active) return false
-      if (statusFilter === 'inactive' && r.is_active) return false
-      if (categoryFilter && r.category !== categoryFilter) return false
-      if (genderFilter && r.gender !== genderFilter) return false
-      if (regionFilter && r.region !== regionFilter) return false
-      if (ageGroupFilter && r.age_group !== ageGroupFilter) return false
-      if (query && !r.name.toLowerCase().includes(query) && !r.contact_info?.includes(query)) {
-        return false
-      }
-      if (eligibleReviewerIds && !eligibleReviewerIds.has(r.id)) return false
-      return true
-    })
-  }, [reviewers, statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search, eligibleReviewerIds])
+    if (!eligibleReviewerIds) return baseFiltered
+    return baseFiltered.filter((r) => eligibleReviewerIds.has(r.id))
+  }, [baseFiltered, eligibleReviewerIds])
 
   useEffect(() => {
     setPage(1)
@@ -276,29 +293,6 @@ export default function ReviewerManager() {
 
       <div className="flex flex-wrap items-center gap-2">
         <select
-          value={storeFilter}
-          onChange={(e) => setStoreFilter(e.target.value)}
-          className="rounded border border-slate-300 px-2 py-1 text-sm"
-        >
-          <option value="">작업 매장으로 필터링 안 함</option>
-          {stores.map((s) => (
-            <option key={s.id} value={s.id}>
-              [{s.platform === 'naver' ? '네이버' : '카카오'}] {s.name}
-            </option>
-          ))}
-        </select>
-        {checkingEligibility && (
-          <span className="text-xs text-slate-400">작업가능 여부 확인 중...</span>
-        )}
-        {selectedStore && !checkingEligibility && (
-          <span className="text-xs text-slate-500">
-            {selectedStore.name}에서 지금 작업 가능한 계정을 가진 리뷰어만 표시 중
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="rounded border border-slate-300 px-2 py-1 text-sm"
@@ -353,6 +347,33 @@ export default function ReviewerManager() {
         </span>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={storeFilter}
+          onChange={(e) => setStoreFilter(e.target.value)}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          <option value="">작업 매장으로 필터링 안 함</option>
+          {stores.map((s) => (
+            <option key={s.id} value={s.id}>
+              [{s.platform === 'naver' ? '네이버' : '카카오'}] {s.name}
+            </option>
+          ))}
+        </select>
+        {checkingEligibility && (
+          <span className="text-xs text-slate-400">작업가능 여부 확인 중...</span>
+        )}
+        {selectedStore && !checkingEligibility && (
+          <span className="text-xs text-slate-500">
+            위 조건에 맞으면서 {selectedStore.name}에서 지금 작업 가능한 계정을 가진 리뷰어만
+            표시 중
+          </span>
+        )}
+        {selectedIds.size > 0 && (
+          <span className="text-xs text-slate-500">선택 {selectedIds.size}명</span>
+        )}
+      </div>
+
       <Pagination
         page={page}
         pageSize={pageSize}
@@ -361,11 +382,34 @@ export default function ReviewerManager() {
         onPageSizeChange={setPageSize}
       />
 
+      {visible.length > 0 && (
+        <label className="flex items-center gap-1.5 text-xs text-slate-500">
+          <input
+            type="checkbox"
+            checked={visible.every((r) => selectedIds.has(r.id))}
+            onChange={() =>
+              setSelectedIds((prev) => {
+                const allSelected = visible.every((r) => prev.has(r.id))
+                const next = new Set(prev)
+                visible.forEach((r) => {
+                  if (allSelected) next.delete(r.id)
+                  else next.add(r.id)
+                })
+                return next
+              })
+            }
+          />
+          현재 페이지 전체 선택
+        </label>
+      )}
+
       <div className="space-y-3">
         {visible.map((reviewer) => (
           <ReviewerCard
             key={reviewer.id}
             reviewer={reviewer}
+            selected={selectedIds.has(reviewer.id)}
+            onToggleSelect={toggleSelected}
             onDeleteReviewer={handleDeleteReviewer}
             onToggleActive={handleToggleActive}
             onCreateAccount={handleCreateAccount}
