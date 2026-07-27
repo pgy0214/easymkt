@@ -39,6 +39,10 @@ export default function ReviewerManager() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
+  const [stores, setStores] = useState([])
+  const [storeFilter, setStoreFilter] = useState('')
+  const [eligibleReviewerIds, setEligibleReviewerIds] = useState(null)
+  const [checkingEligibility, setCheckingEligibility] = useState(false)
   const fileInputRef = useRef(null)
 
   async function refresh() {
@@ -55,7 +59,13 @@ export default function ReviewerManager() {
 
   useEffect(() => {
     refresh()
+    api.getStores().then(setStores).catch(() => {})
   }, [])
+
+  const selectedStore = useMemo(
+    () => stores.find((s) => s.id === Number(storeFilter)) ?? null,
+    [stores, storeFilter],
+  )
 
   async function handleCreateReviewer(data) {
     const reviewer = await api.createReviewer(data)
@@ -132,6 +142,38 @@ export default function ReviewerManager() {
     [reviewers],
   )
 
+  useEffect(() => {
+    if (!selectedStore) {
+      setEligibleReviewerIds(null)
+      return
+    }
+    let cancelled = false
+    const candidates = []
+    for (const r of nonAdminReviewers) {
+      for (const a of r.accounts) {
+        if (a.platform === selectedStore.platform) candidates.push({ reviewerId: r.id, accountId: a.id })
+      }
+    }
+    setCheckingEligibility(true)
+    Promise.all(candidates.map((c) => api.getAccountStoreHistory(c.accountId)))
+      .then((results) => {
+        if (cancelled) return
+        const eligible = new Set()
+        results.forEach((history, i) => {
+          const entry = history.find((h) => h.store_id === selectedStore.id)
+          if (!entry || entry.is_eligible_now) eligible.add(candidates[i].reviewerId)
+        })
+        setEligibleReviewerIds(eligible)
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingEligibility(false)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStore, nonAdminReviewers])
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return reviewers.filter((r) => {
@@ -146,13 +188,14 @@ export default function ReviewerManager() {
       if (query && !r.name.toLowerCase().includes(query) && !r.contact_info?.includes(query)) {
         return false
       }
+      if (eligibleReviewerIds && !eligibleReviewerIds.has(r.id)) return false
       return true
     })
-  }, [reviewers, statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search])
+  }, [reviewers, statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search, eligibleReviewerIds])
 
   useEffect(() => {
     setPage(1)
-  }, [statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search, pageSize])
+  }, [statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search, storeFilter, pageSize])
 
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize)
 
@@ -229,6 +272,29 @@ export default function ReviewerManager() {
           <option value="active">연락가능만</option>
           <option value="inactive">연락불가만</option>
         </select>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={storeFilter}
+          onChange={(e) => setStoreFilter(e.target.value)}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          <option value="">작업 매장으로 필터링 안 함</option>
+          {stores.map((s) => (
+            <option key={s.id} value={s.id}>
+              [{s.platform === 'naver' ? '네이버' : '카카오'}] {s.name}
+            </option>
+          ))}
+        </select>
+        {checkingEligibility && (
+          <span className="text-xs text-slate-400">작업가능 여부 확인 중...</span>
+        )}
+        {selectedStore && !checkingEligibility && (
+          <span className="text-xs text-slate-500">
+            {selectedStore.name}에서 지금 작업 가능한 계정을 가진 리뷰어만 표시 중
+          </span>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

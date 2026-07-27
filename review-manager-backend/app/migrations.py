@@ -33,6 +33,10 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "reviewers", "age_group", "age_group TEXT")
         _add_column_if_missing(conn, "reviewers", "gender", "gender TEXT")
 
+        # reviewers: birth_date — 관리자 계정에서 사용, male|female과 함께 관리자
+        # 계정 등록폼에서 입력 가능
+        _add_column_if_missing(conn, "reviewers", "birth_date", "birth_date DATE")
+
         # review_accounts: ip_address — IP assigned per admin-owned account
         _add_column_if_missing(conn, "review_accounts", "ip_address", "ip_address TEXT")
         _add_column_if_missing(

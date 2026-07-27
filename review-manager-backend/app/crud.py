@@ -83,6 +83,7 @@ def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewe
         region=data.region,
         age_group=data.age_group,
         gender=data.gender,
+        birth_date=data.birth_date,
     )
     db.add(reviewer)
     db.commit()
@@ -100,7 +101,10 @@ def update_reviewer(
     if data.memo is not None:
         reviewer.memo = data.memo
     if data.contact_info is not None:
-        reviewer.contact_info = data.contact_info
+        category = data.category if data.category is not None else reviewer.category
+        reviewer.contact_info = (
+            _normalize_phone(data.contact_info) if category == "admin" else data.contact_info
+        )
     if data.is_active is not None:
         reviewer.is_active = data.is_active
     if data.region is not None:
@@ -109,6 +113,8 @@ def update_reviewer(
         reviewer.age_group = data.age_group
     if data.gender is not None:
         reviewer.gender = data.gender
+    if data.birth_date is not None:
+        reviewer.birth_date = data.birth_date
     db.commit()
     db.refresh(reviewer)
     return reviewer

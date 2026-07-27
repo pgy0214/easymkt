@@ -53,10 +53,10 @@ class ReviewerCreate(BaseModel):
     memo: Optional[str] = None
     contact_info: Optional[str] = None
     is_active: bool = True
-    # 체험단 전용
-    region: Optional[str] = None
-    age_group: Optional[str] = None
+    region: Optional[str] = None  # 체험단 전용
+    age_group: Optional[str] = None  # 체험단 전용
     gender: Optional[Gender] = None
+    birth_date: Optional[datetime.date] = None
 
 
 class ReviewerUpdate(BaseModel):
@@ -68,6 +68,7 @@ class ReviewerUpdate(BaseModel):
     region: Optional[str] = None
     age_group: Optional[str] = None
     gender: Optional[Gender] = None
+    birth_date: Optional[datetime.date] = None
 
 
 class ReviewerOut(BaseModel):
@@ -82,6 +83,7 @@ class ReviewerOut(BaseModel):
     region: Optional[str] = None
     age_group: Optional[str] = None
     gender: Optional[Gender] = None
+    birth_date: Optional[datetime.date] = None
     created_at: datetime.datetime
     accounts: list[ReviewAccountOut] = []
 

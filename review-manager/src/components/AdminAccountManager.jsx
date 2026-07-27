@@ -1,12 +1,22 @@
-import { AlertTriangle, Download, Plus, Search, Trash2, Upload } from 'lucide-react'
+import { AlertTriangle, Download, Pencil, Plus, Search, Send, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
+import { formatDate, GENDER_LABEL } from '../lib/format.js'
+import AccountEditModal from './AccountEditModal.jsx'
+import AccountTaskModal from './AccountTaskModal.jsx'
 import CopyButton from './CopyButton.jsx'
 import Pagination from './Pagination.jsx'
+
+const GENDER_BADGE = {
+  male: 'bg-sky-100 text-sky-700',
+  female: 'bg-rose-100 text-rose-700',
+}
 
 const EMPTY = {
   platform: 'naver',
   name: '',
+  gender: '',
+  birth_date: '',
   contact_info: '',
   label: '',
   password: '',
@@ -40,17 +50,32 @@ export default function AdminAccountManager() {
   const [pageSize, setPageSize] = useState(25)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
+  const [editingRow, setEditingRow] = useState(null)
+  const [taskRow, setTaskRow] = useState(null)
+  const [stores, setStores] = useState([])
+  const [storeFilter, setStoreFilter] = useState('')
+  const [ineligibleForStore, setIneligibleForStore] = useState(new Set())
+  const [checkingEligibility, setCheckingEligibility] = useState(false)
   const fileInputRef = useRef(null)
 
   function toRows(reviewers) {
     return reviewers.flatMap((r) =>
       r.accounts.length > 0
-        ? r.accounts.map((a) => ({ ...a, reviewerId: r.id, name: r.name, contact_info: r.contact_info }))
+        ? r.accounts.map((a) => ({
+            ...a,
+            reviewerId: r.id,
+            name: r.name,
+            gender: r.gender,
+            birth_date: r.birth_date,
+            contact_info: r.contact_info,
+          }))
         : [
             {
               id: null,
               reviewerId: r.id,
               name: r.name,
+              gender: r.gender,
+              birth_date: r.birth_date,
               contact_info: r.contact_info,
               platform: null,
               profile_url: null,
@@ -77,7 +102,40 @@ export default function AdminAccountManager() {
 
   useEffect(() => {
     refresh()
+    api.getStores().then(setStores).catch(() => {})
   }, [])
+
+  const selectedStore = useMemo(
+    () => stores.find((s) => s.id === Number(storeFilter)) ?? null,
+    [stores, storeFilter],
+  )
+
+  useEffect(() => {
+    if (!selectedStore) {
+      setIneligibleForStore(new Set())
+      return
+    }
+    let cancelled = false
+    const candidates = rows.filter((r) => r.id != null && r.platform === selectedStore.platform)
+    setCheckingEligibility(true)
+    Promise.all(candidates.map((r) => api.getAccountStoreHistory(r.id)))
+      .then((results) => {
+        if (cancelled) return
+        const ineligible = new Set()
+        results.forEach((history, i) => {
+          const entry = history.find((h) => h.store_id === selectedStore.id)
+          if (entry && !entry.is_eligible_now) ineligible.add(candidates[i].id)
+        })
+        setIneligibleForStore(ineligible)
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingEligibility(false)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStore, rows])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -87,6 +145,8 @@ export default function AdminAccountManager() {
       const reviewer = await api.createReviewer({
         category: 'admin',
         name: form.name.trim(),
+        gender: form.gender || null,
+        birth_date: form.birth_date || null,
         contact_info: form.contact_info.trim() || null,
       })
       const account = await api.createAccount(reviewer.id, {
@@ -98,7 +158,14 @@ export default function AdminAccountManager() {
       })
       setRows((prev) => [
         ...prev,
-        { ...account, reviewerId: reviewer.id, name: reviewer.name, contact_info: reviewer.contact_info },
+        {
+          ...account,
+          reviewerId: reviewer.id,
+          name: reviewer.name,
+          gender: reviewer.gender,
+          birth_date: reviewer.birth_date,
+          contact_info: reviewer.contact_info,
+        },
       ])
       setForm({ ...EMPTY, platform: form.platform })
     } catch (err) {
@@ -150,19 +217,32 @@ export default function AdminAccountManager() {
     }
   }
 
+  function handleEdited(updated) {
+    setRows((prev) => prev.map((r) => (r.id === editingRow.id ? { ...r, ...updated } : r)))
+    setEditingRow(null)
+  }
+
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return rows
-    return rows.filter((row) =>
-      [row.name, row.contact_info, row.label, row.ip_address]
-        .filter(Boolean)
-        .some((field) => field.toLowerCase().includes(query)),
-    )
-  }, [rows, search])
+    let result = rows
+    if (query) {
+      result = result.filter((row) =>
+        [row.name, row.contact_info, row.label, row.ip_address]
+          .filter(Boolean)
+          .some((field) => field.toLowerCase().includes(query)),
+      )
+    }
+    if (selectedStore) {
+      result = result.filter(
+        (row) => row.id != null && row.platform === selectedStore.platform && !ineligibleForStore.has(row.id),
+      )
+    }
+    return result
+  }, [rows, search, selectedStore, ineligibleForStore])
 
   useEffect(() => {
     setPage(1)
-  }, [search, pageSize])
+  }, [search, storeFilter, pageSize])
 
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize)
 
@@ -194,6 +274,27 @@ export default function AdminAccountManager() {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="w-24 rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500">성별</label>
+          <select
+            value={form.gender}
+            onChange={(e) => setForm({ ...form, gender: e.target.value })}
+            className="rounded border border-slate-300 px-2 py-1 text-sm"
+          >
+            <option value="">선택 안 함</option>
+            <option value="male">남성</option>
+            <option value="female">여성</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500">생년월일</label>
+          <input
+            type="date"
+            value={form.birth_date}
+            onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
+            className="rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
         <div>
@@ -277,7 +378,8 @@ export default function AdminAccountManager() {
         </button>
         <span className="text-xs text-slate-400">
           플랫폼/이름/연락처/계정아이디/비밀번호/URL/IP 컬럼이 있는 .xlsx 또는 .csv 파일 (이름과
-          계정아이디가 둘 다 있는 행만 등록됩니다)
+          계정아이디가 둘 다 있는 행만 등록됩니다. 성별/생년월일은 일괄등록에는 아직 지원되지
+          않아 등록 후 개별 수정으로 입력해야 합니다)
         </span>
         {importResult && (
           <span className="ml-auto text-xs text-slate-600">
@@ -296,41 +398,79 @@ export default function AdminAccountManager() {
 
       {!loading && rows.length > 0 && (
         <>
-          <div className="relative w-64">
-            <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="이름/연락처/계정아이디/IP 검색"
-              className="w-full rounded border border-slate-300 py-1 pl-7 pr-2 text-sm"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-64">
+              <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="이름/연락처/계정아이디/IP 검색"
+                className="w-full rounded border border-slate-300 py-1 pl-7 pr-2 text-sm"
+              />
+            </div>
+            <select
+              value={storeFilter}
+              onChange={(e) => setStoreFilter(e.target.value)}
+              className="rounded border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="">작업 매장으로 필터링 안 함</option>
+              {stores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  [{s.platform === 'naver' ? '네이버' : '카카오'}] {s.name}
+                </option>
+              ))}
+            </select>
+            {checkingEligibility && (
+              <span className="text-xs text-slate-400">작업가능 여부 확인 중...</span>
+            )}
+            {selectedStore && !checkingEligibility && (
+              <span className="text-xs text-slate-500">
+                {selectedStore.name}에서 지금 작업 가능한 계정만 표시 중
+              </span>
+            )}
           </div>
 
           {filteredRows.length === 0 ? (
             <p className="text-sm text-slate-400">조건에 맞는 계정이 없습니다</p>
           ) : (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full min-w-[800px] text-sm">
+          <table className="w-full min-w-[1100px] text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
               <tr>
+                <th className="px-3 py-2">#</th>
                 <th className="px-3 py-2">플랫폼</th>
+                <th className="px-3 py-2">IP</th>
                 <th className="px-3 py-2">이름</th>
+                <th className="px-3 py-2">생년월일</th>
                 <th className="px-3 py-2">연락처</th>
                 <th className="px-3 py-2">계정 아이디</th>
                 <th className="px-3 py-2">비밀번호</th>
                 <th className="px-3 py-2">네이버 마이플레이스 URL</th>
-                <th className="px-3 py-2">IP</th>
                 <th className="px-3 py-2">상태</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {visibleRows.map((row) => (
+              {visibleRows.map((row, index) => (
                 <tr key={`${row.reviewerId}-${row.id ?? 'none'}`}>
+                  <td className="px-3 py-2 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
                   <td className="px-3 py-2">
                     {row.platform === 'naver' ? '네이버' : row.platform === 'kakao' ? '카카오' : '-'}
                   </td>
-                  <td className="px-3 py-2">{row.name}</td>
+                  <td className="px-3 py-2 text-slate-500">{row.ip_address || '-'}</td>
+                  <td className="px-3 py-2">
+                    <span className="inline-flex items-center gap-1">
+                      {row.name}
+                      {row.gender && (
+                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GENDER_BADGE[row.gender]}`}>
+                          {GENDER_LABEL[row.gender]}
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-slate-500">
+                    {row.birth_date ? formatDate(row.birth_date) : '-'}
+                  </td>
                   <td className="px-3 py-2 text-slate-500">{row.contact_info || '-'}</td>
                   <td className="px-3 py-2">
                     <span className="inline-flex items-center gap-1">
@@ -341,7 +481,7 @@ export default function AdminAccountManager() {
                   <td className="px-3 py-2">
                     {row.password ? (
                       <span className="inline-flex items-center gap-1">
-                        <span className="tracking-widest text-slate-400">●●●●●●</span>
+                        <span className="text-slate-600">{row.password}</span>
                         <CopyButton value={row.password} label="비밀번호" />
                       </span>
                     ) : (
@@ -354,15 +494,15 @@ export default function AdminAccountManager() {
                         href={row.profile_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 hover:underline"
+                        title={row.profile_url}
+                        className="block max-w-[220px] truncate text-blue-600 hover:underline"
                       >
-                        링크
+                        {row.profile_url}
                       </a>
                     ) : (
                       '-'
                     )}
                   </td>
-                  <td className="px-3 py-2">{row.ip_address || '-'}</td>
                   <td className="px-3 py-2">
                     {row.id != null && (
                       <button
@@ -380,13 +520,33 @@ export default function AdminAccountManager() {
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    <button
-                      onClick={() => handleDelete(row)}
-                      className="text-slate-400 hover:text-red-600"
-                      title="삭제"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {row.id != null && (
+                        <>
+                          <button
+                            onClick={() => setEditingRow(row)}
+                            className="text-slate-400 hover:text-blue-600"
+                            title="정보 수정"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => setTaskRow(row)}
+                            className="text-slate-400 hover:text-blue-600"
+                            title="작업 관리"
+                          >
+                            <Send size={14} />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDelete(row)}
+                        className="text-slate-400 hover:text-red-600"
+                        title="삭제"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -406,6 +566,11 @@ export default function AdminAccountManager() {
           )}
         </>
       )}
+
+      {editingRow && (
+        <AccountEditModal row={editingRow} onClose={() => setEditingRow(null)} onSaved={handleEdited} />
+      )}
+      {taskRow && <AccountTaskModal row={taskRow} onClose={() => setTaskRow(null)} />}
     </div>
   )
 }

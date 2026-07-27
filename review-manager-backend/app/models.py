@@ -29,7 +29,8 @@ class Reviewer(Base):
     is_active = Column(Boolean, nullable=False, default=True)  # 연락가능(작업배정 대상) 여부
     region = Column(String, nullable=True)  # 체험단 전용
     age_group = Column(String, nullable=True)  # 체험단 전용
-    gender = Column(String, nullable=True)  # 체험단 전용, male|female
+    gender = Column(String, nullable=True)  # male|female
+    birth_date = Column(Date, nullable=True)
     otp_code = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
