@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app import crud, schemas
 from app.database import get_db
-from app.importers import parse_reviewer_rows
+from app.importers import parse_admin_account_rows, parse_reviewer_rows
 
 router = APIRouter(prefix="/api/reviewers", tags=["reviewers"])
 
@@ -60,6 +60,16 @@ async def import_reviewers(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"파일을 읽을 수 없습니다: {e}")
     return crud.import_reviewers(db, rows, category=category)
+
+
+@router.post("/import-admin", response_model=schemas.ReviewerImportResult)
+async def import_admin_accounts(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    content = await file.read()
+    try:
+        rows = parse_admin_account_rows(content, file.filename or "")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"파일을 읽을 수 없습니다: {e}")
+    return crud.import_admin_accounts(db, rows)
 
 
 @router.post("/{reviewer_id}/accounts", response_model=schemas.ReviewAccountOut)

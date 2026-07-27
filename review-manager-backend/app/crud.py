@@ -137,6 +137,57 @@ def import_reviewers(
     )
 
 
+def import_admin_accounts(db: Session, rows: list[dict]) -> schemas.ReviewerImportResult:
+    """관리자 계정 일괄등록 — 이름/계정아이디가 둘 다 있는 행마다 Reviewer(category='admin')
+    와 그 계정을 한 번에 만든다(화면의 "관리자 계정 추가" 폼 1회 제출과 동일한 동작).
+    기존 리뷰어 일괄등록(import_reviewers)과 달리 계정까지 같이 생기므로 여기서만 쓰는
+    별도 함수로 분리했다."""
+    created = 0
+    skipped_duplicate = 0
+    skipped_invalid = 0
+
+    for row in rows:
+        name = row.get("name")
+        label = row.get("label")
+        if not name or not label:
+            skipped_invalid += 1
+            continue
+
+        contact_info = row.get("contact_info")
+        existing_label = (
+            db.query(models.ReviewAccount).filter(models.ReviewAccount.label == label).first()
+        )
+        if existing_label:
+            skipped_duplicate += 1
+            continue
+
+        reviewer = models.Reviewer(
+            name=name,
+            category="admin",
+            contact_info=contact_info,
+            is_active=True,
+        )
+        db.add(reviewer)
+        db.flush()
+
+        account = models.ReviewAccount(
+            reviewer_id=reviewer.id,
+            platform=row.get("platform") or "naver",
+            label=label,
+            profile_url=row.get("profile_url"),
+            ip_address=row.get("ip_address"),
+        )
+        db.add(account)
+        created += 1
+
+    db.commit()
+    return schemas.ReviewerImportResult(
+        created=created,
+        skipped_duplicate=skipped_duplicate,
+        skipped_invalid=skipped_invalid,
+    )
+
+
 def delete_reviewer(db: Session, reviewer: models.Reviewer) -> None:
     account_ids = [a.id for a in reviewer.accounts]
     if account_ids:

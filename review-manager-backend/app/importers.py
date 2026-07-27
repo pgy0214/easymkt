@@ -53,6 +53,46 @@ def _first_matching(row: dict, header_candidates: set) -> str | None:
     return None
 
 
+PLATFORM_HEADERS = {"플랫폼"}
+LABEL_HEADERS = {"계정아이디", "계정 아이디"}
+PROFILE_URL_HEADERS = {"네이버마이플레이스URL", "네이버 마이플레이스 URL", "URL", "마이플레이스URL"}
+IP_HEADERS = {"IP", "ip"}
+PLATFORM_VALUE_MAP = {"네이버": "naver", "naver": "naver", "카카오": "kakao", "kakao": "kakao"}
+
+
+def parse_admin_account_rows(content: bytes, filename: str) -> list[dict]:
+    """관리자 계정 일괄등록 시트 파서 — 리뷰어 마스터 시트와 달리 이 시트는 계정
+    한 건(플랫폼/계정아이디/URL/IP)까지 한 행에 다 담겨 있다(관리자 계정 화면이
+    리뷰어+계정을 평탄화해서 한 줄로 보여주는 것과 동일한 모양). 이름과 계정아이디가
+    둘 다 있어야 유효한 행으로 본다 — 계정아이디가 없으면 "계정"으로서 의미가 없다."""
+    if filename.lower().endswith(".csv"):
+        rows = _parse_csv(content)
+    else:
+        rows = _parse_xlsx(content)
+
+    results = []
+    for row in rows:
+        # 완전히 빈 줄까지 "행"으로 세면 skipped_invalid가 부풀려지니, 아무 컬럼도
+        # 없는 줄만 걸러낸다 — name/label 누락 여부는 crud.import_admin_accounts가
+        # 세도록 여기서는 걸러내지 않는다(여기서 continue로 건너뛰면 그 카운트가
+        # 통계에 아예 안 잡히는 문제가 있었음).
+        if not any(v is not None and str(v).strip() for v in row.values()):
+            continue
+        platform_raw = _first_matching(row, PLATFORM_HEADERS)
+        platform = PLATFORM_VALUE_MAP.get(platform_raw.strip().lower()) if platform_raw else "naver"
+        results.append(
+            {
+                "name": _first_matching(row, NAME_HEADERS),
+                "contact_info": _first_matching(row, CONTACT_HEADERS),
+                "platform": platform or "naver",
+                "label": _first_matching(row, LABEL_HEADERS),
+                "profile_url": _first_matching(row, PROFILE_URL_HEADERS),
+                "ip_address": _first_matching(row, IP_HEADERS),
+            }
+        )
+    return results
+
+
 GUIDELINE_HEADERS = {"가이드라인", "원고 가이드라인"}
 REGIONAL_FEATURES_HEADERS = {"지역특징", "지역적 특징"}
 MENU_NAME_HEADERS = [{"메뉴1명", "메뉴명1"}, {"메뉴2명", "메뉴명2"}, {"메뉴3명", "메뉴명3"}]

@@ -1,5 +1,5 @@
-import { AlertTriangle, Plus, Search, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, Download, Plus, Search, Trash2, Upload } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import Pagination from './Pagination.jsx'
 
@@ -12,6 +12,21 @@ const EMPTY = {
   ip_address: '',
 }
 
+const TEMPLATE_HEADERS = ['플랫폼', '이름', '연락처', '계정아이디', '네이버마이플레이스URL', 'IP']
+
+function downloadTemplate() {
+  const example = ['네이버', '홍길동', '010-1234-5678', 'acct_01', 'https://m.place.naver.com/my/...', '123.45.67.89']
+  // leading BOM so Excel opens the Korean headers as UTF-8 instead of guessing ANSI
+  const csv = '﻿' + TEMPLATE_HEADERS.join(',') + '\n' + example.join(',') + '\n'
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = '관리자계정_일괄등록_양식.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function AdminAccountManager() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -21,6 +36,9 @@ export default function AdminAccountManager() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState(null)
+  const fileInputRef = useRef(null)
 
   function toRows(reviewers) {
     return reviewers.flatMap((r) =>
@@ -83,6 +101,23 @@ export default function AdminAccountManager() {
       alert(err.message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleFileSelected(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setImporting(true)
+    setImportResult(null)
+    try {
+      const result = await api.importAdminAccounts(file)
+      setImportResult(result)
+      await refresh()
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setImporting(false)
+      e.target.value = ''
     }
   }
 
@@ -203,6 +238,41 @@ export default function AdminAccountManager() {
           관리자 계정 추가
         </button>
       </form>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white p-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.csv"
+          onChange={handleFileSelected}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importing}
+          className="flex items-center gap-1 rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
+        >
+          <Upload size={14} />
+          {importing ? '업로드 중...' : '엑셀/CSV로 일괄 등록'}
+        </button>
+        <button
+          onClick={downloadTemplate}
+          className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+        >
+          <Download size={14} />
+          샘플 양식 다운로드
+        </button>
+        <span className="text-xs text-slate-400">
+          플랫폼/이름/연락처/계정아이디/URL/IP 컬럼이 있는 .xlsx 또는 .csv 파일 (이름과
+          계정아이디가 둘 다 있는 행만 등록됩니다)
+        </span>
+        {importResult && (
+          <span className="ml-auto text-xs text-slate-600">
+            신규 {importResult.created}건 · 중복건너뜀 {importResult.skipped_duplicate}건 ·
+            필수값없음 {importResult.skipped_invalid}건
+          </span>
+        )}
+      </div>
 
       {loading && <p className="text-sm text-slate-400">불러오는 중...</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}

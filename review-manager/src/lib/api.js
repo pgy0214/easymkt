@@ -48,6 +48,16 @@ export const api = {
     }
     return res.json()
   },
+  importAdminAccounts: async (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${BASE_URL}/reviewers/import-admin`, { method: 'POST', body: form })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.detail || `요청 실패 (${res.status})`)
+    }
+    return res.json()
+  },
 
   createAccount: (reviewerId, data) =>
     request(`/reviewers/${reviewerId}/accounts`, {
