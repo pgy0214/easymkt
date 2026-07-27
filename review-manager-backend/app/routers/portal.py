@@ -56,12 +56,12 @@ def verify_otp(data: schemas.OtpVerifyIn, db: Session = Depends(get_db)):
     if not reviewer or not crud.verify_otp(db, reviewer, data.code):
         raise HTTPException(status_code=400, detail="인증번호가 올바르지 않거나 만료되었습니다")
     token = auth.issue_token(reviewer.id)
-    return schemas.OtpVerifyOut(token=token, reviewer=reviewer)
+    return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer))
 
 
 @router.get("/me", response_model=schemas.ReviewerOut)
 def get_me(reviewer: models.Reviewer = Depends(get_current_reviewer)):
-    return reviewer
+    return crud.reviewer_to_out(reviewer)
 
 
 @router.post("/accounts", response_model=schemas.ReviewAccountOut)
@@ -70,7 +70,7 @@ def add_my_account(
     reviewer: models.Reviewer = Depends(get_current_reviewer),
     db: Session = Depends(get_db),
 ):
-    return crud.create_account(db, reviewer.id, data)
+    return crud.account_to_out(crud.create_account(db, reviewer.id, data))
 
 
 @router.delete("/accounts/{account_id}")

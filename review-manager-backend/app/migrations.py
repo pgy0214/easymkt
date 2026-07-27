@@ -41,6 +41,9 @@ def run_migrations(engine) -> None:
             "has_login_issue",
             "has_login_issue BOOLEAN NOT NULL DEFAULT 0",
         )
+        _add_column_if_missing(
+            conn, "review_accounts", "password_encrypted", "password_encrypted TEXT"
+        )
 
         # settings: default claim-time presets, now in minutes (was hours). Add
         # the new columns, copy over converted values, then drop the old ones —

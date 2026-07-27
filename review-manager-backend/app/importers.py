@@ -57,6 +57,7 @@ PLATFORM_HEADERS = {"플랫폼"}
 LABEL_HEADERS = {"계정아이디", "계정 아이디"}
 PROFILE_URL_HEADERS = {"네이버마이플레이스URL", "네이버 마이플레이스 URL", "URL", "마이플레이스URL"}
 IP_HEADERS = {"IP", "ip"}
+PASSWORD_HEADERS = {"비밀번호", "계정비밀번호", "계정 비밀번호", "패스워드"}
 PLATFORM_VALUE_MAP = {"네이버": "naver", "naver": "naver", "카카오": "kakao", "kakao": "kakao"}
 
 
@@ -88,6 +89,7 @@ def parse_admin_account_rows(content: bytes, filename: str) -> list[dict]:
                 "label": _first_matching(row, LABEL_HEADERS),
                 "profile_url": _first_matching(row, PROFILE_URL_HEADERS),
                 "ip_address": _first_matching(row, IP_HEADERS),
+                "password": _first_matching(row, PASSWORD_HEADERS),
             }
         )
     return results

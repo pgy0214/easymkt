@@ -11,3 +11,4 @@ requests
 pyjwt
 python-dotenv
 Pillow
+cryptography

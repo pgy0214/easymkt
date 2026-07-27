@@ -1,12 +1,13 @@
 import datetime
 import json
 import os
+import re
 import secrets
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import crypto, models, schemas
 
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 ALLOWED_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -47,12 +48,37 @@ def verify_otp(db: Session, reviewer: models.Reviewer, code: str) -> bool:
     return True
 
 
+def _normalize_phone(raw: str | None) -> str | None:
+    """관리자 계정의 연락처는 항상 실제 전화번호라, 어떤 형태로 입력해도
+    010-0000-0000 식으로 통일한다. 리뷰어 관리 쪽 연락처는 카톡ID 등
+    전화번호가 아닌 값도 들어올 수 있어서 이 함수를 쓰지 않는다 — 여기서도
+    숫자만 뽑았을 때 "0"으로 시작하는 국내 전화번호 모양이 아니면 원본을
+    그대로 둔다(억지로 깨뜨리지 않음)."""
+    if not raw:
+        return raw
+    digits = re.sub(r"\D", "", raw)
+    if not digits or not digits.startswith("0"):
+        return raw.strip()
+    if len(digits) == 11:
+        return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+    if len(digits) == 10:
+        if digits.startswith("02"):
+            return f"{digits[:2]}-{digits[2:6]}-{digits[6:]}"
+        return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+    if len(digits) == 9 and digits.startswith("02"):
+        return f"{digits[:2]}-{digits[2:5]}-{digits[5:]}"
+    return raw.strip()
+
+
 def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewer:
+    contact_info = data.contact_info
+    if data.category == "admin":
+        contact_info = _normalize_phone(contact_info)
     reviewer = models.Reviewer(
         name=data.name,
         category=data.category,
         memo=data.memo,
-        contact_info=data.contact_info,
+        contact_info=contact_info,
         is_active=data.is_active,
         region=data.region,
         age_group=data.age_group,
@@ -86,6 +112,16 @@ def update_reviewer(
     db.commit()
     db.refresh(reviewer)
     return reviewer
+
+
+def reviewer_to_out(reviewer: models.Reviewer) -> schemas.ReviewerOut:
+    """ReviewerOut.accounts는 그냥 model_validate만 하면 계정의 password가 항상
+    None이 된다 — ORM 컬럼명이 password_encrypted라 자동 매핑이 안 되기 때문
+    (account_to_out과 동일한 이유). 리뷰어를 반환하는 라우터는 전부 이 함수를
+    거쳐야 계정 비밀번호가 복호화된 채로 나간다."""
+    out = schemas.ReviewerOut.model_validate(reviewer)
+    out.accounts = [account_to_out(a) for a in reviewer.accounts]
+    return out
 
 
 def import_reviewers(
@@ -164,18 +200,20 @@ def import_admin_accounts(db: Session, rows: list[dict]) -> schemas.ReviewerImpo
         reviewer = models.Reviewer(
             name=name,
             category="admin",
-            contact_info=contact_info,
+            contact_info=_normalize_phone(contact_info),
             is_active=True,
         )
         db.add(reviewer)
         db.flush()
 
+        password = row.get("password")
         account = models.ReviewAccount(
             reviewer_id=reviewer.id,
             platform=row.get("platform") or "naver",
             label=label,
             profile_url=row.get("profile_url"),
             ip_address=row.get("ip_address"),
+            password_encrypted=crypto.encrypt(password) if password else None,
         )
         db.add(account)
         created += 1
@@ -204,6 +242,12 @@ def delete_reviewer(db: Session, reviewer: models.Reviewer) -> None:
 
 # --- ReviewAccount ---
 
+def account_to_out(account: models.ReviewAccount) -> schemas.ReviewAccountOut:
+    out = schemas.ReviewAccountOut.model_validate(account)
+    out.password = crypto.decrypt(account.password_encrypted) if account.password_encrypted else None
+    return out
+
+
 def create_account(
     db: Session, reviewer_id: int, data: schemas.ReviewAccountCreate
 ) -> models.ReviewAccount:
@@ -214,6 +258,7 @@ def create_account(
         profile_url=data.profile_url,
         ip_address=data.ip_address,
         has_login_issue=data.has_login_issue,
+        password_encrypted=crypto.encrypt(data.password) if data.password else None,
     )
     db.add(account)
     db.commit()
@@ -242,6 +287,8 @@ def update_account(
         account.ip_address = data.ip_address
     if data.has_login_issue is not None:
         account.has_login_issue = data.has_login_issue
+    if data.password is not None:
+        account.password_encrypted = crypto.encrypt(data.password) if data.password else None
     db.commit()
     db.refresh(account)
     return account

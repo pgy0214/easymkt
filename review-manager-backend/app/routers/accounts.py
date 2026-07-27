@@ -14,7 +14,7 @@ def update_account(
     account = crud.get_account(db, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
-    return crud.update_account(db, account, data)
+    return crud.account_to_out(crud.update_account(db, account, data))
 
 
 @router.delete("/{account_id}")

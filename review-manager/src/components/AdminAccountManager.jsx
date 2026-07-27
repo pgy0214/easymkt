@@ -1,6 +1,7 @@
 import { AlertTriangle, Download, Plus, Search, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
+import CopyButton from './CopyButton.jsx'
 import Pagination from './Pagination.jsx'
 
 const EMPTY = {
@@ -8,14 +9,15 @@ const EMPTY = {
   name: '',
   contact_info: '',
   label: '',
+  password: '',
   profile_url: '',
   ip_address: '',
 }
 
-const TEMPLATE_HEADERS = ['플랫폼', '이름', '연락처', '계정아이디', '네이버마이플레이스URL', 'IP']
+const TEMPLATE_HEADERS = ['플랫폼', '이름', '연락처', '계정아이디', '비밀번호', '네이버마이플레이스URL', 'IP']
 
 function downloadTemplate() {
-  const example = ['네이버', '홍길동', '010-1234-5678', 'acct_01', 'https://m.place.naver.com/my/...', '123.45.67.89']
+  const example = ['네이버', '홍길동', '010-1234-5678', 'acct_01', 'p@ssw0rd', 'https://m.place.naver.com/my/...', '123.45.67.89']
   // leading BOM so Excel opens the Korean headers as UTF-8 instead of guessing ANSI
   const csv = '﻿' + TEMPLATE_HEADERS.join(',') + '\n' + example.join(',') + '\n'
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
@@ -53,6 +55,7 @@ export default function AdminAccountManager() {
               platform: null,
               profile_url: null,
               ip_address: null,
+              password: null,
               has_login_issue: false,
             },
           ],
@@ -89,6 +92,7 @@ export default function AdminAccountManager() {
       const account = await api.createAccount(reviewer.id, {
         platform: form.platform,
         label: form.label.trim(),
+        password: form.password.trim() || null,
         profile_url: form.platform === 'naver' ? form.profile_url.trim() || null : null,
         ip_address: form.ip_address.trim() || null,
       })
@@ -209,6 +213,15 @@ export default function AdminAccountManager() {
             className="w-28 rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
+        <div>
+          <label className="block text-xs text-slate-500">계정 비밀번호</label>
+          <input
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            className="w-28 rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
         {form.platform === 'naver' && (
           <div>
             <label className="block text-xs text-slate-500">네이버 마이플레이스 URL</label>
@@ -263,7 +276,7 @@ export default function AdminAccountManager() {
           샘플 양식 다운로드
         </button>
         <span className="text-xs text-slate-400">
-          플랫폼/이름/연락처/계정아이디/URL/IP 컬럼이 있는 .xlsx 또는 .csv 파일 (이름과
+          플랫폼/이름/연락처/계정아이디/비밀번호/URL/IP 컬럼이 있는 .xlsx 또는 .csv 파일 (이름과
           계정아이디가 둘 다 있는 행만 등록됩니다)
         </span>
         {importResult && (
@@ -304,6 +317,7 @@ export default function AdminAccountManager() {
                 <th className="px-3 py-2">이름</th>
                 <th className="px-3 py-2">연락처</th>
                 <th className="px-3 py-2">계정 아이디</th>
+                <th className="px-3 py-2">비밀번호</th>
                 <th className="px-3 py-2">네이버 마이플레이스 URL</th>
                 <th className="px-3 py-2">IP</th>
                 <th className="px-3 py-2">상태</th>
@@ -318,7 +332,22 @@ export default function AdminAccountManager() {
                   </td>
                   <td className="px-3 py-2">{row.name}</td>
                   <td className="px-3 py-2 text-slate-500">{row.contact_info || '-'}</td>
-                  <td className="px-3 py-2">{row.label || '-'}</td>
+                  <td className="px-3 py-2">
+                    <span className="inline-flex items-center gap-1">
+                      {row.label || '-'}
+                      <CopyButton value={row.label} label="계정 아이디" />
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    {row.password ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="tracking-widest text-slate-400">●●●●●●</span>
+                        <CopyButton value={row.password} label="비밀번호" />
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     {row.profile_url ? (
                       <a

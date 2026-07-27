@@ -10,12 +10,12 @@ router = APIRouter(prefix="/api/reviewers", tags=["reviewers"])
 
 @router.get("", response_model=list[schemas.ReviewerOut])
 def list_reviewers(db: Session = Depends(get_db)):
-    return crud.get_reviewers(db)
+    return [crud.reviewer_to_out(r) for r in crud.get_reviewers(db)]
 
 
 @router.post("", response_model=schemas.ReviewerOut)
 def create_reviewer(data: schemas.ReviewerCreate, db: Session = Depends(get_db)):
-    return crud.create_reviewer(db, data)
+    return crud.reviewer_to_out(crud.create_reviewer(db, data))
 
 
 @router.get("/{reviewer_id}", response_model=schemas.ReviewerOut)
@@ -23,7 +23,7 @@ def get_reviewer(reviewer_id: int, db: Session = Depends(get_db)):
     reviewer = crud.get_reviewer(db, reviewer_id)
     if not reviewer:
         raise HTTPException(status_code=404, detail="리뷰어를 찾을 수 없습니다")
-    return reviewer
+    return crud.reviewer_to_out(reviewer)
 
 
 @router.patch("/{reviewer_id}", response_model=schemas.ReviewerOut)
@@ -33,7 +33,7 @@ def update_reviewer(
     reviewer = crud.get_reviewer(db, reviewer_id)
     if not reviewer:
         raise HTTPException(status_code=404, detail="리뷰어를 찾을 수 없습니다")
-    return crud.update_reviewer(db, reviewer, data)
+    return crud.reviewer_to_out(crud.update_reviewer(db, reviewer, data))
 
 
 @router.delete("/{reviewer_id}")
@@ -79,4 +79,4 @@ def create_account(
     reviewer = crud.get_reviewer(db, reviewer_id)
     if not reviewer:
         raise HTTPException(status_code=404, detail="리뷰어를 찾을 수 없습니다")
-    return crud.create_account(db, reviewer_id, data)
+    return crud.account_to_out(crud.create_account(db, reviewer_id, data))

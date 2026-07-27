@@ -16,6 +16,7 @@ class ReviewAccountCreate(BaseModel):
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
     has_login_issue: bool = False
+    password: Optional[str] = None  # crud가 암호화해서 저장, 평문은 DB에 안 남음
 
 
 class ReviewAccountUpdate(BaseModel):
@@ -24,6 +25,7 @@ class ReviewAccountUpdate(BaseModel):
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
     has_login_issue: Optional[bool] = None
+    password: Optional[str] = None  # 빈 문자열이면 비밀번호 삭제, None이면 안 건드림
 
 
 class ReviewAccountOut(BaseModel):
@@ -37,6 +39,10 @@ class ReviewAccountOut(BaseModel):
     ip_address: Optional[str] = None
     has_login_issue: bool = False
     created_at: datetime.datetime
+
+    # ORM 컬럼명(password_encrypted)과 달라서 자동 매핑 안 됨 — crud.account_to_out이
+    # 복호화해서 채워줌 (work_days_raw→work_days와 동일한 패턴)
+    password: Optional[str] = None
 
 
 # --- Reviewer ---

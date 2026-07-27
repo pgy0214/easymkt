@@ -49,6 +49,7 @@ class ReviewAccount(Base):
     profile_url = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)  # 관리자(자체보유) 계정에 배정된 IP
     has_login_issue = Column(Boolean, nullable=False, default=False)  # 로그인 불가 등 문제 발생 시 관리자 체크용
+    password_encrypted = Column(String, nullable=True)  # Fernet 암호화된 계정 비밀번호 (app/crypto.py)
     created_at = Column(DateTime, default=utcnow)
 
     reviewer = relationship("Reviewer", back_populates="accounts")
