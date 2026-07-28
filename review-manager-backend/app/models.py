@@ -28,6 +28,8 @@ class Reviewer(Base):
     contact_info = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)  # 연락가능(작업배정 대상) 여부
     region = Column(String, nullable=True)  # 체험단 전용
+    blog_url = Column(String, nullable=True)  # 체험단 전용
+    blog_index = Column(String, nullable=True)  # 체험단 전용, 블로그 지수(등급/점수 등 자유 표기)
     age_group = Column(String, nullable=True)  # 체험단 전용
     gender = Column(String, nullable=True)  # male|female
     birth_date = Column(Date, nullable=True)

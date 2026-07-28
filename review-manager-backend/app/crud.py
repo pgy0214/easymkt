@@ -81,6 +81,8 @@ def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewe
         contact_info=contact_info,
         is_active=data.is_active,
         region=data.region,
+        blog_url=data.blog_url,
+        blog_index=data.blog_index,
         age_group=data.age_group,
         gender=data.gender,
         birth_date=data.birth_date,
@@ -109,6 +111,10 @@ def update_reviewer(
         reviewer.is_active = data.is_active
     if data.region is not None:
         reviewer.region = data.region
+    if data.blog_url is not None:
+        reviewer.blog_url = data.blog_url
+    if data.blog_index is not None:
+        reviewer.blog_index = data.blog_index
     if data.age_group is not None:
         reviewer.age_group = data.age_group
     if data.gender is not None:
@@ -165,6 +171,8 @@ def import_reviewers(
             contact_info=contact_info,
             is_active=False,
             region=row.get("region") if category == "experience" else None,
+            blog_url=row.get("blog_url") if category == "experience" else None,
+            blog_index=row.get("blog_index") if category == "experience" else None,
             age_group=row.get("age_group") if category == "experience" else None,
             gender=row.get("gender") if category == "experience" else None,
         )

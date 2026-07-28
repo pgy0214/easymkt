@@ -37,6 +37,10 @@ def run_migrations(engine) -> None:
         # 계정 등록폼에서 입력 가능
         _add_column_if_missing(conn, "reviewers", "birth_date", "birth_date DATE")
 
+        # reviewers: blog_url/blog_index — 체험단 전용, 블로그 주소와 블로그 지수(등급/점수 등)
+        _add_column_if_missing(conn, "reviewers", "blog_url", "blog_url TEXT")
+        _add_column_if_missing(conn, "reviewers", "blog_index", "blog_index TEXT")
+
         # review_accounts: ip_address — IP assigned per admin-owned account
         _add_column_if_missing(conn, "review_accounts", "ip_address", "ip_address TEXT")
         _add_column_if_missing(

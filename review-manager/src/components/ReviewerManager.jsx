@@ -9,7 +9,7 @@ import ReviewerForm from './ReviewerForm.jsx'
 const REVIEWER_TEMPLATE = { filename: '리뷰어_일괄등록_양식.csv', headers: ['이름', '연락처', '메모'] }
 const EXPERIENCE_TEMPLATE = {
   filename: '체험단_일괄등록_양식.csv',
-  headers: ['이름', '연락처', '메모', '지역', '연령대', '성별'],
+  headers: ['이름', '연락처', '지역', '블로그주소', '지수', '연령대', '성별', '메모'],
 }
 
 function downloadTemplate({ filename, headers }) {
@@ -254,7 +254,8 @@ export default function ReviewerManager() {
           샘플 양식 다운로드
         </button>
         <span className="text-xs text-slate-400">
-          이름/연락처(+체험단은 지역/연령대/성별) 컬럼이 있는 .xlsx 또는 .csv 파일 (신규 등록은 연락불가 상태로 시작)
+          이름/연락처(+체험단은 지역/블로그주소/지수/연령대/성별)/메모 컬럼이 있는 .xlsx 또는
+          .csv 파일 (신규 등록은 연락불가 상태로 시작)
         </span>
         {importResult && (
           <span className="ml-auto text-xs text-slate-600">

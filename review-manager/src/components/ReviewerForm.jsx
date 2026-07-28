@@ -8,6 +8,8 @@ const EMPTY = {
   memo: '',
   contact_info: '',
   region: '',
+  blog_url: '',
+  blog_index: '',
   age_group: '',
   gender: '',
 }
@@ -31,6 +33,8 @@ export default function ReviewerForm({ onCreate }) {
         memo: form.memo.trim() || null,
         contact_info: form.contact_info.trim() || null,
         region: isExperience ? form.region.trim() || null : null,
+        blog_url: isExperience ? form.blog_url.trim() || null : null,
+        blog_index: isExperience ? form.blog_index.trim() || null : null,
         age_group: isExperience ? form.age_group || null : null,
         gender: isExperience ? form.gender || null : null,
       })
@@ -73,14 +77,6 @@ export default function ReviewerForm({ onCreate }) {
         />
       </div>
       <div>
-        <label className="block text-xs text-slate-500">메모</label>
-        <input
-          value={form.memo}
-          onChange={(e) => setForm({ ...form, memo: e.target.value })}
-          className="w-40 rounded border border-slate-300 px-2 py-1 text-sm"
-        />
-      </div>
-      <div>
         <label className="block text-xs text-slate-500">연락수단 (카톡ID/전화번호 등)</label>
         <input
           value={form.contact_info}
@@ -97,6 +93,24 @@ export default function ReviewerForm({ onCreate }) {
               onChange={(e) => setForm({ ...form, region: e.target.value })}
               placeholder="예: 서울 강남구"
               className="w-32 rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500">블로그 주소</label>
+            <input
+              value={form.blog_url}
+              onChange={(e) => setForm({ ...form, blog_url: e.target.value })}
+              placeholder="https://blog.naver.com/..."
+              className="w-48 rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500">지수</label>
+            <input
+              value={form.blog_index}
+              onChange={(e) => setForm({ ...form, blog_index: e.target.value })}
+              placeholder="예: 최적화, 85"
+              className="w-24 rounded border border-slate-300 px-2 py-1 text-sm"
             />
           </div>
           <div>
@@ -131,6 +145,14 @@ export default function ReviewerForm({ onCreate }) {
           </div>
         </>
       )}
+      <div>
+        <label className="block text-xs text-slate-500">메모</label>
+        <input
+          value={form.memo}
+          onChange={(e) => setForm({ ...form, memo: e.target.value })}
+          className="w-40 rounded border border-slate-300 px-2 py-1 text-sm"
+        />
+      </div>
       <button
         type="submit"
         disabled={submitting}

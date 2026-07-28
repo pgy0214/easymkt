@@ -54,6 +54,8 @@ class ReviewerCreate(BaseModel):
     contact_info: Optional[str] = None
     is_active: bool = True
     region: Optional[str] = None  # 체험단 전용
+    blog_url: Optional[str] = None  # 체험단 전용
+    blog_index: Optional[str] = None  # 체험단 전용, 블로그 지수(등급/점수 등 자유 표기)
     age_group: Optional[str] = None  # 체험단 전용
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None
@@ -66,6 +68,8 @@ class ReviewerUpdate(BaseModel):
     contact_info: Optional[str] = None
     is_active: Optional[bool] = None
     region: Optional[str] = None
+    blog_url: Optional[str] = None
+    blog_index: Optional[str] = None
     age_group: Optional[str] = None
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None
@@ -81,6 +85,8 @@ class ReviewerOut(BaseModel):
     contact_info: Optional[str] = None
     is_active: bool
     region: Optional[str] = None
+    blog_url: Optional[str] = None
+    blog_index: Optional[str] = None
     age_group: Optional[str] = None
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None

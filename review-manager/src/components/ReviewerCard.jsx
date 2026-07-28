@@ -71,10 +71,22 @@ export default function ReviewerCard({
           {reviewer.contact_info && (
             <p className="text-sm text-slate-600">연락처: {reviewer.contact_info}</p>
           )}
-          {reviewer.category === 'experience' && (reviewer.region || reviewer.age_group) && (
+          {reviewer.category === 'experience' && (reviewer.region || reviewer.age_group || reviewer.blog_index) && (
             <p className="text-xs text-slate-500">
-              {[reviewer.region, reviewer.age_group].filter(Boolean).join(' · ')}
+              {[reviewer.region, reviewer.blog_index && `지수 ${reviewer.blog_index}`, reviewer.age_group]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
+          )}
+          {reviewer.category === 'experience' && reviewer.blog_url && (
+            <a
+              href={reviewer.blog_url}
+              target="_blank"
+              rel="noreferrer"
+              className="block text-xs text-blue-600 hover:underline"
+            >
+              {reviewer.blog_url}
+            </a>
           )}
         </div>
         <div className="flex items-center gap-2">
