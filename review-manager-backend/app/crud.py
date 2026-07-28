@@ -146,6 +146,10 @@ def import_reviewers(
     created = 0
     skipped_duplicate = 0
     skipped_invalid = 0
+    # DB 세션이 autoflush=False라서 db.query()는 이번 업로드에서 이미 db.add()했지만
+    # 아직 flush 안 된 행을 못 본다 — 즉 같은 파일 안에 같은 연락처가 두 번 있으면
+    # DB 조회만으로는 못 걸러진다. 그래서 이번 배치에서 본 연락처를 따로 기억해둔다.
+    seen_contacts: set[str] = set()
 
     for row in rows:
         name = row.get("name")
@@ -155,6 +159,9 @@ def import_reviewers(
 
         contact_info = row.get("contact_info")
         if contact_info:
+            if contact_info in seen_contacts:
+                skipped_duplicate += 1
+                continue
             existing = (
                 db.query(models.Reviewer)
                 .filter(models.Reviewer.contact_info == contact_info)
@@ -163,6 +170,7 @@ def import_reviewers(
             if existing:
                 skipped_duplicate += 1
                 continue
+            seen_contacts.add(contact_info)
 
         reviewer = models.Reviewer(
             name=name,
@@ -195,6 +203,10 @@ def import_admin_accounts(db: Session, rows: list[dict]) -> schemas.ReviewerImpo
     created = 0
     skipped_duplicate = 0
     skipped_invalid = 0
+    # import_reviewers와 동일한 이유(autoflush=False)로, 같은 파일 안에서 계정아이디가
+    # 두 번 나오는 경우까지 걸러내려면 DB 조회만으로는 부족해서 이번 배치에서 본
+    # 계정아이디를 따로 기억해둔다.
+    seen_labels: set[str] = set()
 
     for row in rows:
         name = row.get("name")
@@ -203,6 +215,9 @@ def import_admin_accounts(db: Session, rows: list[dict]) -> schemas.ReviewerImpo
             skipped_invalid += 1
             continue
 
+        if label in seen_labels:
+            skipped_duplicate += 1
+            continue
         contact_info = row.get("contact_info")
         existing_label = (
             db.query(models.ReviewAccount).filter(models.ReviewAccount.label == label).first()
@@ -210,6 +225,7 @@ def import_admin_accounts(db: Session, rows: list[dict]) -> schemas.ReviewerImpo
         if existing_label:
             skipped_duplicate += 1
             continue
+        seen_labels.add(label)
 
         reviewer = models.Reviewer(
             name=name,

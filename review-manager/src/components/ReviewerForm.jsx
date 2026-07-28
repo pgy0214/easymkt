@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
-import { AGE_GROUP_OPTIONS, GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
+import { AGE_GROUP_OPTIONS, GENDER_LABEL, REGION_GROUPS, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
 
 const EMPTY = {
   category: 'reviewer',
@@ -88,12 +88,22 @@ export default function ReviewerForm({ onCreate }) {
         <>
           <div>
             <label className="block text-xs text-slate-500">지역</label>
-            <input
+            <select
               value={form.region}
               onChange={(e) => setForm({ ...form, region: e.target.value })}
-              placeholder="예: 서울 강남구"
-              className="w-32 rounded border border-slate-300 px-2 py-1 text-sm"
-            />
+              className="rounded border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="">선택안함</option>
+              {REGION_GROUPS.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((region) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs text-slate-500">블로그 주소</label>
