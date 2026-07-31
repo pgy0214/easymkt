@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { ExternalLink, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 const EMPTY = { platform: 'naver', label: '', profile_url: '', ip_address: '' }
@@ -87,13 +87,22 @@ export default function AccountForm({ onCreate, showIp = false }) {
       {error && <span className="text-xs text-red-600">{error}</span>}
 
       <div className="w-full space-y-0.5 text-xs text-slate-400">
-        <p>· 계정 아이디는 여러 리뷰 계정을 구분하기 편하도록 적어두는 용도입니다 (실제 로그인 아이디가 아니어도 됩니다).</p>
+        <p>· 계정 아이디는 여러 리뷰 계정을 구분하기 편하도록 적어두는 용도입니다.</p>
         {form.platform === 'naver' && (
           <p>
             · 마이플레이스 URL 찾는 법: 네이버 지도 앱 → 하단 'MY' 탭 → 내 프로필 →
             공유 아이콘 → 링크 복사 (또는 PC: map.naver.com 로그인 → 우측 상단 프로필
             → 마이플레이스 → 주소창 URL 복사). 앱 버전에 따라 메뉴 위치가 다를 수
-            있어요.
+            있어요.{' '}
+            <a
+              href="https://m.place.naver.com/my"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-0.5 text-blue-600 hover:underline"
+            >
+              마이플레이스 열기
+              <ExternalLink size={11} />
+            </a>
           </p>
         )}
       </div>

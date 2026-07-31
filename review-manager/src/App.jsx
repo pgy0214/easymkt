@@ -19,7 +19,7 @@ export default function App() {
         </h1>
       </header>
       <Nav active={tab} onChange={setTab} />
-      <main className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
+      <main className="mx-auto max-w-[1600px] px-3 py-4 sm:px-4 sm:py-6">
         {tab === 'reviewers' && <ReviewerManager />}
         {tab === 'admin-accounts' && <AdminAccountManager />}
         {tab === 'stores' && <StoreManager />}

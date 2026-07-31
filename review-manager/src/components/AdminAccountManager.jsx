@@ -4,6 +4,7 @@ import { api } from '../lib/api.js'
 import { formatDate, GENDER_LABEL } from '../lib/format.js'
 import AccountEditModal from './AccountEditModal.jsx'
 import AccountTaskModal from './AccountTaskModal.jsx'
+import BulkAssignModal from './BulkAssignModal.jsx'
 import CopyButton from './CopyButton.jsx'
 import Pagination from './Pagination.jsx'
 
@@ -57,6 +58,7 @@ export default function AdminAccountManager() {
   const [ineligibleForStore, setIneligibleForStore] = useState(new Set())
   const [checkingEligibility, setCheckingEligibility] = useState(false)
   const [selectedKeys, setSelectedKeys] = useState(new Set())
+  const [bulkAssigning, setBulkAssigning] = useState(false)
   const fileInputRef = useRef(null)
 
   function rowKey(row) {
@@ -239,6 +241,30 @@ export default function AdminAccountManager() {
   function handleEdited(updated) {
     setRows((prev) => prev.map((r) => (r.id === editingRow.id ? { ...r, ...updated } : r)))
     setEditingRow(null)
+  }
+
+  const selectedRows = useMemo(() => rows.filter((r) => selectedKeys.has(rowKey(r))), [rows, selectedKeys])
+
+  async function handleBulkDelete() {
+    if (!confirm(`선택한 ${selectedRows.length}개 계정을 삭제할까요?`)) return
+    const toDelete = selectedRows.filter((r) => r.id != null)
+    try {
+      for (const row of toDelete) {
+        await api.deleteAccount(row.id)
+      }
+      const deletedIds = new Set(toDelete.map((r) => r.id))
+      const remaining = rows.filter((r) => !deletedIds.has(r.id))
+      const affectedReviewerIds = new Set(toDelete.map((r) => r.reviewerId))
+      for (const reviewerId of affectedReviewerIds) {
+        const stillHasAccount = remaining.some((r) => r.reviewerId === reviewerId && r.id != null)
+        if (!stillHasAccount) await api.deleteReviewer(reviewerId)
+      }
+      setSelectedKeys(new Set())
+      await refresh()
+    } catch (err) {
+      alert(err.message)
+      await refresh()
+    }
   }
 
   const filteredRows = useMemo(() => {
@@ -447,7 +473,23 @@ export default function AdminAccountManager() {
               </span>
             )}
             {selectedKeys.size > 0 && (
-              <span className="text-xs text-slate-500">선택 {selectedKeys.size}건</span>
+              <>
+                <span className="text-xs text-slate-500">선택 {selectedKeys.size}건</span>
+                <button
+                  onClick={() => setBulkAssigning(true)}
+                  className="flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                >
+                  <Send size={12} />
+                  선택 작업 배분
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                >
+                  <Trash2 size={12} />
+                  선택 삭제
+                </button>
+              </>
             )}
           </div>
 
@@ -618,6 +660,16 @@ export default function AdminAccountManager() {
         <AccountEditModal row={editingRow} onClose={() => setEditingRow(null)} onSaved={handleEdited} />
       )}
       {taskRow && <AccountTaskModal row={taskRow} onClose={() => setTaskRow(null)} />}
+      {bulkAssigning && (
+        <BulkAssignModal
+          entities={selectedRows.filter((r) => r.id != null)}
+          getDisplayName={(row) => `${row.name} (${row.label})`}
+          resolveAccount={(row, platform) => (row.platform === platform ? row : null)}
+          unitLabel="개 계정"
+          onClose={() => setBulkAssigning(false)}
+          onDone={refresh}
+        />
+      )}
     </div>
   )
 }

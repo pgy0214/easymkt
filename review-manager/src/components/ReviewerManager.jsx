@@ -1,7 +1,8 @@
-import { Download, Search, Upload } from 'lucide-react'
+import { Download, Search, Send, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import { GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
+import BulkAssignModal from './BulkAssignModal.jsx'
 import Pagination from './Pagination.jsx'
 import ReviewerCard from './ReviewerCard.jsx'
 import ReviewerForm from './ReviewerForm.jsx'
@@ -44,6 +45,7 @@ export default function ReviewerManager() {
   const [eligibleReviewerIds, setEligibleReviewerIds] = useState(null)
   const [checkingEligibility, setCheckingEligibility] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkAssigning, setBulkAssigning] = useState(false)
   const fileInputRef = useRef(null)
 
   function toggleSelected(id) {
@@ -210,6 +212,11 @@ export default function ReviewerManager() {
     return baseFiltered.filter((r) => eligibleReviewerIds.has(r.id))
   }, [baseFiltered, eligibleReviewerIds])
 
+  const selectedReviewers = useMemo(
+    () => reviewers.filter((r) => selectedIds.has(r.id)),
+    [reviewers, selectedIds],
+  )
+
   useEffect(() => {
     setPage(1)
   }, [statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search, storeFilter, pageSize])
@@ -371,7 +378,16 @@ export default function ReviewerManager() {
           </span>
         )}
         {selectedIds.size > 0 && (
-          <span className="text-xs text-slate-500">선택 {selectedIds.size}명</span>
+          <>
+            <span className="text-xs text-slate-500">선택 {selectedIds.size}명</span>
+            <button
+              onClick={() => setBulkAssigning(true)}
+              className="flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+            >
+              <Send size={12} />
+              선택 작업 배분
+            </button>
+          </>
         )}
       </div>
 
@@ -426,6 +442,19 @@ export default function ReviewerManager() {
           totalCount={filtered.length}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
+        />
+      )}
+
+      {bulkAssigning && (
+        <BulkAssignModal
+          entities={selectedReviewers}
+          getDisplayName={(reviewer) => reviewer.name}
+          resolveAccount={(reviewer, platform) =>
+            reviewer.accounts.find((a) => a.platform === platform) ?? null
+          }
+          unitLabel="명"
+          onClose={() => setBulkAssigning(false)}
+          onDone={refresh}
         />
       )}
     </div>
