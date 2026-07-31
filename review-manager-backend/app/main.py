@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app import scheduler
 from app.database import Base, engine
 from app.migrations import run_migrations
-from app.routers import accounts, portal, reviewers, settings, settlement, stores, targets, tasks
+from app.routers import accounts, notify, portal, reviewers, settings, settlement, stores, targets, tasks
 
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 os.makedirs(os.path.join(UPLOADS_DIR, "campaigns"), exist_ok=True)
@@ -48,6 +48,7 @@ app.include_router(tasks.router)
 app.include_router(settlement.router)
 app.include_router(settings.router)
 app.include_router(portal.router)
+app.include_router(notify.router)
 
 
 @app.get("/api/health")

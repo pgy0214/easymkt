@@ -1,8 +1,9 @@
-import { Download, Search, Send, Upload } from 'lucide-react'
+import { Download, MessageSquare, Search, Send, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import { GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
 import BulkAssignModal from './BulkAssignModal.jsx'
+import BulkMessageModal from './BulkMessageModal.jsx'
 import Pagination from './Pagination.jsx'
 import ReviewerCard from './ReviewerCard.jsx'
 import ReviewerForm from './ReviewerForm.jsx'
@@ -46,6 +47,7 @@ export default function ReviewerManager() {
   const [checkingEligibility, setCheckingEligibility] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkAssigning, setBulkAssigning] = useState(false)
+  const [bulkMessaging, setBulkMessaging] = useState(false)
   const fileInputRef = useRef(null)
 
   function toggleSelected(id) {
@@ -387,6 +389,13 @@ export default function ReviewerManager() {
               <Send size={12} />
               선택 작업 배분
             </button>
+            <button
+              onClick={() => setBulkMessaging(true)}
+              className="flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100"
+            >
+              <MessageSquare size={12} />
+              선택 메시지 발송
+            </button>
           </>
         )}
       </div>
@@ -456,6 +465,9 @@ export default function ReviewerManager() {
           onClose={() => setBulkAssigning(false)}
           onDone={refresh}
         />
+      )}
+      {bulkMessaging && (
+        <BulkMessageModal reviewers={selectedReviewers} onClose={() => setBulkMessaging(false)} />
       )}
     </div>
   )

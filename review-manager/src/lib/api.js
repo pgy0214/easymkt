@@ -123,6 +123,9 @@ export const api = {
   getSettings: () => request('/settings'),
   updateSettings: (data) =>
     request('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
+
+  getNotifyStatus: () => request('/notify/status'),
+  sendBulkMessage: (data) => request('/notify/bulk', { method: 'POST', body: JSON.stringify(data) }),
 }
 
 export const portalApi = {

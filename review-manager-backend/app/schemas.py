@@ -328,6 +328,28 @@ class ReviewerImportResult(BaseModel):
     skipped_invalid: int
 
 
+# --- 알림 발송 (SMS / 카카오 알림톡) ---
+
+class NotifyStatusOut(BaseModel):
+    sms_configured: bool
+    kakao_configured: bool
+
+
+class BulkMessageIn(BaseModel):
+    reviewer_ids: list[int]
+    channel: Literal["sms", "kakao"]
+    message: str  # {name}은 수신자 이름으로 치환됨
+    template_code: Optional[str] = None  # channel="kakao"일 때 필수
+    fallback_message: Optional[str] = None  # channel="kakao"일 때, 실패 시 대체 문자
+
+
+class NotifyResultItem(BaseModel):
+    reviewer_id: int
+    name: str
+    success: bool
+    reason: Optional[str] = None
+
+
 # --- Self-service portal ---
 
 class OtpRequestIn(BaseModel):

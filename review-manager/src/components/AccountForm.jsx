@@ -1,4 +1,4 @@
-import { ExternalLink, Plus } from 'lucide-react'
+import { Clipboard, ExternalLink, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 const EMPTY = { platform: 'naver', label: '', profile_url: '', ip_address: '' }
@@ -7,6 +7,15 @@ export default function AccountForm({ onCreate, showIp = false }) {
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+
+  async function handlePasteUrl() {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) setForm((prev) => ({ ...prev, profile_url: text.trim() }))
+    } catch {
+      // 클립보드 권한이 없거나 지원 안 되는 환경(예: http) — 조용히 무시, 수동 입력으로 대체
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -55,12 +64,22 @@ export default function AccountForm({ onCreate, showIp = false }) {
       {form.platform === 'naver' && (
         <div>
           <label className="block text-xs text-slate-500">네이버 마이플레이스 URL</label>
-          <input
-            value={form.profile_url}
-            onChange={(e) => setForm({ ...form, profile_url: e.target.value })}
-            placeholder="https://m.place.naver.com/my/..."
-            className="w-64 rounded border border-slate-300 px-2 py-1 text-sm"
-          />
+          <div className="flex items-center gap-1">
+            <input
+              value={form.profile_url}
+              onChange={(e) => setForm({ ...form, profile_url: e.target.value })}
+              placeholder="https://m.place.naver.com/my/..."
+              className="w-64 rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+            <button
+              type="button"
+              onClick={handlePasteUrl}
+              className="rounded border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-50"
+              title="클립보드에서 붙여넣기"
+            >
+              <Clipboard size={14} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -91,9 +110,9 @@ export default function AccountForm({ onCreate, showIp = false }) {
         {form.platform === 'naver' && (
           <p>
             · 마이플레이스 URL 찾는 법: 네이버 지도 앱 → 하단 'MY' 탭 → 내 프로필 →
-            공유 아이콘 → 링크 복사 (또는 PC: map.naver.com 로그인 → 우측 상단 프로필
-            → 마이플레이스 → 주소창 URL 복사). 앱 버전에 따라 메뉴 위치가 다를 수
-            있어요.{' '}
+            공유 아이콘 → 링크 복사 → 이 화면으로 돌아와서 붙여넣기 버튼 클릭 (또는 PC:
+            map.naver.com 로그인 → 우측 상단 프로필 → 마이플레이스 → 주소창 URL 복사).
+            앱 버전에 따라 메뉴 위치가 다를 수 있어요.{' '}
             <a
               href="https://m.place.naver.com/my"
               target="_blank"
