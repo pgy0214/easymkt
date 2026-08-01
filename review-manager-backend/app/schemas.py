@@ -153,6 +153,10 @@ class StoreInfoFetchOut(BaseModel):
     representative_product: Optional[str] = None
 
 
+class StoreReceiptOut(BaseModel):
+    url: str
+
+
 # --- ReviewTarget ---
 
 class MenuItemIn(BaseModel):

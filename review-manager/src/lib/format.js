@@ -71,6 +71,14 @@ export const GENDER_LABEL = {
   female: '여성',
 }
 
+// 입력 중인 값에 실시간으로 하이픈을 넣어준다 (000-00-00000, 총 10자리)
+export function formatBusinessNumber(value) {
+  const digits = (value || '').replace(/\D/g, '').slice(0, 10)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
+}
+
 export const AGE_GROUP_OPTIONS = ['10대', '20대', '30대', '40대', '50대', '60대 이상']
 
 export const REGION_GROUPS = [

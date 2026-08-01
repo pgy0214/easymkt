@@ -325,6 +325,50 @@ def generate_receipt(
     return output_path
 
 
+_product_item_re = re.compile(r"^(.*?)\s+([\d,]+)\s*원?$")
+
+
+def parse_representative_product(text: str | None) -> list[dict]:
+    """Store.representative_product("아메리카노 4,500원, 카페라떼 5000원" 같은 콤마구분
+    문자열)를 generate_receipt()가 받는 [{"name":.., "price":..}] 형태로 변환한다.
+    가격을 못 찾은 항목은 영수증에 금액을 매길 수 없으므로 건너뛴다."""
+    if not text:
+        return []
+    items = []
+    for segment in text.split(","):
+        trimmed = segment.strip()
+        if not trimmed:
+            continue
+        m = _product_item_re.match(trimmed)
+        if m:
+            items.append({"name": m.group(1).strip(), "price": int(m.group(2).replace(",", ""))})
+    return items
+
+
+def generate_receipt_for_store(store) -> str:
+    """매장관리에 등록된 정보만으로(캠페인/작업 없이) 영수증 이미지 1건을 즉석 생성한다."""
+    menu_items = parse_representative_product(store.representative_product)
+    if not menu_items:
+        raise ValueError("대표상품(메뉴/금액)이 등록되어 있지 않아 영수증을 만들 수 없습니다.")
+
+    hour, minute, second = _random_time_in_range(store.representative_hours)
+    dt = datetime.now().replace(hour=hour, minute=minute, second=second)
+
+    filename = f"store_{store.id}_{dt.strftime('%Y%m%d%H%M%S')}.jpg"
+    output_path = os.path.join(UPLOADS_DIR, "receipts", filename)
+    generate_receipt(
+        store_name=store.name,
+        business_registration_number=store.business_registration_number,
+        representative_name=store.representative_name,
+        phone=store.phone,
+        address=store.address,
+        menu_items=menu_items,
+        dt=dt,
+        output_path=output_path,
+    )
+    return f"/uploads/receipts/{filename}"
+
+
 def generate_receipt_for_task(task, store, menu_items: list[dict] | None) -> str | None:
     """작업(Task)의 확정된 영수증 날짜(naver_available_date)로 영수증 이미지를 생성.
     메뉴가 등록 안 된 캠페인은 건너뛰고 None을 반환 — 이 경우 관리자가 캠페인에

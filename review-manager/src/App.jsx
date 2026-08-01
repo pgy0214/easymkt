@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AdminAccountManager from './components/AdminAccountManager.jsx'
 import Nav from './components/Nav.jsx'
+import ReceiptGenerator from './components/ReceiptGenerator.jsx'
 import ReviewerManager from './components/ReviewerManager.jsx'
 import SettingsPanel from './components/SettingsPanel.jsx'
 import SettlementSummary from './components/SettlementSummary.jsx'
@@ -25,6 +26,7 @@ export default function App() {
         {tab === 'stores' && <StoreManager />}
         {tab === 'targets' && <TargetForm />}
         {tab === 'tasks' && <TaskDashboard />}
+        {tab === 'receipt' && <ReceiptGenerator />}
         {tab === 'settlement' && <SettlementSummary />}
         {tab === 'settings' && <SettingsPanel />}
       </main>

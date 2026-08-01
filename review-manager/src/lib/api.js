@@ -76,6 +76,7 @@ export const api = {
   deleteStore: (id) => request(`/stores/${id}`, { method: 'DELETE' }),
   fetchStoreInfo: (url) =>
     request('/stores/fetch-info', { method: 'POST', body: JSON.stringify({ url }) }),
+  generateStoreReceipt: (storeId) => request(`/stores/${storeId}/receipt`, { method: 'POST' }),
 
   getTargets: () => request('/targets'),
   createTarget: (data) => request('/targets', { method: 'POST', body: JSON.stringify(data) }),

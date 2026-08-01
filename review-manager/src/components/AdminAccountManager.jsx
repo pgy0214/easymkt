@@ -513,7 +513,7 @@ export default function AdminAccountManager() {
           <table className="w-full min-w-[1200px] whitespace-nowrap text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
               <tr>
-                <th className="px-2 py-1.5">
+                <th className="px-1.5 py-1">
                   <input
                     type="checkbox"
                     checked={visibleRows.length > 0 && visibleRows.every((r) => selectedKeys.has(rowKey(r)))}
@@ -531,37 +531,37 @@ export default function AdminAccountManager() {
                     title="현재 페이지 전체 선택"
                   />
                 </th>
-                <th className="px-2 py-1.5">#</th>
-                <th className="px-2 py-1.5">플랫폼</th>
-                <th className="px-2 py-1.5">IP</th>
-                <th className="px-2 py-1.5">이름</th>
-                <th className="px-2 py-1.5">성별</th>
-                <th className="px-2 py-1.5">생년월일</th>
-                <th className="px-2 py-1.5">연락처</th>
-                <th className="px-2 py-1.5">계정 아이디</th>
-                <th className="px-2 py-1.5">비밀번호</th>
-                <th className="px-2 py-1.5">URL</th>
-                <th className="px-2 py-1.5">상태</th>
-                <th className="px-2 py-1.5" />
+                <th className="px-1.5 py-1">#</th>
+                <th className="px-1.5 py-1">플랫폼</th>
+                <th className="px-1.5 py-1">IP</th>
+                <th className="px-1.5 py-1">이름</th>
+                <th className="px-1.5 py-1">성별</th>
+                <th className="px-1.5 py-1">생년월일</th>
+                <th className="px-1.5 py-1">연락처</th>
+                <th className="px-1.5 py-1">계정 아이디</th>
+                <th className="px-1.5 py-1">비밀번호</th>
+                <th className="px-1.5 py-1">URL</th>
+                <th className="px-1.5 py-1">상태</th>
+                <th className="px-1.5 py-1" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {visibleRows.map((row, index) => (
-                <tr key={rowKey(row)}>
-                  <td className="px-2 py-1.5">
+                <tr key={rowKey(row)} className={selectedKeys.has(rowKey(row)) ? 'bg-blue-50' : undefined}>
+                  <td className="px-1.5 py-1">
                     <input
                       type="checkbox"
                       checked={selectedKeys.has(rowKey(row))}
                       onChange={() => toggleSelected(rowKey(row))}
                     />
                   </td>
-                  <td className="px-2 py-1.5 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-1.5 py-1 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
+                  <td className="px-1.5 py-1">
                     {row.platform === 'naver' ? '네이버' : row.platform === 'kakao' ? '카카오' : '-'}
                   </td>
-                  <td className="px-2 py-1.5 text-slate-500">{row.ip_address || '-'}</td>
-                  <td className="px-2 py-1.5">{row.name}</td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-1.5 py-1 text-slate-500">{row.ip_address || '-'}</td>
+                  <td className="px-1.5 py-1">{row.name}</td>
+                  <td className="px-1.5 py-1">
                     {row.gender ? (
                       <span className={`rounded px-1 py-0.5 text-[11px] font-medium ${GENDER_BADGE[row.gender]}`}>
                         {GENDER_SHORT[row.gender]}
@@ -570,15 +570,15 @@ export default function AdminAccountManager() {
                       '-'
                     )}
                   </td>
-                  <td className="px-2 py-1.5 text-slate-500">{formatBirthDateCompact(row.birth_date)}</td>
-                  <td className="px-2 py-1.5 text-slate-500">{row.contact_info || '-'}</td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-1.5 py-1 text-slate-500">{formatBirthDateCompact(row.birth_date)}</td>
+                  <td className="px-1.5 py-1 text-slate-500">{row.contact_info || '-'}</td>
+                  <td className="px-1.5 py-1">
                     <span className="inline-flex items-center gap-1">
                       {row.label || '-'}
                       <CopyButton value={row.label} label="계정 아이디" />
                     </span>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-1.5 py-1">
                     {row.password ? (
                       <span className="inline-flex items-center gap-1">
                         <span className="text-slate-600">{row.password}</span>
@@ -588,7 +588,7 @@ export default function AdminAccountManager() {
                       '-'
                     )}
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-1.5 py-1">
                     {row.profile_url ? (
                       <a
                         href={row.profile_url}
@@ -603,7 +603,7 @@ export default function AdminAccountManager() {
                       '-'
                     )}
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-1.5 py-1">
                     {row.id != null && (
                       <button
                         onClick={() => handleToggleLoginIssue(row)}
@@ -618,7 +618,7 @@ export default function AdminAccountManager() {
                       </button>
                     )}
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-1.5 py-1">
                     <div className="flex items-center gap-2">
                       {row.id != null && (
                         <>

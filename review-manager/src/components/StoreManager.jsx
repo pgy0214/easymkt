@@ -1,7 +1,8 @@
 import { ExternalLink, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
-import { formatDateTime, PLATFORM_LABEL } from '../lib/format.js'
+import { formatBusinessNumber, formatDateTime, PLATFORM_LABEL } from '../lib/format.js'
+import ProductRowsEditor from './ProductRowsEditor.jsx'
 import StoreEditModal from './StoreEditModal.jsx'
 
 const EMPTY = { platform: 'naver', url: '', cooldown_days: 90 }
@@ -20,6 +21,10 @@ export default function StoreManager() {
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [editingStore, setEditingStore] = useState(null)
+  // ProductRowsEditor는 마운트 시점에만 value를 행으로 파싱하므로, 외부에서
+  // productInput이 바뀌는 경우(양식 초기화/새 URL 조회)엔 key를 바꿔 강제로
+  // 다시 마운트시켜야 그 값이 반영된다.
+  const [productEditorKey, setProductEditorKey] = useState(0)
 
   async function refresh() {
     setLoading(true)
@@ -45,6 +50,7 @@ export default function StoreManager() {
     setBusinessRegistrationNumber('')
     setRepresentativeName('')
     setPhone('')
+    setProductEditorKey((k) => k + 1)
   }
 
   async function handleFetchInfo() {
@@ -61,6 +67,7 @@ export default function StoreManager() {
       const info = await api.fetchStoreInfo(url)
       setFetched(info)
       setProductInput(info.representative_product || '')
+      setProductEditorKey((k) => k + 1)
       if (!info.name) {
         setFetchError('매장명을 찾지 못했어요. URL이 맞는지 확인하고 다시 시도해주세요.')
       }
@@ -205,7 +212,7 @@ export default function StoreManager() {
               <p className="text-xs text-slate-500">영수증 생성에 쓰이는 사업자 정보 (필수)</p>
               <input
                 value={businessRegistrationNumber}
-                onChange={(e) => setBusinessRegistrationNumber(e.target.value)}
+                onChange={(e) => setBusinessRegistrationNumber(formatBusinessNumber(e.target.value))}
                 placeholder="사업자번호 (예: 250-07-00453)"
                 className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
               />
@@ -232,12 +239,13 @@ export default function StoreManager() {
                   <p className="text-xs text-amber-600">
                     *플레이스에 등록된 정보를 찾을 수가 없습니다 직접 입력해주세요.
                   </p>
-                  <input
-                    value={productInput}
-                    onChange={(e) => setProductInput(e.target.value)}
-                    placeholder="예: 아메리카노 4500원, 카페라떼 5000원"
-                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  />
+                  <div className="mt-1">
+                    <ProductRowsEditor
+                      key={productEditorKey}
+                      value={productInput}
+                      onChange={setProductInput}
+                    />
+                  </div>
                 </>
               )}
             </div>
@@ -269,8 +277,6 @@ export default function StoreManager() {
               <th className="px-3 py-2">매장명</th>
               <th className="px-3 py-2">URL</th>
               <th className="px-3 py-2">주소</th>
-              <th className="px-3 py-2">대표시간</th>
-              <th className="px-3 py-2">대표상품</th>
               <th className="px-3 py-2">재작업 주기(일)</th>
               <th className="px-3 py-2">등록일</th>
               <th className="px-3 py-2" />
@@ -280,7 +286,15 @@ export default function StoreManager() {
             {stores.map((store) => (
               <tr key={store.id}>
                 <td className="px-3 py-2">{PLATFORM_LABEL[store.platform]}</td>
-                <td className="px-3 py-2 text-slate-700">{store.name}</td>
+                <td className="px-3 py-2">
+                  <button
+                    onClick={() => setEditingStore(store)}
+                    className="text-slate-700 hover:text-blue-600 hover:underline"
+                    title="클릭해서 대표시간/대표상품 등 매장 정보 확인"
+                  >
+                    {store.name}
+                  </button>
+                </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-1">
                     <a
@@ -297,15 +311,6 @@ export default function StoreManager() {
                 </td>
                 <td className="px-3 py-2 text-slate-700" title={store.address || ''}>
                   {store.address || '-'}
-                </td>
-                <td className="px-3 py-2 text-slate-700" title={store.representative_hours || ''}>
-                  {store.representative_hours || '-'}
-                </td>
-                <td
-                  className="max-w-[10rem] truncate px-3 py-2 text-slate-700"
-                  title={store.representative_product || ''}
-                >
-                  {store.representative_product || '-'}
                 </td>
                 <td className="px-3 py-2">{store.cooldown_days}</td>
                 <td className="px-3 py-2 text-slate-500">{formatDateTime(store.created_at)}</td>

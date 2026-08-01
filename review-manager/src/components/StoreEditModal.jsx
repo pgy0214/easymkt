@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../lib/api.js'
-import { formatDateTime } from '../lib/format.js'
+import { formatBusinessNumber, formatDateTime } from '../lib/format.js'
+import ProductRowsEditor from './ProductRowsEditor.jsx'
 
 export default function StoreEditModal({ store, onClose, onSaved }) {
   const [url, setUrl] = useState(store.url)
@@ -75,19 +76,14 @@ export default function StoreEditModal({ store, onClose, onSaved }) {
         </div>
         <div>
           <label className="block text-xs text-slate-500">대표상품</label>
-          <input
-            value={representativeProduct}
-            onChange={(e) => setRepresentativeProduct(e.target.value)}
-            placeholder="예: 아메리카노 4500원, 카페라떼 5000원"
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-          />
+          <ProductRowsEditor value={representativeProduct} onChange={setRepresentativeProduct} />
         </div>
 
         <div className="space-y-2 border-t border-slate-100 pt-3">
           <p className="text-xs text-slate-500">영수증 생성에 쓰이는 사업자 정보 (선택)</p>
           <input
             value={businessRegistrationNumber}
-            onChange={(e) => setBusinessRegistrationNumber(e.target.value)}
+            onChange={(e) => setBusinessRegistrationNumber(formatBusinessNumber(e.target.value))}
             placeholder="사업자번호 (예: 250-07-00453)"
             className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
           />

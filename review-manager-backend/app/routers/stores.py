@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import crud, schemas
+from app import crud, receipt_generator, schemas
 from app.crawlers import naver_store_info
 from app.database import get_db
 
@@ -35,6 +35,18 @@ def update_store(store_id: int, data: schemas.StoreUpdate, db: Session = Depends
     if not store:
         raise HTTPException(status_code=404, detail="매장을 찾을 수 없습니다")
     return crud.update_store(db, store, data)
+
+
+@router.post("/{store_id}/receipt", response_model=schemas.StoreReceiptOut)
+def generate_store_receipt(store_id: int, db: Session = Depends(get_db)):
+    store = crud.get_store(db, store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="매장을 찾을 수 없습니다")
+    try:
+        url = receipt_generator.generate_receipt_for_store(store)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return schemas.StoreReceiptOut(url=url)
 
 
 @router.delete("/{store_id}")
