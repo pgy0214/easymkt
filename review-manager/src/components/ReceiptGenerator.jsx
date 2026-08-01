@@ -3,13 +3,17 @@ import { useEffect, useState } from 'react'
 import { API_ORIGIN, api } from '../lib/api.js'
 import { PLATFORM_LABEL } from '../lib/format.js'
 
+const MAX_COUNT = 50
+
 export default function ReceiptGenerator() {
   const [stores, setStores] = useState([])
   const [loading, setLoading] = useState(true)
   const [storeId, setStoreId] = useState('')
+  const [date, setDate] = useState('')
+  const [count, setCount] = useState(1)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState(null)
-  const [receiptUrl, setReceiptUrl] = useState(null)
+  const [receiptUrls, setReceiptUrls] = useState([])
 
   useEffect(() => {
     api
@@ -24,10 +28,10 @@ export default function ReceiptGenerator() {
     if (!store) return
     setGenerating(true)
     setError(null)
-    setReceiptUrl(null)
+    setReceiptUrls([])
     try {
-      const result = await api.generateStoreReceipt(store.id)
-      setReceiptUrl(result.url)
+      const results = await api.generateStoreReceipt(store.id, { date, count })
+      setReceiptUrls(results.map((r) => r.url))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -49,7 +53,7 @@ export default function ReceiptGenerator() {
             value={storeId}
             onChange={(e) => {
               setStoreId(e.target.value)
-              setReceiptUrl(null)
+              setReceiptUrls([])
               setError(null)
             }}
             className="w-64 rounded border border-slate-300 px-2 py-1 text-sm"
@@ -61,6 +65,26 @@ export default function ReceiptGenerator() {
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500">생성할 날짜</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500">개수 (최대 {MAX_COUNT})</label>
+          <input
+            type="number"
+            min="1"
+            max={MAX_COUNT}
+            value={count}
+            onChange={(e) => setCount(Math.max(1, Math.min(MAX_COUNT, Number(e.target.value) || 1)))}
+            className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+          />
         </div>
         <button
           onClick={handleGenerate}
@@ -82,21 +106,25 @@ export default function ReceiptGenerator() {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {receiptUrl && (
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <img
-            src={`${API_ORIGIN}${receiptUrl}`}
-            alt="생성된 영수증"
-            className="max-h-[80vh] rounded border border-slate-200"
-          />
-          <a
-            href={`${API_ORIGIN}${receiptUrl}`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 inline-block text-xs text-blue-600 hover:underline"
-          >
-            새 탭에서 원본 보기
-          </a>
+      {receiptUrls.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {receiptUrls.map((url) => (
+            <div key={url} className="rounded-lg border border-slate-200 bg-white p-3">
+              <img
+                src={`${API_ORIGIN}${url}`}
+                alt="생성된 영수증"
+                className="w-full rounded border border-slate-200"
+              />
+              <a
+                href={`${API_ORIGIN}${url}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-xs text-blue-600 hover:underline"
+              >
+                새 탭에서 원본 보기
+              </a>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -72,13 +72,30 @@ def _extract_name(soup) -> str | None:
     return None
 
 
+# 도로명주소는 항상 지번/건물번호(숫자, "60-1" 같은 하이픈 포함 가능)로 끝난다 — 네이버
+# 페이지가 그 뒤에 상호명을 이어붙여 내려주는 경우가 있어(예: "...향일암로 60-1 갑순네
+# 돌산갓김치") 마지막 숫자 토큰 뒤는 전부 잘라낸다. 상호명이 항상 정확히 store.name과
+# 일치하는 것도 아니라서(공백 유무 등) 이름 매칭이 아니라 주소 형식 자체로 판단한다.
+_ROAD_ADDRESS_TAIL_RE = re.compile(r"\d+(-\d+)?")
+
+
+def _trim_to_road_address(address: str) -> str:
+    last_match = None
+    for m in _ROAD_ADDRESS_TAIL_RE.finditer(address):
+        last_match = m
+    if not last_match:
+        return address.strip()
+    return address[: last_match.end()].strip()
+
+
 def _extract_address(soup) -> str | None:
     share_el = soup.select_one("[data-line-description]")
+    value = None
     if share_el:
-        value = (share_el.get("data-line-description") or "").strip()
-        if value:
-            return value
-    return _first_text(soup, ADDRESS_SELECTORS)
+        value = (share_el.get("data-line-description") or "").strip() or None
+    if not value:
+        value = _first_text(soup, ADDRESS_SELECTORS)
+    return _trim_to_road_address(value) if value else None
 
 
 def _extract_business_category(current_url: str, soup) -> str | None:
@@ -217,11 +234,18 @@ def fetch_store_info(store_url: str) -> dict:
                         break
 
                 lines = []
+                seen = set()
                 for item in items[:MAX_MENU_ITEMS]:
                     name = _first_text(item, MENU_NAME_SELECTORS)
                     if not name:
                         continue
                     price = _first_text(item, MENU_PRICE_SELECTORS) or ""
+                    # 페이지가 같은 메뉴 항목을 두 번(예: 요약 섹션 + 전체 목록) 내려주는
+                    # 경우가 있어 같은 이름+가격 조합은 한 번만 기록한다.
+                    key = (name, price)
+                    if key in seen:
+                        continue
+                    seen.add(key)
                     lines.append(f"{name} {price}".strip())
 
                 if lines:

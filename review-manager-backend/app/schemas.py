@@ -153,6 +153,11 @@ class StoreInfoFetchOut(BaseModel):
     representative_product: Optional[str] = None
 
 
+class StoreReceiptIn(BaseModel):
+    date: Optional[datetime.date] = None
+    count: int = 1
+
+
 class StoreReceiptOut(BaseModel):
     url: str
 

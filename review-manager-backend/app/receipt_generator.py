@@ -18,7 +18,8 @@ legacy version are:
 import os
 import random
 import re
-from datetime import datetime
+from datetime import date as date_cls
+from datetime import datetime, time
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -27,6 +28,15 @@ UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"
 # 폰트 경로 — 레거시 코드와 동일 (건드리지 말 것)
 PATH_SANDOLL = r"C:\Users\PARK GWANYONG\AppData\Local\Microsoft\Windows\Fonts\AppleSDGothicNeoL.ttf"
 PATH_ARIAL = r"C:\Windows\Fonts\Arial.ttf"
+
+# 상품명은 x=50에서 시작해 오른쪽으로 그려지고, 단가는 x=390에서 우측정렬로 그려진다
+# (draw_mixed/draw_mixed_right, 건드리지 말 것 — canvas 레이아웃은 레거시 그대로 유지).
+# text_mixed_width()로 실측한 결과: 단가는 "9,900원"~"999,000원" 범위에서 85~113px,
+# 즉 최악의 경우 단가 칸 왼쪽 끝이 x=277까지 올 수 있다. 상품명은 12자(한글 기준,
+# SANDOLL 26pt, 실제 크롤링된 긴 메뉴명 "순두부짬뽕밥(2인분 (공기밥..." 앞부분으로 측정)를
+# 넘으면 폭이 213px를 넘어서기 시작해 겹칠 위험이 커진다 — 14자로 뒀다가 실제 생성된
+# 영수증에서 겹침을 직접 확인하고 12자로 낮췄다.
+MAX_PRODUCT_NAME_LENGTH = 12
 
 # ============================ RULES (레거시 그대로) ============================
 RULES_TEXT = r"""
@@ -194,7 +204,7 @@ def _pick_random_order(menu_items: list[dict]) -> tuple[list[str], list[int], li
     랜덤으로 매긴다."""
     num = random.randint(1, len(menu_items))
     chosen = random.sample(menu_items, num)
-    names = [m["name"] for m in chosen]
+    names = [m["name"][:MAX_PRODUCT_NAME_LENGTH] for m in chosen]
     prices = [m["price"] for m in chosen]
     quantities = [random.randint(1, 2) for _ in chosen]
     return names, prices, quantities
@@ -325,36 +335,42 @@ def generate_receipt(
     return output_path
 
 
-_product_item_re = re.compile(r"^(.*?)\s+([\d,]+)\s*원?$")
+# "이름 가격[,가격]원" 조합을 문자열 전체에서 직접 찾는다 — 단순히 ","로 나누면
+# "22,000원"처럼 가격 자체에 천단위 콤마가 들어간 경우 "22"와 "000원"으로 쪼개져버리는
+# 문제가 있었다(실제로 이렇게 깨진 화면을 확인함). `.+?`(비탐욕)가 "공백 + 숫자(,숫자)*
+# + 선택적 원 + (,로 이어지거나 끝)"이 성립하는 가장 가까운 지점까지만 이름으로 잡으므로,
+# 이름 안에 있는 숫자(예: "2인분", "2개")는 그 뒤에 콤마/끝이 바로 오지 않는 한 가격으로
+# 오인하지 않는다.
+_product_item_re = re.compile(r"(.+?)\s+(\d+(?:,\d{3})*)\s*원?\s*(?:,\s*|$)")
 
 
 def parse_representative_product(text: str | None) -> list[dict]:
     """Store.representative_product("아메리카노 4,500원, 카페라떼 5000원" 같은 콤마구분
-    문자열)를 generate_receipt()가 받는 [{"name":.., "price":..}] 형태로 변환한다.
-    가격을 못 찾은 항목은 영수증에 금액을 매길 수 없으므로 건너뛴다."""
+    문자열)를 generate_receipt()가 받는 [{"name":.., "price":..}] 형태로 변환한다."""
     if not text:
         return []
     items = []
-    for segment in text.split(","):
-        trimmed = segment.strip()
-        if not trimmed:
-            continue
-        m = _product_item_re.match(trimmed)
-        if m:
-            items.append({"name": m.group(1).strip(), "price": int(m.group(2).replace(",", ""))})
+    for m in _product_item_re.finditer(text.strip()):
+        name = m.group(1).strip()
+        if name:
+            items.append({"name": name, "price": int(m.group(2).replace(",", ""))})
     return items
 
 
-def generate_receipt_for_store(store) -> str:
-    """매장관리에 등록된 정보만으로(캠페인/작업 없이) 영수증 이미지 1건을 즉석 생성한다."""
+def generate_receipt_for_store(store, target_date: date_cls | None = None) -> str:
+    """매장관리에 등록된 정보만으로(캠페인/작업 없이) 영수증 이미지 1건을 즉석 생성한다.
+    target_date를 안 주면 오늘 날짜를 쓴다."""
     menu_items = parse_representative_product(store.representative_product)
     if not menu_items:
         raise ValueError("대표상품(메뉴/금액)이 등록되어 있지 않아 영수증을 만들 수 없습니다.")
 
     hour, minute, second = _random_time_in_range(store.representative_hours)
-    dt = datetime.now().replace(hour=hour, minute=minute, second=second)
+    base_date = target_date or datetime.now().date()
+    dt = datetime.combine(base_date, time(hour=hour, minute=minute, second=second))
 
-    filename = f"store_{store.id}_{dt.strftime('%Y%m%d%H%M%S')}.jpg"
+    # 같은 날짜로 여러 장을 한 번에 만들 때 파일명이 겹치지 않도록 랜덤 접미사를 붙인다
+    # (시:분:초가 우연히 같은 값으로 뽑힐 수 있어 타임스탬프만으로는 충분하지 않음).
+    filename = f"store_{store.id}_{dt.strftime('%Y%m%d%H%M%S')}_{random.randint(1000, 9999)}.jpg"
     output_path = os.path.join(UPLOADS_DIR, "receipts", filename)
     generate_receipt(
         store_name=store.name,

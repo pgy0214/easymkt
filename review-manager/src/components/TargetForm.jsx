@@ -379,7 +379,8 @@ export default function TargetForm() {
                   <input
                     value={item.name}
                     onChange={(e) => updateMenuItem(i, 'name', e.target.value)}
-                    placeholder={`메뉴명 ${i + 1}`}
+                    placeholder={`메뉴명 ${i + 1} (최대 12자)`}
+                    maxLength={12}
                     className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
                   />
                   <input
