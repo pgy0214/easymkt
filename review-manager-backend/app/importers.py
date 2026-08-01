@@ -1,6 +1,7 @@
 import csv
 import datetime
 import io
+import re
 
 import openpyxl
 
@@ -59,7 +60,7 @@ def _first_matching(row: dict, header_candidates: set) -> str | None:
     return None
 
 
-BIRTH_DATE_HEADERS = {"생년월일", "생일"}
+BIRTH_DATE_HEADERS = {"생년월일", "생일", "생년월일(예:570710)"}
 _BIRTH_DATE_FORMATS = ("%Y-%m-%d", "%Y.%m.%d", "%Y/%m/%d", "%Y%m%d", "%Y-%m-%d %H:%M:%S")
 
 
@@ -67,6 +68,19 @@ def _parse_birth_date(raw: str | None) -> datetime.date | None:
     if not raw:
         return None
     text = raw.strip()
+
+    # 6자리 YYMMDD(예: "570710" = 1957-07-10) — 화면 표시 형식과 맞춘 압축 표기.
+    # strptime의 %y는 57을 2057로 해석해버려서(포직스 관행: 00~68→2000년대) 생년월일
+    # 용도로는 안 맞아, 현재 연도의 뒤 두 자리보다 크면 1900년대로 직접 판정한다.
+    if re.fullmatch(r"\d{6}", text):
+        yy, mm, dd = int(text[:2]), int(text[2:4]), int(text[4:6])
+        current_yy = datetime.date.today().year % 100
+        century = 1900 if yy > current_yy else 2000
+        try:
+            return datetime.date(century + yy, mm, dd)
+        except ValueError:
+            return None
+
     for fmt in _BIRTH_DATE_FORMATS:
         try:
             return datetime.datetime.strptime(text, fmt).date()

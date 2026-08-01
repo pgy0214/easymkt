@@ -1,7 +1,6 @@
-import { AlertTriangle, Download, Pencil, Plus, Search, Send, Trash2, Upload } from 'lucide-react'
+import { Download, ExternalLink, Pencil, Plus, Search, Send, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
-import { formatDate, GENDER_LABEL } from '../lib/format.js'
 import AccountEditModal from './AccountEditModal.jsx'
 import AccountTaskModal from './AccountTaskModal.jsx'
 import BulkAssignModal from './BulkAssignModal.jsx'
@@ -11,6 +10,19 @@ import Pagination from './Pagination.jsx'
 const GENDER_BADGE = {
   male: 'bg-sky-100 text-sky-700',
   female: 'bg-rose-100 text-rose-700',
+}
+
+const GENDER_SHORT = {
+  male: '남',
+  female: '여',
+}
+
+// 화면 표시 전용 압축 형식(YYMMDD, 예: 1957-07-10 → "570710") — 일괄등록 시에도
+// 같은 형식으로 입력받는다(app/importers.py의 _parse_birth_date와 짝).
+function formatBirthDateCompact(value) {
+  if (!value) return '-'
+  const [y, m, d] = value.split('-')
+  return `${y.slice(-2)}${m}${d}`
 }
 
 const EMPTY = {
@@ -25,7 +37,7 @@ const EMPTY = {
   ip_address: '',
 }
 
-const TEMPLATE_HEADERS = ['플랫폼', 'IP', '이름', '성별', '생년월일', '연락처', '계정아이디', '비밀번호', '네이버마이플레이스URL']
+const TEMPLATE_HEADERS = ['플랫폼', 'IP', '이름', '성별', '생년월일(예:570710)', '연락처', '계정아이디', '비밀번호', '네이버마이플레이스URL']
 
 function downloadTemplate() {
   // leading BOM so Excel opens the Korean headers as UTF-8 instead of guessing ANSI.
@@ -423,7 +435,8 @@ export default function AdminAccountManager() {
         </button>
         <span className="text-xs text-slate-400">
           플랫폼/IP/이름/성별/생년월일/연락처/계정아이디/비밀번호/URL 컬럼이 있는 .xlsx 또는
-          .csv 파일 (이름과 계정아이디가 둘 다 있는 행만 등록됩니다)
+          .csv 파일 (이름과 계정아이디가 둘 다 있는 행만 등록됩니다. 생년월일은 570710처럼
+          YYMMDD 6자리로 입력)
         </span>
         {importResult && (
           <span className="ml-auto text-xs text-slate-600">
@@ -497,10 +510,10 @@ export default function AdminAccountManager() {
             <p className="text-sm text-slate-400">조건에 맞는 계정이 없습니다</p>
           ) : (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full min-w-[1550px] whitespace-nowrap text-sm">
+          <table className="w-full min-w-[1200px] whitespace-nowrap text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
               <tr>
-                <th className="px-3 py-2">
+                <th className="px-2 py-1.5">
                   <input
                     type="checkbox"
                     checked={visibleRows.length > 0 && visibleRows.every((r) => selectedKeys.has(rowKey(r)))}
@@ -518,56 +531,54 @@ export default function AdminAccountManager() {
                     title="현재 페이지 전체 선택"
                   />
                 </th>
-                <th className="px-3 py-2">#</th>
-                <th className="px-3 py-2">플랫폼</th>
-                <th className="px-3 py-2">IP</th>
-                <th className="px-3 py-2">이름</th>
-                <th className="px-3 py-2">성별</th>
-                <th className="px-3 py-2">생년월일</th>
-                <th className="px-3 py-2">연락처</th>
-                <th className="px-3 py-2">계정 아이디</th>
-                <th className="px-3 py-2">비밀번호</th>
-                <th className="px-3 py-2">네이버 마이플레이스 URL</th>
-                <th className="px-3 py-2">상태</th>
-                <th className="px-3 py-2" />
+                <th className="px-2 py-1.5">#</th>
+                <th className="px-2 py-1.5">플랫폼</th>
+                <th className="px-2 py-1.5">IP</th>
+                <th className="px-2 py-1.5">이름</th>
+                <th className="px-2 py-1.5">성별</th>
+                <th className="px-2 py-1.5">생년월일</th>
+                <th className="px-2 py-1.5">연락처</th>
+                <th className="px-2 py-1.5">계정 아이디</th>
+                <th className="px-2 py-1.5">비밀번호</th>
+                <th className="px-2 py-1.5">URL</th>
+                <th className="px-2 py-1.5">상태</th>
+                <th className="px-2 py-1.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {visibleRows.map((row, index) => (
                 <tr key={rowKey(row)}>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     <input
                       type="checkbox"
                       checked={selectedKeys.has(rowKey(row))}
                       onChange={() => toggleSelected(rowKey(row))}
                     />
                   </td>
-                  <td className="px-3 py-2 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
+                  <td className="px-2 py-1.5">
                     {row.platform === 'naver' ? '네이버' : row.platform === 'kakao' ? '카카오' : '-'}
                   </td>
-                  <td className="px-3 py-2 text-slate-500">{row.ip_address || '-'}</td>
-                  <td className="px-3 py-2">{row.name}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5 text-slate-500">{row.ip_address || '-'}</td>
+                  <td className="px-2 py-1.5">{row.name}</td>
+                  <td className="px-2 py-1.5">
                     {row.gender ? (
-                      <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GENDER_BADGE[row.gender]}`}>
-                        {GENDER_LABEL[row.gender]}
+                      <span className={`rounded px-1 py-0.5 text-[11px] font-medium ${GENDER_BADGE[row.gender]}`}>
+                        {GENDER_SHORT[row.gender]}
                       </span>
                     ) : (
                       '-'
                     )}
                   </td>
-                  <td className="px-3 py-2 text-slate-500">
-                    {row.birth_date ? formatDate(row.birth_date) : '-'}
-                  </td>
-                  <td className="px-3 py-2 text-slate-500">{row.contact_info || '-'}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5 text-slate-500">{formatBirthDateCompact(row.birth_date)}</td>
+                  <td className="px-2 py-1.5 text-slate-500">{row.contact_info || '-'}</td>
+                  <td className="px-2 py-1.5">
                     <span className="inline-flex items-center gap-1">
                       {row.label || '-'}
                       <CopyButton value={row.label} label="계정 아이디" />
                     </span>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     {row.password ? (
                       <span className="inline-flex items-center gap-1">
                         <span className="text-slate-600">{row.password}</span>
@@ -577,38 +588,37 @@ export default function AdminAccountManager() {
                       '-'
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     {row.profile_url ? (
                       <a
                         href={row.profile_url}
                         target="_blank"
                         rel="noreferrer"
                         title={row.profile_url}
-                        className="block max-w-[220px] truncate text-blue-600 hover:underline"
+                        className="inline-flex items-center justify-center rounded border border-slate-200 p-1 text-blue-600 hover:bg-blue-50"
                       >
-                        {row.profile_url}
+                        <ExternalLink size={13} />
                       </a>
                     ) : (
                       '-'
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     {row.id != null && (
                       <button
                         onClick={() => handleToggleLoginIssue(row)}
-                        className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${
-                          row.has_login_issue
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                        }`}
-                        title="로그인 문제 표시 토글"
+                        className="inline-flex items-center justify-center p-1"
+                        title={row.has_login_issue ? '로그인 문제 — 클릭해서 정상으로 표시' : '정상 — 클릭해서 로그인 문제로 표시'}
                       >
-                        <AlertTriangle size={12} />
-                        {row.has_login_issue ? '로그인 문제' : '정상'}
+                        <span
+                          className={`block h-2.5 w-2.5 rounded-full ${
+                            row.has_login_issue ? 'bg-red-500' : 'bg-green-500'
+                          }`}
+                        />
                       </button>
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     <div className="flex items-center gap-2">
                       {row.id != null && (
                         <>
