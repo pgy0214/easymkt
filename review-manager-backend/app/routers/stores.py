@@ -49,9 +49,10 @@ def generate_store_receipt(
         raise HTTPException(status_code=404, detail="매장을 찾을 수 없습니다")
     if data.count < 1 or data.count > MAX_RECEIPT_BATCH_COUNT:
         raise HTTPException(status_code=400, detail=f"개수는 1~{MAX_RECEIPT_BATCH_COUNT} 사이여야 합니다")
+    card_rules = crud.card_rules_as_dicts(db)
     try:
         urls = [
-            receipt_generator.generate_receipt_for_store(store, target_date=data.date)
+            receipt_generator.generate_receipt_for_store(store, card_rules, target_date=data.date)
             for _ in range(data.count)
         ]
     except ValueError as e:

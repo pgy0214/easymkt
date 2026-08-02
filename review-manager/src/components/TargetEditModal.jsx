@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../lib/api.js'
-import { WEEKDAY_LABELS } from '../lib/format.js'
+import { enforceProductNameLength, WEEKDAY_LABELS } from '../lib/format.js'
 
 const EMPTY_MENU_ITEM = { name: '', price: '' }
 
@@ -183,9 +183,8 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
                 <div key={i} className="flex gap-1">
                   <input
                     value={item.name}
-                    onChange={(e) => updateMenuItem(i, 'name', e.target.value)}
+                    onChange={(e) => updateMenuItem(i, 'name', enforceProductNameLength(e.target.value))}
                     placeholder={`메뉴명 ${i + 1} (최대 12자)`}
-                    maxLength={12}
                     className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
                   />
                   <input

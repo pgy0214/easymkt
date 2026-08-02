@@ -158,6 +158,20 @@ class StoreReceiptIn(BaseModel):
     count: int = 1
 
 
+class CardRuleIn(BaseModel):
+    card_prefix_1: str
+    card_prefix_2: str
+    approval_prefix: str
+    acquirer: str
+    card_type: str
+
+
+class CardRuleOut(CardRuleIn):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+
+
 class StoreReceiptOut(BaseModel):
     url: str
 

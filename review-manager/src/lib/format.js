@@ -79,6 +79,37 @@ export function formatBusinessNumber(value) {
   return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
 }
 
+// Store.representative_product 같은 "이름 가격원, 이름2 가격2원" 콤마구분 문자열을
+// [{name, price}] 배열로 파싱한다 — ProductRowsEditor(매장 대표상품 편집)와
+// TargetForm(캠페인 등록시 매장 메뉴 자동입력) 양쪽에서 같은 로직을 써야 한다.
+// 단순히 ","로 나누면 "22,000원"처럼 가격 자체에 천단위 콤마가 들어간 경우 "22"와
+// "000원"으로 쪼개지는 문제가 있어(실제로 확인함), 문자열 전체에서 "이름 + 공백 +
+// 숫자(,숫자)* + 선택적 원 + (,로 이어지거나 끝)" 패턴을 직접 찾는다 — 백엔드
+// receipt_generator.parse_representative_product와 동일한 로직.
+export function parseProductString(text) {
+  if (!text) return []
+  const items = []
+  for (const match of text.trim().matchAll(/(.+?)\s+(\d+(?:,\d{3})*)\s*원?\s*(?:,\s*|$)/g)) {
+    const name = match[1].trim()
+    if (name) items.push({ name, price: match[2].replace(/,/g, '') })
+  }
+  return items
+}
+
+// 영수증 캔버스에서 상품명이 단가 칸과 겹치지 않는 실측 안전선 — 백엔드
+// receipt_generator.MAX_PRODUCT_NAME_LENGTH와 반드시 같은 값을 유지해야 한다.
+export const MAX_PRODUCT_NAME_LENGTH = 12
+
+// maxLength HTML 속성만 쓰면 타이핑이 조용히 막혀서 사용자가 왜 안 눌리는지 모른다 —
+// 여기서 직접 길이를 검사해 팝업으로 알려주고 잘라낸다.
+export function enforceProductNameLength(value) {
+  if (value.length > MAX_PRODUCT_NAME_LENGTH) {
+    alert(`상품명은 최대 ${MAX_PRODUCT_NAME_LENGTH}자까지만 입력할 수 있어요 (영수증 이미지에서 단가와 겹치는 걸 막기 위함).`)
+    return value.slice(0, MAX_PRODUCT_NAME_LENGTH)
+  }
+  return value
+}
+
 export const AGE_GROUP_OPTIONS = ['10대', '20대', '30대', '40대', '50대', '60대 이상']
 
 export const REGION_GROUPS = [

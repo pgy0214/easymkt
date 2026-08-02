@@ -5,7 +5,7 @@ import { formatBusinessNumber, formatDateTime, PLATFORM_LABEL } from '../lib/for
 import ProductRowsEditor from './ProductRowsEditor.jsx'
 import StoreEditModal from './StoreEditModal.jsx'
 
-const EMPTY = { platform: 'naver', url: '', cooldown_days: 90 }
+const EMPTY = { platform: 'naver', url: '', cooldown_days: 30 }
 
 export default function StoreManager() {
   const [stores, setStores] = useState([])

@@ -1,5 +1,7 @@
 from sqlalchemy import text
 
+from app import receipt_generator
+
 # Lightweight ad-hoc migrations for the SQLite dev DB (no Alembic setup at this
 # scale). Base.metadata.create_all only creates missing tables, not columns
 # added to existing tables, so new columns need an explicit ALTER TABLE here.
@@ -196,5 +198,20 @@ def run_migrations(engine) -> None:
                 # if there's real data, we deliberately leave the old table alone
                 # rather than risk destroying it — this app is pre-production scale
                 # so that hasn't happened, but this guard costs nothing to keep.
+
+        # card_rules: 영수증 카드정보(카드번호/승인번호/매입사명/카드종류) 후보 목록 —
+        # 테이블 자체는 create_all이 만들지만 데이터는 비어있으니, 레거시에 하드코딩돼
+        # 있던 카드정보를 최초 1회만 옮겨 심는다(관리자가 이후 설정 탭에서 추가/삭제).
+        card_rules_count = conn.execute(text("SELECT COUNT(*) FROM card_rules")).scalar()
+        if card_rules_count == 0:
+            for rule in receipt_generator.legacy_rules_as_card_rule_dicts():
+                conn.execute(
+                    text(
+                        "INSERT INTO card_rules "
+                        "(card_prefix_1, card_prefix_2, approval_prefix, acquirer, card_type) "
+                        "VALUES (:card_prefix_1, :card_prefix_2, :approval_prefix, :acquirer, :card_type)"
+                    ),
+                    rule,
+                )
 
         conn.commit()

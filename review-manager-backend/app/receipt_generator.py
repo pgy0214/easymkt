@@ -38,7 +38,9 @@ PATH_ARIAL = r"C:\Windows\Fonts\Arial.ttf"
 # 영수증에서 겹침을 직접 확인하고 12자로 낮췄다.
 MAX_PRODUCT_NAME_LENGTH = 12
 
-# ============================ RULES (레거시 그대로) ============================
+# ============================ RULES (레거시 시드 데이터, DB card_rules 테이블 최초
+# 시딩에만 쓰인다 — 실제 영수증 생성은 항상 DB에서 읽은 목록을 인자로 받는다. 관리자가
+# 설정 탭에서 카드번호/승인번호/매입사명/카드종류를 추가·삭제할 수 있다) ============================
 RULES_TEXT = r"""
 카드번호1/4	카드번호2/4	승인번호(8자리)	매입사	카드종류
 4678	5600	"8"+7자리랜덤	우리	우리카드
@@ -144,24 +146,39 @@ def parse_rules(text: str):
     return rules
 
 
-RULES = parse_rules(RULES_TEXT)
+def _extract_approval_prefix(approval_rule: str) -> str:
+    """레거시 규칙의 approval_rule은 '"8"+7자리랜덤' 같은 DSL 문자열이다 — DB 시딩 시
+    앞자리 숫자만 뽑아 card_rules.approval_prefix에 저장한다."""
+    text = (approval_rule or "").strip()
+    m = re.search(r'"(\d+)"', text)
+    if m:
+        return m.group(1)
+    return text if text.isdigit() else ""
 
 
-def gen_card_by_rule(rule: dict) -> str:
-    g1 = (re.sub(r"\D", "", rule.get("g1", "")) or rand_digits(4))[:4].ljust(4, "0")
-    g2 = (re.sub(r"\D", "", rule.get("g2", "")) or rand_digits(4))[:4].ljust(4, "0")
+def legacy_rules_as_card_rule_dicts() -> list[dict]:
+    """DB card_rules 테이블이 비어있을 때 최초 1회 시딩할 데이터."""
+    return [
+        {
+            "card_prefix_1": r["g1"],
+            "card_prefix_2": r["g2"],
+            "approval_prefix": _extract_approval_prefix(r["approval_rule"]),
+            "acquirer": r["acquirer"],
+            "card_type": r["cardtype"],
+        }
+        for r in parse_rules(RULES_TEXT)
+    ]
+
+
+def gen_card_number(rule: dict) -> str:
+    g1 = (re.sub(r"\D", "", rule.get("card_prefix_1") or "") or rand_digits(4))[:4].ljust(4, "0")
+    g2 = (re.sub(r"\D", "", rule.get("card_prefix_2") or "") or rand_digits(4))[:4].ljust(4, "0")
     return f"{g1}-{g2}-****-****"
 
 
-def gen_approval(rule: dict) -> str:
-    r = (rule.get("approval_rule") or "").strip()
-    m = re.search(r'"(\d+)"', r)
-    if m:
-        prefix = m.group(1)
-        return (prefix + rand_digits(8 - len(prefix)))[:8]
-    if r.isdigit():
-        return (r + rand_digits(8 - len(r)))[:8]
-    return rand_digits(8)
+def gen_approval_number(rule: dict) -> str:
+    prefix = re.sub(r"\D", "", rule.get("approval_prefix") or "")
+    return (prefix + rand_digits(8 - len(prefix)))[:8] if prefix else rand_digits(8)
 
 
 # ============================ RENDER UTILS (레거시 그대로) ============================
@@ -235,9 +252,12 @@ def generate_receipt(
     menu_items: list[dict],
     dt: datetime,
     output_path: str,
+    card_rules: list[dict],
 ) -> str:
     if not menu_items:
         raise ValueError("메뉴 정보가 없어 영수증을 만들 수 없습니다.")
+    if not card_rules:
+        raise ValueError("영수증 카드정보가 없어 영수증을 만들 수 없습니다. 설정 탭에서 추가해주세요.")
 
     가게이름 = store_name
     사업자번호 = business_registration_number or ""
@@ -252,9 +272,9 @@ def generate_receipt(
     총액 = sum(p * q for p, q in zip(l_단가, l_수량))
     공급가액, 부가세 = (총액 * 10) // 11, 총액 - (총액 * 10) // 11
 
-    rule = random.choice(RULES)
-    카드번호_표시 = gen_card_by_rule(rule)
-    승인번호 = gen_approval(rule)
+    rule = random.choice(card_rules)
+    카드번호_표시 = gen_card_number(rule)
+    승인번호 = gen_approval_number(rule)
 
     # 캔버스 세팅 — 레거시와 동일 (건드리지 말 것)
     W, H, P, FS = 630, 2000, 50, 26
@@ -323,7 +343,7 @@ def generate_receipt(
         ("가맹점번호", "00080365021"),
         ("승인번호", 승인번호),
         ("매입사명", rule.get("acquirer", "")),
-        ("카드종류", rule.get("cardtype", "")),
+        ("카드종류", rule.get("card_type", "")),
     ]
     for label, val in infos:
         draw_mixed(d, P, y, label, f_text, f_digit)
@@ -357,7 +377,7 @@ def parse_representative_product(text: str | None) -> list[dict]:
     return items
 
 
-def generate_receipt_for_store(store, target_date: date_cls | None = None) -> str:
+def generate_receipt_for_store(store, card_rules: list[dict], target_date: date_cls | None = None) -> str:
     """매장관리에 등록된 정보만으로(캠페인/작업 없이) 영수증 이미지 1건을 즉석 생성한다.
     target_date를 안 주면 오늘 날짜를 쓴다."""
     menu_items = parse_representative_product(store.representative_product)
@@ -381,11 +401,14 @@ def generate_receipt_for_store(store, target_date: date_cls | None = None) -> st
         menu_items=menu_items,
         dt=dt,
         output_path=output_path,
+        card_rules=card_rules,
     )
     return f"/uploads/receipts/{filename}"
 
 
-def generate_receipt_for_task(task, store, menu_items: list[dict] | None) -> str | None:
+def generate_receipt_for_task(
+    task, store, menu_items: list[dict] | None, card_rules: list[dict]
+) -> str | None:
     """작업(Task)의 확정된 영수증 날짜(naver_available_date)로 영수증 이미지를 생성.
     메뉴가 등록 안 된 캠페인은 건너뛰고 None을 반환 — 이 경우 관리자가 캠페인에
     메뉴를 채운 뒤 나중에 다시 시도해야 함."""
@@ -409,5 +432,6 @@ def generate_receipt_for_task(task, store, menu_items: list[dict] | None) -> str
         menu_items=menu_items,
         dt=dt,
         output_path=output_path,
+        card_rules=card_rules,
     )
     return f"/uploads/receipts/task_{task.id}.jpg"

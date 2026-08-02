@@ -151,6 +151,21 @@ class Task(Base):
     review_account = relationship("ReviewAccount", back_populates="tasks")
 
 
+class CardRule(Base):
+    """영수증 이미지의 카드결제 정보(카드번호/승인번호/매입사명/카드종류)를 랜덤으로
+    고를 때 쓰는 후보 목록 — 설정 탭에서 관리자가 직접 추가/삭제한다."""
+
+    __tablename__ = "card_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    card_prefix_1 = Column(String, nullable=False)  # 카드번호 앞 4자리
+    card_prefix_2 = Column(String, nullable=False)  # 카드번호 다음 4자리
+    approval_prefix = Column(String, nullable=False)  # 승인번호 앞자리 (나머지는 8자리까지 랜덤으로 채움)
+    acquirer = Column(String, nullable=False)  # 매입사명
+    card_type = Column(String, nullable=False)  # 카드종류
+    created_at = Column(DateTime, default=utcnow)
+
+
 class Settings(Base):
     __tablename__ = "settings"
 

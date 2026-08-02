@@ -1,30 +1,13 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-
-// 상품명 칸 x=50 ~ 단가 칸(우측정렬, x=390) 사이 실측 여유폭을 PIL로 직접 재서 정한
-// 값 — review-manager-backend/app/receipt_generator.py의 MAX_PRODUCT_NAME_LENGTH와
-// 반드시 같은 값을 유지해야 한다(영수증 캔버스에서 상품명이 단가 칸과 겹치는 걸 실제로
-// 확인했음).
-const MAX_PRODUCT_NAME_LENGTH = 12
+import { MAX_PRODUCT_NAME_LENGTH, enforceProductNameLength, parseProductString } from '../lib/format.js'
 
 // "대표상품" 문자열("아메리카노 4,500원, 카페라떼 5000원")을 행 배열로 파싱/직렬화한다.
 // 저장 형식은 그대로 콤마구분 문자열로 유지 — 백엔드 필드(Store.representative_product)가
 // 단순 텍스트라 구조화 마이그레이션 없이도 UI만 행 단위로 바꿀 수 있다.
-//
-// 단순히 ","로 나누면 "22,000원"처럼 가격 자체에 천단위 콤마가 들어간 경우 "22"와
-// "000원"으로 쪼개져버리는 문제가 있었다(실제로 이렇게 깨진 화면을 확인함). 그래서
-// 문자열 전체에서 "이름 + 공백 + 숫자(,숫자)* + 선택적 원 + (,로 이어지거나 끝)" 패턴을
-// 직접 찾는다 — 백엔드 receipt_generator.parse_representative_product와 동일한 로직.
-const PRODUCT_ITEM_RE = /(.+?)\s+(\d+(?:,\d{3})*)\s*원?\s*(?:,\s*|$)/g
-
 function parseProductRows(text) {
-  if (!text) return [{ name: '', price: '' }]
-  const rows = []
-  for (const match of text.trim().matchAll(PRODUCT_ITEM_RE)) {
-    const name = match[1].trim()
-    if (name) rows.push({ name, price: match[2].replace(/,/g, '') })
-  }
-  return rows.length > 0 ? rows : [{ name: '', price: '' }]
+  const items = parseProductString(text)
+  return items.length > 0 ? items : [{ name: '', price: '' }]
 }
 
 function serializeProductRows(rows) {
@@ -60,9 +43,8 @@ export default function ProductRowsEditor({ value, onChange }) {
         <div key={i} className="flex items-center gap-1">
           <input
             value={row.name}
-            onChange={(e) => update(i, 'name', e.target.value)}
+            onChange={(e) => update(i, 'name', enforceProductNameLength(e.target.value))}
             placeholder={`메뉴명 ${i + 1} (최대 ${MAX_PRODUCT_NAME_LENGTH}자)`}
-            maxLength={MAX_PRODUCT_NAME_LENGTH}
             className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
           />
           <input

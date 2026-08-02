@@ -131,6 +131,10 @@ export const api = {
 
   getNotifyStatus: () => request('/notify/status'),
   sendBulkMessage: (data) => request('/notify/bulk', { method: 'POST', body: JSON.stringify(data) }),
+
+  getCardRules: () => request('/card-rules'),
+  createCardRule: (data) => request('/card-rules', { method: 'POST', body: JSON.stringify(data) }),
+  deleteCardRule: (id) => request(`/card-rules/${id}`, { method: 'DELETE' }),
 }
 
 export const portalApi = {

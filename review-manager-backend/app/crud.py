@@ -966,3 +966,44 @@ def update_settings(db: Session, data: schemas.SettingsUpdate) -> models.Setting
     db.commit()
     db.refresh(settings)
     return settings
+
+
+def get_card_rules(db: Session) -> list[models.CardRule]:
+    return db.query(models.CardRule).order_by(models.CardRule.id).all()
+
+
+def card_rules_as_dicts(db: Session) -> list[dict]:
+    """receipt_generator.generate_receipt()가 바로 쓸 수 있는 형태로 변환."""
+    return [
+        {
+            "card_prefix_1": r.card_prefix_1,
+            "card_prefix_2": r.card_prefix_2,
+            "approval_prefix": r.approval_prefix,
+            "acquirer": r.acquirer,
+            "card_type": r.card_type,
+        }
+        for r in get_card_rules(db)
+    ]
+
+
+def create_card_rule(db: Session, data: schemas.CardRuleIn) -> models.CardRule:
+    rule = models.CardRule(
+        card_prefix_1=data.card_prefix_1,
+        card_prefix_2=data.card_prefix_2,
+        approval_prefix=data.approval_prefix,
+        acquirer=data.acquirer,
+        card_type=data.card_type,
+    )
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    return rule
+
+
+def get_card_rule(db: Session, rule_id: int) -> models.CardRule | None:
+    return db.query(models.CardRule).filter(models.CardRule.id == rule_id).first()
+
+
+def delete_card_rule(db: Session, rule: models.CardRule) -> None:
+    db.delete(rule)
+    db.commit()

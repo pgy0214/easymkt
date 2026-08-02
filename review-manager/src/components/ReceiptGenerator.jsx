@@ -1,9 +1,14 @@
-import { Receipt } from 'lucide-react'
+import { Download, Receipt } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { API_ORIGIN, api } from '../lib/api.js'
 import { PLATFORM_LABEL } from '../lib/format.js'
 
 const MAX_COUNT = 50
+
+function todayForFilename() {
+  const d = new Date()
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+}
 
 export default function ReceiptGenerator() {
   const [stores, setStores] = useState([])
@@ -14,6 +19,7 @@ export default function ReceiptGenerator() {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState(null)
   const [receiptUrls, setReceiptUrls] = useState([])
+  const [downloadPrefix, setDownloadPrefix] = useState('')
 
   useEffect(() => {
     api
@@ -32,11 +38,24 @@ export default function ReceiptGenerator() {
     try {
       const results = await api.generateStoreReceipt(store.id, { date, count })
       setReceiptUrls(results.map((r) => r.url))
+      setDownloadPrefix(`${store.name}_${date ? date.replaceAll('-', '') : todayForFilename()}`)
     } catch (err) {
       setError(err.message)
     } finally {
       setGenerating(false)
     }
+  }
+
+  async function handleDownload(url, index) {
+    const suffix = receiptUrls.length > 1 ? `_${index + 1}` : ''
+    const res = await fetch(`${API_ORIGIN}${url}`)
+    const blob = await res.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.download = `${downloadPrefix}${suffix}.jpg`
+    a.click()
+    URL.revokeObjectURL(objectUrl)
   }
 
   return (
@@ -108,21 +127,30 @@ export default function ReceiptGenerator() {
 
       {receiptUrls.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {receiptUrls.map((url) => (
+          {receiptUrls.map((url, i) => (
             <div key={url} className="rounded-lg border border-slate-200 bg-white p-3">
               <img
                 src={`${API_ORIGIN}${url}`}
                 alt="생성된 영수증"
                 className="w-full rounded border border-slate-200"
               />
-              <a
-                href={`${API_ORIGIN}${url}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-block text-xs text-blue-600 hover:underline"
-              >
-                새 탭에서 원본 보기
-              </a>
+              <div className="mt-2 flex items-center gap-3 text-xs">
+                <button
+                  onClick={() => handleDownload(url, i)}
+                  className="flex items-center gap-1 text-blue-600 hover:underline"
+                >
+                  <Download size={12} />
+                  JPG 다운로드
+                </button>
+                <a
+                  href={`${API_ORIGIN}${url}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  새 탭에서 원본 보기
+                </a>
+              </div>
             </div>
           ))}
         </div>

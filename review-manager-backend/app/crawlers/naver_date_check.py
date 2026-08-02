@@ -100,8 +100,9 @@ def _generate_receipt_if_possible(db, task: models.Task) -> None:
     if not store:
         return
     menu_items = crud.decode_menu_items(target.menu_items_json)
+    card_rules = crud.card_rules_as_dicts(db)
     try:
-        path = receipt_generator.generate_receipt_for_task(task, store, menu_items)
+        path = receipt_generator.generate_receipt_for_task(task, store, menu_items, card_rules)
     except Exception:
         logger.exception("Task %s 영수증 생성 실패", task.id)
         return

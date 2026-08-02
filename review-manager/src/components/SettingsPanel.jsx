@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
+import CardRuleModal from './CardRuleModal.jsx'
 
 export default function SettingsPanel() {
   const [settings, setSettings] = useState(null)
@@ -7,6 +8,7 @@ export default function SettingsPanel() {
   const [message, setMessage] = useState(null)
   const [error, setError] = useState(null)
   const [notifyStatus, setNotifyStatus] = useState(null)
+  const [cardRuleModalOpen, setCardRuleModalOpen] = useState(false)
 
   useEffect(() => {
     api.getSettings().then(setSettings).catch((err) => setError(err.message))
@@ -168,6 +170,24 @@ export default function SettingsPanel() {
         </div>
       )}
     </div>
+
+    <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
+      <div>
+        <h3 className="text-sm font-medium text-slate-700">영수증정보</h3>
+        <p className="mt-0.5 text-xs text-slate-400">
+          영수증 이미지 생성 시 쓰이는 카드번호/승인번호/매입사명/카드종류 후보 목록을
+          관리합니다.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setCardRuleModalOpen(true)}
+        className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+      >
+        관리
+      </button>
+    </div>
+    {cardRuleModalOpen && <CardRuleModal onClose={() => setCardRuleModalOpen(false)} />}
     </div>
   )
 }
