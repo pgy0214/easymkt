@@ -98,6 +98,18 @@ export const api = {
     }
     return res.json()
   },
+  uploadTargetPhotos: async (id, files) => {
+    const form = new FormData()
+    files.forEach((file) => form.append('files', file))
+    const res = await fetch(`${BASE_URL}/targets/${id}/photos`, { method: 'POST', body: form })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.detail || `요청 실패 (${res.status})`)
+    }
+    return res.json()
+  },
+  deleteTargetPhoto: (targetId, photoId) =>
+    request(`/targets/${targetId}/photos/${photoId}`, { method: 'DELETE' }),
   parseTargetGuideline: async (file) => {
     const form = new FormData()
     form.append('file', file)

@@ -75,6 +75,32 @@ async def upload_reference_photo(
     return crud.target_to_out(target)
 
 
+@router.post("/{target_id}/photos", response_model=list[schemas.TargetPhotoOut])
+async def upload_target_photos(
+    target_id: int, files: list[UploadFile] = File(...), db: Session = Depends(get_db)
+):
+    """캠페인 사진 풀에 여러 장을 한 번에 업로드 — 저장 전 자동으로 EXIF를 세탁한다
+    (app.photo_washer)."""
+    target = crud.get_target(db, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    contents = [(await f.read(), f.filename or "photo.jpg") for f in files]
+    try:
+        photos = crud.save_target_photos(db, target, contents)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return photos
+
+
+@router.delete("/{target_id}/photos/{photo_id}")
+def delete_target_photo(target_id: int, photo_id: int, db: Session = Depends(get_db)):
+    photo = crud.get_target_photo(db, photo_id)
+    if not photo or photo.review_target_id != target_id:
+        raise HTTPException(status_code=404, detail="사진을 찾을 수 없습니다")
+    crud.delete_target_photo(db, photo)
+    return {"ok": True}
+
+
 @router.delete("/{target_id}")
 def delete_target(target_id: int, db: Session = Depends(get_db)):
     target = crud.get_target(db, target_id)

@@ -381,6 +381,7 @@ function TaskBriefModal({ token, taskId, onClose }) {
     !brief.regional_features &&
     !brief.menu_items?.length &&
     !brief.reference_photo_path &&
+    !brief.assigned_photo_paths?.length &&
     !brief.receipt_image_path
 
   return (
@@ -443,6 +444,24 @@ function TaskBriefModal({ token, taskId, onClose }) {
                   alt="참고 이미지"
                   className="mt-1 max-h-64 rounded border border-slate-200"
                 />
+              </div>
+            )}
+
+            {brief.assigned_photo_paths?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-slate-500">
+                  이 리뷰에 사용할 사진 ({brief.assigned_photo_paths.length}장)
+                </p>
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  {brief.assigned_photo_paths.map((path) => (
+                    <img
+                      key={path}
+                      src={`${API_ORIGIN}${path}`}
+                      alt="배정된 사진"
+                      className="rounded border border-slate-200"
+                    />
+                  ))}
+                </div>
               </div>
             )}
 

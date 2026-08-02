@@ -98,7 +98,8 @@ class ReviewTarget(Base):
     guideline = Column(String, nullable=True)  # 원고 작성 가이드라인
     regional_features = Column(String, nullable=True)  # 지역적 특징
     menu_items_json = Column(String, nullable=True)  # JSON: [{"name":..,"price":..}, ...] 최대 3개
-    reference_photo_path = Column(String, nullable=True)  # 참고 이미지 (선택)
+    reference_photo_path = Column(String, nullable=True)  # 참고 이미지 (선택, 구버전 단일사진 — 유지만 함)
+    photos_per_review = Column(Integer, nullable=False, default=1)  # 리뷰 1건당 배정할 사진 갯수
 
     created_at = Column(DateTime, default=utcnow)
 
@@ -106,6 +107,27 @@ class ReviewTarget(Base):
     tasks = relationship(
         "Task", back_populates="review_target", cascade="all, delete-orphan"
     )
+    photos = relationship(
+        "TargetPhoto",
+        back_populates="review_target",
+        cascade="all, delete-orphan",
+        order_by="TargetPhoto.id",
+    )
+
+
+class TargetPhoto(Base):
+    """캠페인에 업로드된 사진 풀 — 업로드 시 photo_washer.wash_photo()로 EXIF를 자동
+    세탁해서 저장한다. 작업(Task) 배정 시 photos_per_review 갯수만큼 라운드로빈으로
+    골라서 리뷰어에게 보여준다(crud.assign_photos_for_task)."""
+
+    __tablename__ = "target_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    review_target_id = Column(Integer, ForeignKey("review_targets.id"), nullable=False)
+    file_path = Column(String, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    review_target = relationship("ReviewTarget", back_populates="photos")
 
 
 class Task(Base):

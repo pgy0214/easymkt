@@ -156,6 +156,12 @@ def run_migrations(engine) -> None:
         # tasks: receipt_image_path — 영수증 이미지, naver_available_date가 정해지면 자동 생성
         _add_column_if_missing(conn, "tasks", "receipt_image_path", "receipt_image_path TEXT")
 
+        # review_targets: photos_per_review — 리뷰 1건당 배정할 사진 갯수(캠페인 사진 풀에서
+        # 라운드로빈으로 골라줌). target_photos 테이블 자체는 create_all이 만든다.
+        _add_column_if_missing(
+            conn, "review_targets", "photos_per_review", "photos_per_review INTEGER NOT NULL DEFAULT 1"
+        )
+
         # review_targets: start_date/end_date — 캠페인이 실제로 작업되는 기간(둘 다
         # null이면 기존과 동일하게 무기한). 오픈풀 노출 필터에도 적용됨.
         _add_column_if_missing(conn, "review_targets", "start_date", "start_date DATE")

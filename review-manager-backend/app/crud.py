@@ -7,7 +7,7 @@ import secrets
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app import crypto, models, schemas
+from app import crypto, models, photo_washer, schemas
 
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 ALLOWED_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -469,6 +469,61 @@ def save_reference_photo(
     db.commit()
 
 
+def save_target_photos(
+    db: Session, target: models.ReviewTarget, files: list[tuple[bytes, str]]
+) -> list[models.TargetPhoto]:
+    """캠페인 사진 풀에 여러 장을 한 번에 추가한다 — 저장 전 photo_washer.wash_photo()로
+    EXIF를 자동으로 세탁한다(사용자가 수동으로 쓰던 포토워셔 프로그램을 대체)."""
+    saved = []
+    for content, filename in files:
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in ALLOWED_PHOTO_EXTENSIONS:
+            raise ValueError(f"지원하지 않는 이미지 형식입니다: {ext or '(확장자 없음)'}")
+        washed = photo_washer.wash_photo(content)
+        photo = models.TargetPhoto(review_target_id=target.id, file_path="")
+        db.add(photo)
+        db.flush()
+        filename = f"target_{target.id}_photo_{photo.id}.jpg"
+        dest = os.path.join(UPLOADS_DIR, "campaigns", filename)
+        with open(dest, "wb") as f:
+            f.write(washed)
+        photo.file_path = f"/uploads/campaigns/{filename}"
+        saved.append(photo)
+    db.commit()
+    for photo in saved:
+        db.refresh(photo)
+    return saved
+
+
+def get_target_photo(db: Session, photo_id: int) -> models.TargetPhoto | None:
+    return db.query(models.TargetPhoto).filter(models.TargetPhoto.id == photo_id).first()
+
+
+def delete_target_photo(db: Session, photo: models.TargetPhoto) -> None:
+    path = os.path.join(UPLOADS_DIR, "campaigns", os.path.basename(photo.file_path))
+    if os.path.exists(path):
+        os.remove(path)
+    db.delete(photo)
+    db.commit()
+
+
+def assign_photos_for_task(task: models.Task) -> list[str]:
+    """캠페인 사진 풀에서 이 작업(Task)에 배정할 사진 경로를 라운드로빈으로 고른다 —
+    캠페인의 photos_per_review 설정값만큼, 작업마다 겹치지 않게(풀이 부족하면 순환)."""
+    target = task.review_target
+    if target is None or not target.photos or target.photos_per_review <= 0:
+        return []
+    photos = target.photos  # ReviewTarget.photos relationship은 id순 정렬됨
+    tasks = sorted(target.tasks, key=lambda t: t.id)
+    try:
+        task_index = tasks.index(task)
+    except ValueError:
+        return []
+    n = len(photos)
+    start = (task_index * target.photos_per_review) % n
+    return [photos[(start + i) % n].file_path for i in range(min(target.photos_per_review, n))]
+
+
 def delete_target(db: Session, target: models.ReviewTarget) -> None:
     in_progress = [t for t in target.tasks if t.status != "open"]
     if in_progress:
@@ -505,6 +560,8 @@ def update_target(
         target.regional_features = data.regional_features
     if data.menu_items is not None:
         target.menu_items_json = encode_menu_items(data.menu_items)
+    if data.photos_per_review is not None:
+        target.photos_per_review = data.photos_per_review
     db.commit()
     db.refresh(target)
     return target
@@ -542,6 +599,7 @@ def create_review_target(
         guideline=data.guideline,
         regional_features=data.regional_features,
         menu_items_json=encode_menu_items(data.menu_items),
+        photos_per_review=data.photos_per_review,
     )
     db.add(target)
     db.flush()
@@ -581,6 +639,7 @@ def task_to_out(task: models.Task) -> schemas.TaskOut:
         out.store_id = target.store.id
         out.store_name = target.store.name
         out.store_url = target.store.url
+    out.assigned_photo_paths = assign_photos_for_task(task)
     return out
 
 

@@ -1,5 +1,6 @@
+import { X } from 'lucide-react'
 import { useState } from 'react'
-import { api } from '../lib/api.js'
+import { API_ORIGIN, api } from '../lib/api.js'
 import { enforceProductNameLength, WEEKDAY_LABELS } from '../lib/format.js'
 
 const EMPTY_MENU_ITEM = { name: '', price: '' }
@@ -22,9 +23,20 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
   const [guideline, setGuideline] = useState(target.guideline || '')
   const [regionalFeatures, setRegionalFeatures] = useState(target.regional_features || '')
   const [menuItems, setMenuItems] = useState(toMenuItemForm(target.menu_items))
-  const [photoFile, setPhotoFile] = useState(null)
+  const [photoFiles, setPhotoFiles] = useState([])
+  const [photosPerReview, setPhotosPerReview] = useState(target.photos_per_review ?? 1)
+  const [photos, setPhotos] = useState(target.photos || [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+
+  async function handleDeletePhoto(photoId) {
+    try {
+      await api.deleteTargetPhoto(target.id, photoId)
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
 
   function toggleWorkDay(day) {
     setWorkDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]))
@@ -55,11 +67,16 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
         guideline: guideline.trim() || null,
         regional_features: regionalFeatures.trim() || null,
         menu_items: cleanMenuItems.length > 0 ? cleanMenuItems : null,
+        photos_per_review: Number(photosPerReview) || 1,
       })
-      if (photoFile) {
-        await api.uploadTargetPhoto(target.id, photoFile)
+      let updatedPhotos = photos
+      if (photoFiles.length > 0) {
+        const uploaded = await api.uploadTargetPhotos(target.id, photoFiles)
+        updatedPhotos = [...photos, ...uploaded]
+        setPhotos(updatedPhotos)
+        setPhotoFiles([])
       }
-      onSaved(updated)
+      onSaved({ ...updated, photos: updatedPhotos })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -200,13 +217,53 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs text-slate-500">참고 이미지 (선택 — 다시 올리면 기존 이미지를 대체)</label>
+            <label className="block text-xs text-slate-500">사진 풀 (여러 장 추가 가능)</label>
+            {photos.length > 0 && (
+              <div className="mt-1 grid grid-cols-6 gap-1">
+                {photos.map((photo) => (
+                  <div key={photo.id} className="group relative">
+                    <img
+                      src={`${API_ORIGIN}${photo.file_path}`}
+                      alt="캠페인 사진"
+                      className="aspect-square rounded border border-slate-200 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePhoto(photo.id)}
+                      className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white opacity-0 group-hover:opacity-100"
+                      title="삭제"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => setPhotoFile(e.target.files[0] || null)}
-              className="w-full text-sm"
+              multiple
+              onChange={(e) =>
+                setPhotoFiles((prev) => [...prev, ...Array.from(e.target.files || [])])
+              }
+              className="mt-1 w-full text-sm"
             />
+            {photoFiles.length > 0 && (
+              <p className="mt-1 text-xs text-slate-400">
+                저장하면 {photoFiles.length}장이 자동 세탁되어 추가됩니다.
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500">리뷰당 사진 갯수</label>
+            <input
+              type="number"
+              min="0"
+              value={photosPerReview}
+              onChange={(e) => setPhotosPerReview(e.target.value)}
+              className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+            <p className="mt-1 text-xs text-slate-400">설정한 갯수대로 리뷰1개에 적용됩니다.</p>
           </div>
         </div>
 

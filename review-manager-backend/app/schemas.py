@@ -200,6 +200,7 @@ class ReviewTargetCreate(BaseModel):
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
     menu_items: Optional[list[MenuItemIn]] = None  # 최대 3개, 영수증 생성에도 사용
+    photos_per_review: int = 1  # 리뷰 1건당 배정할 사진 갯수
 
 
 class ReviewTargetUpdate(BaseModel):
@@ -214,12 +215,20 @@ class ReviewTargetUpdate(BaseModel):
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
     menu_items: Optional[list[MenuItemIn]] = None
+    photos_per_review: Optional[int] = None
 
 
 class TargetGuidelineParseOut(BaseModel):
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
     menu_items: Optional[list[MenuItemIn]] = None
+
+
+class TargetPhotoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    file_path: str
 
 
 class ReviewTargetOut(BaseModel):
@@ -251,6 +260,8 @@ class ReviewTargetOut(BaseModel):
     # parsed from menu_items_json by crud.target_to_out (same reasoning as work_days)
     menu_items: Optional[list[MenuItemIn]] = None
     reference_photo_path: Optional[str] = None
+    photos_per_review: int = 1
+    photos: list[TargetPhotoOut] = []
 
     # denormalized, filled in by the router — 캠페인 목록의 진행중/완료 필터에 사용
     completed_count: int = 0
@@ -285,6 +296,9 @@ class TaskOut(BaseModel):
     settlement_paid_at: Optional[datetime.datetime] = None
     sale_amount: Optional[int] = None
     receipt_image_path: Optional[str] = None
+    # denormalized, filled in by the router — 캠페인 사진 풀에서 라운드로빈으로
+    # 배정된 이 작업의 사진들 (crud.assign_photos_for_task)
+    assigned_photo_paths: list[str] = []
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -399,6 +413,7 @@ class TaskBriefOut(BaseModel):
     regional_features: Optional[str] = None
     menu_items: Optional[list[MenuItemIn]] = None
     reference_photo_path: Optional[str] = None
+    assigned_photo_paths: list[str] = []
     receipt_image_path: Optional[str] = None
 
 

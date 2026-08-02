@@ -58,6 +58,7 @@ const EMPTY = {
   guideline: DEFAULT_GUIDELINE,
   regional_features: '',
   menu_items: [{ ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }],
+  photos_per_review: 1,
 }
 
 function menuItemsFromStore(store) {
@@ -75,7 +76,7 @@ export default function TargetForm() {
   const [message, setMessage] = useState(null)
   const [targets, setTargets] = useState([])
   const [stores, setStores] = useState([])
-  const [photoFile, setPhotoFile] = useState(null)
+  const [photoFiles, setPhotoFiles] = useState([])
   const [guidelineImporting, setGuidelineImporting] = useState(false)
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
   const guidelineFileInputRef = useRef(null)
@@ -202,9 +203,10 @@ export default function TargetForm() {
         guideline: form.guideline.trim() || null,
         regional_features: form.regional_features.trim() || null,
         menu_items: menuItems.length > 0 ? menuItems : null,
+        photos_per_review: Number(form.photos_per_review) || 1,
       })
-      if (photoFile) {
-        await api.uploadTargetPhoto(target.id, photoFile)
+      if (photoFiles.length > 0) {
+        await api.uploadTargetPhotos(target.id, photoFiles)
       }
       setMessage(
         `"${target.store_name}" 등록 완료 — ${target.required_count}건이 오픈풀에 등록되었습니다. 리뷰어가 직접 클레임합니다.`,
@@ -215,7 +217,7 @@ export default function TargetForm() {
         store_id: prev.store_id,
         menu_items: menuItemsFromStore(stores.find((s) => s.id === Number(prev.store_id))) ?? EMPTY.menu_items,
       }))
-      setPhotoFile(null)
+      setPhotoFiles([])
       setRegisterModalOpen(false)
       await refreshTargets()
     } catch (err) {
@@ -465,13 +467,49 @@ export default function TargetForm() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500">참고 이미지 (선택)</label>
+                  <label className="block text-xs text-slate-500">참고 이미지 (선택, 여러 장 가능)</label>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setPhotoFile(e.target.files[0] || null)}
+                    multiple
+                    onChange={(e) =>
+                      setPhotoFiles((prev) => [...prev, ...Array.from(e.target.files || [])])
+                    }
                     className="w-full text-sm"
                   />
+                  {photoFiles.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {photoFiles.map((f, i) => (
+                        <span
+                          key={`${f.name}-${i}`}
+                          className="flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                        >
+                          {f.name}
+                          <button
+                            type="button"
+                            onClick={() => setPhotoFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="text-slate-400 hover:text-red-600"
+                          >
+                            <X size={10} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-1 text-xs text-slate-400">
+                    업로드한 사진은 저장 전 EXIF(촬영정보)가 자동으로 랜덤 처리됩니다.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500">리뷰당 사진 갯수</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.photos_per_review}
+                    onChange={(e) => setForm((prev) => ({ ...prev, photos_per_review: e.target.value }))}
+                    className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-slate-400">설정한 갯수대로 리뷰1개에 적용됩니다.</p>
                 </div>
               </div>
               <div>

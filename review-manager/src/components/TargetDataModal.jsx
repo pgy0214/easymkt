@@ -41,7 +41,8 @@ export default function TargetDataModal({ targetId, onClose }) {
               {!target.guideline &&
                 !target.regional_features &&
                 !(target.menu_items?.length > 0) &&
-                !target.reference_photo_path && (
+                !target.reference_photo_path &&
+                !(target.photos?.length > 0) && (
                   <p className="text-slate-400">등록된 원고 자료가 없습니다.</p>
                 )}
               {target.guideline && (
@@ -76,6 +77,23 @@ export default function TargetDataModal({ targetId, onClose }) {
                     alt="참고 이미지"
                     className="mt-1 max-h-48 rounded border border-slate-200"
                   />
+                </div>
+              )}
+              {target.photos?.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-500">
+                    사진 풀 (총 {target.photos.length}장 · 리뷰당 {target.photos_per_review}장 배정)
+                  </p>
+                  <div className="mt-1 grid grid-cols-4 gap-1">
+                    {target.photos.map((photo) => (
+                      <img
+                        key={photo.id}
+                        src={`${API_ORIGIN}${photo.file_path}`}
+                        alt="캠페인 사진"
+                        className="aspect-square rounded border border-slate-200 object-cover"
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </section>
@@ -128,6 +146,21 @@ function TaskDataRow({ task }) {
           >
             제출한 결과 보기
           </a>
+        </div>
+      )}
+      {task.assigned_photo_paths?.length > 0 && (
+        <div className="mt-1">
+          <p className="text-xs text-slate-500">배정된 사진 ({task.assigned_photo_paths.length}장)</p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {task.assigned_photo_paths.map((path) => (
+              <img
+                key={path}
+                src={`${API_ORIGIN}${path}`}
+                alt="배정된 사진"
+                className="h-16 w-16 rounded border border-slate-200 object-cover"
+              />
+            ))}
+          </div>
         </div>
       )}
       {task.receipt_image_path ? (

@@ -168,5 +168,6 @@ def get_task_brief(
         regional_features=target.regional_features if target else None,
         menu_items=crud.decode_menu_items(target.menu_items_json) if target else None,
         reference_photo_path=target.reference_photo_path if target else None,
+        assigned_photo_paths=crud.assign_photos_for_task(task),
         receipt_image_path=task.receipt_image_path,
     )
