@@ -11,6 +11,7 @@ export default function AccountEditModal({ row, onClose, onSaved }) {
   const [password, setPassword] = useState(row.password || '')
   const [profileUrl, setProfileUrl] = useState(row.profile_url || '')
   const [ipAddress, setIpAddress] = useState(row.ip_address || '')
+  const [adspowerProfileId, setAdspowerProfileId] = useState(row.adspower_profile_id || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
@@ -31,6 +32,7 @@ export default function AccountEditModal({ row, onClose, onSaved }) {
           password: password.trim() || null,
           profile_url: platform === 'naver' ? profileUrl.trim() || null : null,
           ip_address: ipAddress.trim() || null,
+          adspower_profile_id: adspowerProfileId.trim() || null,
         }),
       ])
       onSaved({ ...row, ...account, name: reviewer.name, gender: reviewer.gender, birth_date: reviewer.birth_date, contact_info: reviewer.contact_info })
@@ -138,6 +140,18 @@ export default function AccountEditModal({ row, onClose, onSaved }) {
             onChange={(e) => setIpAddress(e.target.value)}
             className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
           />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500">AdsPower 프로필 ID (선택)</label>
+          <input
+            value={adspowerProfileId}
+            onChange={(e) => setAdspowerProfileId(e.target.value)}
+            placeholder="예: k1fapmng"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          />
+          <p className="mt-0.5 text-[11px] text-slate-400">
+            설정하면 목록에서 "실행" 버튼으로 이 계정의 AdsPower 브라우저 창을 바로 띄울 수 있어요.
+          </p>
         </div>
 
         {error && <p className="text-xs text-red-600">{error}</p>}

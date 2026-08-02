@@ -51,6 +51,7 @@ class ReviewAccount(Base):
     label = Column(String, nullable=False)
     profile_url = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)  # 관리자(자체보유) 계정에 배정된 IP
+    adspower_profile_id = Column(String, nullable=True)  # AdsPower 프로필 user_id — 설정하면 "실행" 버튼으로 해당 창을 바로 띄울 수 있음
     has_login_issue = Column(Boolean, nullable=False, default=False)  # 로그인 불가 등 문제 발생 시 관리자 체크용
     password_encrypted = Column(String, nullable=True)  # Fernet 암호화된 계정 비밀번호 (app/crypto.py)
     created_at = Column(DateTime, default=utcnow)
@@ -100,6 +101,7 @@ class ReviewTarget(Base):
     menu_items_json = Column(String, nullable=True)  # JSON: [{"name":..,"price":..}, ...] 최대 3개
     reference_photo_path = Column(String, nullable=True)  # 참고 이미지 (선택, 구버전 단일사진 — 유지만 함)
     photos_per_review = Column(Integer, nullable=False, default=1)  # 리뷰 1건당 배정할 사진 갯수
+    review_length = Column(Integer, nullable=False, default=80)  # 리뷰 원고 목표 글자수 (50/80/100)
 
     created_at = Column(DateTime, default=utcnow)
 
@@ -112,6 +114,12 @@ class ReviewTarget(Base):
         back_populates="review_target",
         cascade="all, delete-orphan",
         order_by="TargetPhoto.id",
+    )
+    review_texts = relationship(
+        "TargetReviewText",
+        back_populates="review_target",
+        cascade="all, delete-orphan",
+        order_by="TargetReviewText.id",
     )
 
 
@@ -128,6 +136,22 @@ class TargetPhoto(Base):
     created_at = Column(DateTime, default=utcnow)
 
     review_target = relationship("ReviewTarget", back_populates="photos")
+
+
+class TargetReviewText(Base):
+    """캠페인에 업로드된 리뷰 원고 풀 — 엑셀(번호+리뷰내용)로 업로드하면 작업(Task)
+    생성 순서대로 1건씩 배정된다(사진 라운드로빈과 달리 겹치지 않고 그대로 소진).
+    업로드분이 작업 갯수보다 적으면 나머지 작업은 처음 브리핑 조회 시점에
+    app.review_writer로 자동 생성해 Task.assigned_review_text에 캐싱한다."""
+
+    __tablename__ = "target_review_texts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    review_target_id = Column(Integer, ForeignKey("review_targets.id"), nullable=False)
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    review_target = relationship("ReviewTarget", back_populates="review_texts")
 
 
 class Task(Base):
@@ -151,6 +175,7 @@ class Task(Base):
     result_link = Column(String, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     receipt_image_path = Column(String, nullable=True)  # naver_available_date가 정해지면 자동 생성
+    assigned_review_text = Column(String, nullable=True)  # 업로드분에서 1:1 배정되거나 AI로 생성된 리뷰 원고 (한 번 생성되면 고정)
 
     review_posted_date = Column(Date, nullable=True)  # 실제 리뷰 "작성일"
 

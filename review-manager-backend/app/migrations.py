@@ -55,6 +55,12 @@ def run_migrations(engine) -> None:
             conn, "review_accounts", "password_encrypted", "password_encrypted TEXT"
         )
 
+        # review_accounts: adspower_profile_id — AdsPower 프로필 user_id 매핑,
+        # 관리자계정 화면에서 "실행" 버튼으로 해당 브라우저 창을 바로 띄우는 데 사용
+        _add_column_if_missing(
+            conn, "review_accounts", "adspower_profile_id", "adspower_profile_id TEXT"
+        )
+
         # settings: default claim-time presets, now in minutes (was hours). Add
         # the new columns, copy over converted values, then drop the old ones —
         # settings only ever has one row and it's worth preserving in place
@@ -161,6 +167,16 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(
             conn, "review_targets", "photos_per_review", "photos_per_review INTEGER NOT NULL DEFAULT 1"
         )
+
+        # review_targets: review_length — 리뷰 원고 목표 글자수(50/80/100), 기본 80.
+        # target_review_texts 테이블 자체는 create_all이 만든다.
+        _add_column_if_missing(
+            conn, "review_targets", "review_length", "review_length INTEGER NOT NULL DEFAULT 80"
+        )
+
+        # tasks: assigned_review_text — 업로드된 원고에서 1:1 배정되거나 AI로 생성된
+        # 리뷰 원고 캐시 (한 번 생성되면 재생성하지 않음)
+        _add_column_if_missing(conn, "tasks", "assigned_review_text", "assigned_review_text TEXT")
 
         # review_targets: start_date/end_date — 캠페인이 실제로 작업되는 기간(둘 다
         # null이면 기존과 동일하게 무기한). 오픈풀 노출 필터에도 적용됨.

@@ -4,25 +4,16 @@ import { api } from '../lib/api.js'
 import { enforceProductNameLength, MAX_PRODUCT_NAME_LENGTH, WEEKDAY_LABELS, parseProductString } from '../lib/format.js'
 import TargetList from './TargetList.jsx'
 
-const GUIDELINE_TEMPLATE_HEADERS = [
-  '가이드라인',
-  '지역특징',
-  '메뉴1명',
-  '메뉴1가격',
-  '메뉴2명',
-  '메뉴2가격',
-  '메뉴3명',
-  '메뉴3가격',
-]
+const REVIEW_TEXT_TEMPLATE_HEADERS = ['번호', '리뷰내용']
 
-function downloadGuidelineTemplate() {
-  const example = ['친절하고 자연스러운 톤으로 작성', '근처에 관광지가 있어요', '아메리카노', '4500', '라떼', '5000', '크로플', '6000']
-  const csv = '﻿' + GUIDELINE_TEMPLATE_HEADERS.join(',') + '\n' + example.join(',') + '\n'
+function downloadReviewTextTemplate() {
+  const example = ['1', '여기에 완성된 리뷰 원고를 그대로 붙여넣으세요']
+  const csv = '﻿' + REVIEW_TEXT_TEMPLATE_HEADERS.join(',') + '\n' + example.join(',') + '\n'
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = '캠페인_원고_양식.csv'
+  a.download = '캠페인_리뷰원고_양식.csv'
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -34,6 +25,7 @@ function daysBetween(start, end) {
 }
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
+const REVIEW_LENGTH_OPTIONS = [50, 80, 100]
 
 const EMPTY_MENU_ITEM = { name: '', price: '' }
 
@@ -48,16 +40,16 @@ const DEFAULT_GUIDELINE = [
 const EMPTY = {
   platform: 'naver',
   store_id: '',
-  required_count: 1,
   unit_price: 0,
   sale_price: '',
-  daily_limit: '',
+  daily_limit: 1,
   start_date: '',
   end_date: '',
   work_days: ALL_DAYS,
   guideline: DEFAULT_GUIDELINE,
   regional_features: '',
   menu_items: [{ ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }],
+  review_length: 80,
   photos_per_review: 1,
 }
 
@@ -69,6 +61,20 @@ function menuItemsFromStore(store) {
   )
 }
 
+// work_days는 백엔드와 동일하게 0=월..6=일 — JS Date.getDay()(0=일..6=토)를 변환해서 맞춘다
+function countMatchingDays(startDate, endDate, workDays) {
+  if (!startDate || !endDate) return 0
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  if (end < start) return 0
+  let count = 0
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const mondayBased = (d.getDay() + 6) % 7
+    if (workDays.includes(mondayBased)) count++
+  }
+  return count
+}
+
 export default function TargetForm() {
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
@@ -76,10 +82,14 @@ export default function TargetForm() {
   const [message, setMessage] = useState(null)
   const [targets, setTargets] = useState([])
   const [stores, setStores] = useState([])
+  const [usePhotos, setUsePhotos] = useState(false)
   const [photoFiles, setPhotoFiles] = useState([])
-  const [guidelineImporting, setGuidelineImporting] = useState(false)
+  const [reviewTextFile, setReviewTextFile] = useState(null)
+  const [previewText, setPreviewText] = useState(null)
+  const [previewing, setPreviewing] = useState(false)
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
-  const guidelineFileInputRef = useRef(null)
+  const photoInputRef = useRef(null)
+  const reviewTextInputRef = useRef(null)
 
   async function refreshTargets() {
     setTargets(await api.getTargets())
@@ -132,26 +142,24 @@ export default function TargetForm() {
     }))
   }
 
-  async function handleGuidelineFileSelected(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    setGuidelineImporting(true)
+  async function handlePreviewReviewText() {
+    setPreviewing(true)
+    setPreviewText(null)
     try {
-      const parsed = await api.parseTargetGuideline(file)
-      setForm((prev) => ({
-        ...prev,
-        guideline: parsed.guideline || prev.guideline,
-        regional_features: parsed.regional_features || prev.regional_features,
-        menu_items:
-          parsed.menu_items && parsed.menu_items.length > 0
-            ? [0, 1, 2].map((i) => parsed.menu_items[i] || { ...EMPTY_MENU_ITEM })
-            : prev.menu_items,
-      }))
+      const menuItems = form.menu_items
+        .filter((item) => item.name.trim() && item.price !== '')
+        .map((item) => ({ name: item.name.trim(), price: Number(item.price) }))
+      const result = await api.previewReviewText({
+        guideline: form.guideline.trim() || null,
+        regional_features: form.regional_features.trim() || null,
+        review_length: Number(form.review_length),
+        menu_items: menuItems.length > 0 ? menuItems : null,
+      })
+      setPreviewText(result.text)
     } catch (err) {
       alert(err.message)
     } finally {
-      setGuidelineImporting(false)
-      e.target.value = ''
+      setPreviewing(false)
     }
   }
 
@@ -175,6 +183,11 @@ export default function TargetForm() {
     setRegisterModalOpen(false)
   }
 
+  const dayCount = daysBetween(form.start_date, form.end_date)
+  const matchingDays = countMatchingDays(form.start_date, form.end_date, form.work_days)
+  const totalCount = matchingDays * (Number(form.daily_limit) || 0)
+  const selectedStore = stores.find((s) => s.id === Number(form.store_id))
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.store_id) {
@@ -185,6 +198,14 @@ export default function TargetForm() {
       setError('작업요일을 최소 하루 이상 선택해주세요.')
       return
     }
+    if (!form.start_date || !form.end_date) {
+      setError('작업 기간(시작일~종료일)을 입력해주세요 — 총 건수 계산에 필요합니다.')
+      return
+    }
+    if (totalCount <= 0) {
+      setError('작업 기간/작업요일/1일 작업 갯수를 확인해주세요 — 총 건수가 0건입니다.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
@@ -193,19 +214,23 @@ export default function TargetForm() {
         .map((item) => ({ name: item.name.trim(), price: Number(item.price) }))
       const target = await api.createTarget({
         store_id: Number(form.store_id),
-        required_count: Number(form.required_count),
+        required_count: totalCount,
         unit_price: Number(form.unit_price),
         sale_price: form.sale_price === '' ? null : Number(form.sale_price),
         work_days: form.work_days,
-        daily_limit: form.daily_limit === '' ? null : Number(form.daily_limit),
+        daily_limit: Number(form.daily_limit),
         start_date: form.start_date || null,
         end_date: form.end_date || null,
         guideline: form.guideline.trim() || null,
         regional_features: form.regional_features.trim() || null,
         menu_items: menuItems.length > 0 ? menuItems : null,
-        photos_per_review: Number(form.photos_per_review) || 1,
+        review_length: Number(form.review_length),
+        photos_per_review: usePhotos ? Number(form.photos_per_review) || 1 : 0,
       })
-      if (photoFiles.length > 0) {
+      if (reviewTextFile) {
+        await api.uploadTargetReviewTexts(target.id, reviewTextFile)
+      }
+      if (usePhotos && photoFiles.length > 0) {
         await api.uploadTargetPhotos(target.id, photoFiles)
       }
       setMessage(
@@ -217,7 +242,10 @@ export default function TargetForm() {
         store_id: prev.store_id,
         menu_items: menuItemsFromStore(stores.find((s) => s.id === Number(prev.store_id))) ?? EMPTY.menu_items,
       }))
+      setUsePhotos(false)
       setPhotoFiles([])
+      setReviewTextFile(null)
+      setPreviewText(null)
       setRegisterModalOpen(false)
       await refreshTargets()
     } catch (err) {
@@ -226,9 +254,6 @@ export default function TargetForm() {
       setSubmitting(false)
     }
   }
-
-  const dayCount = daysBetween(form.start_date, form.end_date)
-  const selectedStore = stores.find((s) => s.id === Number(form.store_id))
 
   return (
     <div className="space-y-4">
@@ -292,17 +317,7 @@ export default function TargetForm() {
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs text-slate-500">건수</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.required_count}
-                    onChange={(e) => setForm({ ...form, required_count: e.target.value })}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs text-slate-500">건당 단가 (원, 리뷰어 정산)</label>
+                  <label className="block text-xs text-slate-500">리뷰어 단가 (원)</label>
                   <input
                     type="number"
                     min="0"
@@ -311,36 +326,21 @@ export default function TargetForm() {
                     className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
                   />
                 </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-slate-500">판매단가 (원, 선택)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.sale_price}
+                    onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
+                    placeholder="비워두면 매출 집계에서 제외"
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-slate-500">
-                  건당 판매금액 (원, 매장 청구 — 선택, 정산요약의 매출 집계에 사용)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={form.sale_price}
-                  onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
-                  placeholder="비워두면 매출 집계에서 제외됩니다"
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500">
-                  1일 작업 갯수 (선택 — 하루에 이만큼만 오픈풀에서 클레임 가능)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={form.daily_limit}
-                  onChange={(e) => setForm({ ...form, daily_limit: e.target.value })}
-                  placeholder="비워두면 제한 없음"
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500">
-                  작업 기간 (선택 — 비워두면 시작일 즉시부터 무기한)
+                  작업 기간 (총 건수 계산에 사용됩니다)
                 </label>
                 <div className="mt-1 flex items-center gap-2">
                   <input
@@ -380,41 +380,32 @@ export default function TargetForm() {
                   ))}
                 </div>
               </div>
+              <div>
+                <label className="block text-xs text-slate-500">1일 작업 갯수 (하루에 이만큼만 오픈풀에서 클레임 가능)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.daily_limit}
+                  onChange={(e) => setForm({ ...form, daily_limit: e.target.value })}
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                />
+              </div>
+              <div className="rounded border border-blue-100 bg-blue-50 p-2">
+                <label className="block text-xs text-slate-500">건수 (작업기간 × 작업요일 × 1일 작업 갯수로 자동 계산)</label>
+                <input
+                  type="number"
+                  value={totalCount}
+                  disabled
+                  className="w-full rounded border border-slate-200 bg-slate-100 px-2 py-1 text-sm text-slate-500"
+                />
+              </div>
               <div className="space-y-3 border-t border-slate-100 pt-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-medium text-slate-500">
-                    리뷰 원고 자료 (리뷰어가 포털에서 "리뷰 자료 보기"로 확인)
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <input
-                      ref={guidelineFileInputRef}
-                      type="file"
-                      accept=".xlsx,.csv"
-                      onChange={handleGuidelineFileSelected}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => guidelineFileInputRef.current?.click()}
-                      disabled={guidelineImporting}
-                      className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                    >
-                      <Upload size={12} />
-                      {guidelineImporting ? '불러오는 중...' : '엑셀로 원고 불러오기'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={downloadGuidelineTemplate}
-                      className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
-                    >
-                      <Download size={12} />
-                      샘플 양식
-                    </button>
-                  </div>
-                </div>
+                <p className="text-xs font-medium text-slate-500">
+                  리뷰 원고 자료 (리뷰어가 포털에서 "리뷰 자료 보기"로 확인)
+                </p>
                 <div>
                   <label className="block text-xs text-slate-500">
-                    원고 가이드라인 (AI가 리뷰 원고를 만들 때 참고하는 예시 — 자유롭게 고쳐서 쓰세요)
+                    원고 가이드라인 (엑셀 업로드분이 부족할 때 AI가 참고하는 예시 — 자유롭게 고쳐서 쓰세요)
                   </label>
                   <div className="mt-1 rounded border border-slate-200 bg-slate-50 p-2">
                     <textarea
@@ -434,6 +425,38 @@ export default function TargetForm() {
                     placeholder="예: 근처 관광지, 교통 접근성 등 리뷰에 녹일 수 있는 지역 특징"
                     className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500">리뷰 글자수</label>
+                  <div className="mt-1 flex items-center gap-1">
+                    {REVIEW_LENGTH_OPTIONS.map((len) => (
+                      <button
+                        key={len}
+                        type="button"
+                        onClick={() => setForm({ ...form, review_length: len })}
+                        className={`rounded px-2 py-1 text-xs font-medium ${
+                          Number(form.review_length) === len
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {len}자
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handlePreviewReviewText}
+                      disabled={previewing}
+                      className="ml-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      {previewing ? '생성 중...' : '예시 보기'}
+                    </button>
+                  </div>
+                  {previewText && (
+                    <p className="mt-1 whitespace-pre-wrap rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                      {previewText}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs text-slate-500">
@@ -467,49 +490,117 @@ export default function TargetForm() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500">참고 이미지 (선택, 여러 장 가능)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) =>
-                      setPhotoFiles((prev) => [...prev, ...Array.from(e.target.files || [])])
-                    }
-                    className="w-full text-sm"
-                  />
-                  {photoFiles.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {photoFiles.map((f, i) => (
-                        <span
-                          key={`${f.name}-${i}`}
-                          className="flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
-                        >
-                          {f.name}
-                          <button
-                            type="button"
-                            onClick={() => setPhotoFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                            className="text-slate-400 hover:text-red-600"
-                          >
-                            <X size={10} />
-                          </button>
-                        </span>
-                      ))}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-xs text-slate-500">
+                      리뷰 원고 엑셀 업로드 (번호+리뷰내용 — 작업 건수만큼 순서대로 배정되고, 부족한 만큼은 위 가이드라인으로 AI가 자동 생성합니다)
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        ref={reviewTextInputRef}
+                        type="file"
+                        accept=".xlsx,.csv"
+                        onChange={(e) => setReviewTextFile(e.target.files[0] || null)}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => reviewTextInputRef.current?.click()}
+                        className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                      >
+                        <Upload size={12} />
+                        엑셀 선택
+                      </button>
+                      <button
+                        type="button"
+                        onClick={downloadReviewTextTemplate}
+                        className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                      >
+                        <Download size={12} />
+                        샘플 양식
+                      </button>
                     </div>
+                  </div>
+                  {reviewTextFile && (
+                    <span className="mt-1 flex w-fit items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                      {reviewTextFile.name}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReviewTextFile(null)
+                          if (reviewTextInputRef.current) reviewTextInputRef.current.value = ''
+                        }}
+                        className="text-slate-400 hover:text-red-600"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
                   )}
-                  <p className="mt-1 text-xs text-slate-400">
-                    업로드한 사진은 저장 전 EXIF(촬영정보)가 자동으로 랜덤 처리됩니다.
-                  </p>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500">리뷰당 사진 갯수</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.photos_per_review}
-                    onChange={(e) => setForm((prev) => ({ ...prev, photos_per_review: e.target.value }))}
-                    className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
-                  />
-                  <p className="mt-1 text-xs text-slate-400">설정한 갯수대로 리뷰1개에 적용됩니다.</p>
+                  <label className="flex items-center gap-2 text-xs text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={usePhotos}
+                      onChange={(e) => setUsePhotos(e.target.checked)}
+                    />
+                    사진을 리뷰에 사용
+                  </label>
+                  {usePhotos && (
+                    <div className="mt-2 space-y-2 rounded border border-slate-200 bg-slate-50 p-2">
+                      <div>
+                        <input
+                          ref={photoInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) =>
+                            setPhotoFiles((prev) => [...prev, ...Array.from(e.target.files || [])])
+                          }
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => photoInputRef.current?.click()}
+                          className="flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                        >
+                          <Upload size={12} />
+                          사진 업로드하기
+                        </button>
+                        {photoFiles.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {photoFiles.map((f, i) => (
+                              <span
+                                key={`${f.name}-${i}`}
+                                className="flex items-center gap-1 rounded bg-white px-2 py-0.5 text-xs text-slate-600"
+                              >
+                                {f.name}
+                                <button
+                                  type="button"
+                                  onClick={() => setPhotoFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                                  className="text-slate-400 hover:text-red-600"
+                                >
+                                  <X size={10} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="mt-1 text-xs text-slate-400">
+                          업로드한 사진은 저장 전 EXIF(촬영정보)가 자동으로 랜덤 처리됩니다.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500">리뷰당 사진 갯수</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={form.photos_per_review}
+                          onChange={(e) => setForm((prev) => ({ ...prev, photos_per_review: e.target.value }))}
+                          className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div>

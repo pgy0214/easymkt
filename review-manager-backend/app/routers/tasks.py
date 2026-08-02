@@ -37,7 +37,7 @@ def list_tasks(
         created_to=created_to,
         sort=sort,
     )
-    return [crud.task_to_out(t) for t in tasks]
+    return [crud.task_to_out(db, t) for t in tasks]
 
 
 @router.get("/{task_id}", response_model=schemas.TaskOut)
@@ -45,7 +45,7 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
     task = crud.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
-    return crud.task_to_out(task)
+    return crud.task_to_out(db, task)
 
 
 @router.patch("/{task_id}/result", response_model=schemas.TaskOut)
@@ -56,7 +56,7 @@ def update_result(
     if not task:
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
     task = crud.update_task_result(db, task, data.result_link)
-    return crud.task_to_out(task)
+    return crud.task_to_out(db, task)
 
 
 @router.patch("/{task_id}/settlement", response_model=schemas.TaskOut)
@@ -67,7 +67,7 @@ def update_settlement(
     if not task:
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
     task = crud.update_task_settlement(db, task, data)
-    return crud.task_to_out(task)
+    return crud.task_to_out(db, task)
 
 
 @router.post("/{task_id}/assign", response_model=schemas.TaskOut)
@@ -81,7 +81,7 @@ def assign_task(task_id: int, data: schemas.TaskAssignIn, db: Session = Depends(
     if not account:
         raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
     try:
-        return crud.task_to_out(crud.claim_task(db, task, account))
+        return crud.task_to_out(db, crud.claim_task(db, task, account))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -100,4 +100,4 @@ def recheck_blind(task_id: int, db: Session = Depends(get_db)):
         kakao_blind_check.recheck_task(db, task)
 
     db.refresh(task)
-    return crud.task_to_out(task)
+    return crud.task_to_out(db, task)

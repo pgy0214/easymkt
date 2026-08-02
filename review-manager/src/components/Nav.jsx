@@ -31,7 +31,9 @@ const FLAT_TABS = [
 
 export default function Nav({ active, onChange }) {
   const [openGroup, setOpenGroup] = useState(null)
+  const [dropdownPos, setDropdownPos] = useState(null)
   const navRef = useRef(null)
+  const buttonRefs = useRef({})
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -41,7 +43,20 @@ export default function Nav({ active, onChange }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  function toggleGroup(groupId) {
+    setOpenGroup((prev) => {
+      if (prev === groupId) return null
+      const rect = buttonRefs.current[groupId]?.getBoundingClientRect()
+      if (rect) setDropdownPos({ left: rect.left, top: rect.bottom })
+      return groupId
+    })
+  }
+
   return (
+    // overflow-x-auto here (for the mobile horizontal-scroll tabs) forces the
+    // browser to also compute overflow-y as auto, which would clip the dropdown
+    // panels below — so the dropdowns use position:fixed (computed from the
+    // button's rect) instead of absolute, which escapes that clipping.
     <nav ref={navRef} className="relative flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-2 sm:px-4">
       {GROUPS.map((group) => {
         const Icon = group.icon
@@ -50,8 +65,9 @@ export default function Nav({ active, onChange }) {
         return (
           <div key={group.id} className="relative shrink-0">
             <button
+              ref={(el) => (buttonRefs.current[group.id] = el)}
               type="button"
-              onClick={() => setOpenGroup((prev) => (prev === group.id ? null : group.id))}
+              onClick={() => toggleGroup(group.id)}
               className={`flex items-center gap-1 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 sm:py-3 ${
                 isActive
                   ? 'border-blue-600 text-blue-600'
@@ -62,8 +78,11 @@ export default function Nav({ active, onChange }) {
               {group.label}
               <ChevronDown size={14} className={isOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
-            {isOpen && (
-              <div className="absolute left-0 top-full z-20 min-w-[160px] rounded-b border border-slate-200 bg-white py-1 shadow-lg">
+            {isOpen && dropdownPos && (
+              <div
+                style={{ left: dropdownPos.left, top: dropdownPos.top }}
+                className="fixed z-20 min-w-[160px] rounded-b border border-slate-200 bg-white py-1 shadow-lg"
+              >
                 {group.children.map((child) => (
                   <button
                     key={child.id}

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app import crud, importers, schemas
+from app import crud, importers, review_writer, schemas
 from app.database import get_db
 
 router = APIRouter(prefix="/api/targets", tags=["targets"])
@@ -26,13 +26,21 @@ def create_target(data: schemas.ReviewTargetCreate, db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/parse-guideline", response_model=schemas.TargetGuidelineParseOut)
-async def parse_guideline(file: UploadFile = File(...)):
-    """캠페인 등록 폼의 원고 자료를 엑셀/CSV 업로드로 미리 채우기 위한 파서
-    (DB에 아무것도 쓰지 않음 — 폼 프리필 용도)."""
-    content = await file.read()
-    parsed = importers.parse_target_guideline_row(content, file.filename or "")
-    return schemas.TargetGuidelineParseOut(**parsed)
+@router.post("/preview-review-text", response_model=schemas.ReviewTextGenerateOut)
+def preview_review_text(data: schemas.ReviewTextGenerateIn):
+    """등록 폼의 "예시 보기" 버튼 — 현재 입력된 가이드라인/지역특징/글자수로 예시 원고를
+    생성만 해서 보여준다(저장 안 함)."""
+    if not review_writer.is_configured():
+        raise HTTPException(
+            status_code=400, detail="ANTHROPIC_API_KEY가 서버에 설정되어 있지 않습니다"
+        )
+    text = review_writer.generate_review_text(
+        guideline=data.guideline,
+        regional_features=data.regional_features,
+        length=data.review_length,
+        menu_items=[m.model_dump() for m in data.menu_items] if data.menu_items else None,
+    )
+    return schemas.ReviewTextGenerateOut(text=text)
 
 
 @router.patch("/{target_id}", response_model=schemas.ReviewTargetOut)
@@ -56,7 +64,7 @@ def get_target(target_id: int, db: Session = Depends(get_db)):
         out.store_url = target.store.url
     out.work_days = crud.decode_work_days(target.work_days_raw)
     out.menu_items = crud.decode_menu_items(target.menu_items_json)
-    out.tasks = [crud.task_to_out(t) for t in target.tasks]
+    out.tasks = [crud.task_to_out(db, t) for t in target.tasks]
     return out
 
 
@@ -98,6 +106,31 @@ def delete_target_photo(target_id: int, photo_id: int, db: Session = Depends(get
     if not photo or photo.review_target_id != target_id:
         raise HTTPException(status_code=404, detail="사진을 찾을 수 없습니다")
     crud.delete_target_photo(db, photo)
+    return {"ok": True}
+
+
+@router.post("/{target_id}/review-texts", response_model=list[schemas.TargetReviewTextOut])
+async def upload_target_review_texts(
+    target_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)
+):
+    """캠페인 리뷰 원고 풀에 엑셀(번호+리뷰내용)을 업로드 — 작업 생성 순서대로 1:1로
+    배정된다(crud.assign_review_text_for_task)."""
+    target = crud.get_target(db, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    content = await file.read()
+    texts = importers.parse_review_text_rows(content, file.filename or "")
+    if not texts:
+        raise HTTPException(status_code=400, detail="파일에서 리뷰내용을 찾을 수 없습니다")
+    return crud.save_target_review_texts(db, target, texts)
+
+
+@router.delete("/{target_id}/review-texts/{text_id}")
+def delete_target_review_text(target_id: int, text_id: int, db: Session = Depends(get_db)):
+    text = crud.get_target_review_text(db, text_id)
+    if not text or text.review_target_id != target_id:
+        raise HTTPException(status_code=404, detail="원고를 찾을 수 없습니다")
+    crud.delete_target_review_text(db, text)
     return {"ok": True}
 
 

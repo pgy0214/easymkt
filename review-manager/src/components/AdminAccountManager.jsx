@@ -1,4 +1,4 @@
-import { Download, ExternalLink, Pencil, Plus, Search, Send, Trash2, Upload } from 'lucide-react'
+import { Download, ExternalLink, Pencil, Play, Plus, Search, Send, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import AccountEditModal from './AccountEditModal.jsx'
@@ -71,6 +71,7 @@ export default function AdminAccountManager() {
   const [checkingEligibility, setCheckingEligibility] = useState(false)
   const [selectedKeys, setSelectedKeys] = useState(new Set())
   const [bulkAssigning, setBulkAssigning] = useState(false)
+  const [launchingId, setLaunchingId] = useState(null)
   const fileInputRef = useRef(null)
 
   function rowKey(row) {
@@ -250,6 +251,17 @@ export default function AdminAccountManager() {
     }
   }
 
+  async function handleLaunch(row) {
+    setLaunchingId(row.id)
+    try {
+      await api.launchAccount(row.id)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setLaunchingId(null)
+    }
+  }
+
   function handleEdited(updated) {
     setRows((prev) => prev.map((r) => (r.id === editingRow.id ? { ...r, ...updated } : r)))
     setEditingRow(null)
@@ -304,7 +316,7 @@ export default function AdminAccountManager() {
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <p className="text-sm text-slate-500">
         여기 등록된 계정은 리뷰어가 아니라 우리(회사)가 직접 소유한 계정입니다. "리뷰어 관리"
         목록에는 나타나지 않습니다.
@@ -513,7 +525,7 @@ export default function AdminAccountManager() {
           <table className="w-full min-w-[1200px] whitespace-nowrap text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
               <tr>
-                <th className="px-1.5 py-1">
+                <th className="px-1.5 py-0.5">
                   <input
                     type="checkbox"
                     checked={visibleRows.length > 0 && visibleRows.every((r) => selectedKeys.has(rowKey(r)))}
@@ -531,37 +543,37 @@ export default function AdminAccountManager() {
                     title="현재 페이지 전체 선택"
                   />
                 </th>
-                <th className="px-1.5 py-1">#</th>
-                <th className="px-1.5 py-1">플랫폼</th>
-                <th className="px-1.5 py-1">IP</th>
-                <th className="px-1.5 py-1">이름</th>
-                <th className="px-1.5 py-1">성별</th>
-                <th className="px-1.5 py-1">생년월일</th>
-                <th className="px-1.5 py-1">연락처</th>
-                <th className="px-1.5 py-1">계정 아이디</th>
-                <th className="px-1.5 py-1">비밀번호</th>
-                <th className="px-1.5 py-1">URL</th>
-                <th className="px-1.5 py-1">상태</th>
-                <th className="px-1.5 py-1" />
+                <th className="px-1.5 py-0.5">#</th>
+                <th className="px-1.5 py-0.5">플랫폼</th>
+                <th className="px-1.5 py-0.5">IP</th>
+                <th className="px-1.5 py-0.5">이름</th>
+                <th className="px-1.5 py-0.5">성별</th>
+                <th className="px-1.5 py-0.5">생년월일</th>
+                <th className="px-1.5 py-0.5">연락처</th>
+                <th className="px-1.5 py-0.5">계정 아이디</th>
+                <th className="px-1.5 py-0.5">비밀번호</th>
+                <th className="px-1.5 py-0.5">URL</th>
+                <th className="px-1.5 py-0.5">상태</th>
+                <th className="px-1.5 py-0.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {visibleRows.map((row, index) => (
                 <tr key={rowKey(row)} className={selectedKeys.has(rowKey(row)) ? 'bg-blue-50' : undefined}>
-                  <td className="px-1.5 py-1">
+                  <td className="px-1.5 py-0.5">
                     <input
                       type="checkbox"
                       checked={selectedKeys.has(rowKey(row))}
                       onChange={() => toggleSelected(rowKey(row))}
                     />
                   </td>
-                  <td className="px-1.5 py-1 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
-                  <td className="px-1.5 py-1">
+                  <td className="px-1.5 py-0.5 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
+                  <td className="px-1.5 py-0.5">
                     {row.platform === 'naver' ? '네이버' : row.platform === 'kakao' ? '카카오' : '-'}
                   </td>
-                  <td className="px-1.5 py-1 text-slate-500">{row.ip_address || '-'}</td>
-                  <td className="px-1.5 py-1">{row.name}</td>
-                  <td className="px-1.5 py-1">
+                  <td className="px-1.5 py-0.5 text-slate-500">{row.ip_address || '-'}</td>
+                  <td className="px-1.5 py-0.5">{row.name}</td>
+                  <td className="px-1.5 py-0.5">
                     {row.gender ? (
                       <span className={`rounded px-1 py-0.5 text-[11px] font-medium ${GENDER_BADGE[row.gender]}`}>
                         {GENDER_SHORT[row.gender]}
@@ -570,15 +582,15 @@ export default function AdminAccountManager() {
                       '-'
                     )}
                   </td>
-                  <td className="px-1.5 py-1 text-slate-500">{formatBirthDateCompact(row.birth_date)}</td>
-                  <td className="px-1.5 py-1 text-slate-500">{row.contact_info || '-'}</td>
-                  <td className="px-1.5 py-1">
+                  <td className="px-1.5 py-0.5 text-slate-500">{formatBirthDateCompact(row.birth_date)}</td>
+                  <td className="px-1.5 py-0.5 text-slate-500">{row.contact_info || '-'}</td>
+                  <td className="px-1.5 py-0.5">
                     <span className="inline-flex items-center gap-1">
                       {row.label || '-'}
                       <CopyButton value={row.label} label="계정 아이디" />
                     </span>
                   </td>
-                  <td className="px-1.5 py-1">
+                  <td className="px-1.5 py-0.5">
                     {row.password ? (
                       <span className="inline-flex items-center gap-1">
                         <span className="text-slate-600">{row.password}</span>
@@ -588,7 +600,7 @@ export default function AdminAccountManager() {
                       '-'
                     )}
                   </td>
-                  <td className="px-1.5 py-1">
+                  <td className="px-1.5 py-0.5">
                     {row.profile_url ? (
                       <a
                         href={row.profile_url}
@@ -603,7 +615,7 @@ export default function AdminAccountManager() {
                       '-'
                     )}
                   </td>
-                  <td className="px-1.5 py-1">
+                  <td className="px-1.5 py-0.5">
                     {row.id != null && (
                       <button
                         onClick={() => handleToggleLoginIssue(row)}
@@ -618,7 +630,7 @@ export default function AdminAccountManager() {
                       </button>
                     )}
                   </td>
-                  <td className="px-1.5 py-1">
+                  <td className="px-1.5 py-0.5">
                     <div className="flex items-center gap-2">
                       {row.id != null && (
                         <>
@@ -636,6 +648,16 @@ export default function AdminAccountManager() {
                           >
                             <Send size={14} />
                           </button>
+                          {row.adspower_profile_id && (
+                            <button
+                              onClick={() => handleLaunch(row)}
+                              disabled={launchingId === row.id}
+                              className="text-slate-400 hover:text-green-600 disabled:opacity-50"
+                              title="AdsPower 브라우저 실행"
+                            >
+                              <Play size={14} />
+                            </button>
+                          )}
                         </>
                       )}
                       <button

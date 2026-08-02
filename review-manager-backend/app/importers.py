@@ -134,40 +134,24 @@ def parse_admin_account_rows(content: bytes, filename: str) -> list[dict]:
     return results
 
 
-GUIDELINE_HEADERS = {"가이드라인", "원고 가이드라인"}
-REGIONAL_FEATURES_HEADERS = {"지역특징", "지역적 특징"}
-MENU_NAME_HEADERS = [{"메뉴1명", "메뉴명1"}, {"메뉴2명", "메뉴명2"}, {"메뉴3명", "메뉴명3"}]
-MENU_PRICE_HEADERS = [{"메뉴1가격", "메뉴가격1"}, {"메뉴2가격", "메뉴가격2"}, {"메뉴3가격", "메뉴가격3"}]
+REVIEW_TEXT_HEADERS = {"리뷰내용", "리뷰 내용", "원고", "내용"}
 
 
-def parse_target_guideline_row(content: bytes, filename: str) -> dict:
-    """캠페인 등록 폼의 리뷰 원고 자료(가이드라인/지역특징/메뉴 3개)를 엑셀/CSV
-    한 줄로 미리 채워 넣기 위한 파서 — 캠페인 1건은 원고도 1건뿐이라 첫 데이터
-    행만 사용한다."""
+def parse_review_text_rows(content: bytes, filename: str) -> list[str]:
+    """캠페인 리뷰 원고 풀 엑셀 파서 — "번호"는 라벨일 뿐 순서에 쓰지 않고, 파일에 나온
+    행 순서 그대로 작업(Task) 생성 순서에 1:1로 배정한다(crud.assign_review_text_for_task).
+    "리뷰내용"이 빈 행은 건너뛴다."""
     if filename.lower().endswith(".csv"):
         rows = _parse_csv(content)
     else:
         rows = _parse_xlsx(content)
 
-    if not rows:
-        return {"guideline": None, "regional_features": None, "menu_items": None}
-
-    row = rows[0]
-    menu_items = []
-    for name_headers, price_headers in zip(MENU_NAME_HEADERS, MENU_PRICE_HEADERS):
-        name = _first_matching(row, name_headers)
-        price_raw = _first_matching(row, price_headers)
-        if name and price_raw:
-            try:
-                menu_items.append({"name": name, "price": int(float(price_raw))})
-            except ValueError:
-                continue
-
-    return {
-        "guideline": _first_matching(row, GUIDELINE_HEADERS),
-        "regional_features": _first_matching(row, REGIONAL_FEATURES_HEADERS),
-        "menu_items": menu_items or None,
-    }
+    texts = []
+    for row in rows:
+        content_text = _first_matching(row, REVIEW_TEXT_HEADERS)
+        if content_text:
+            texts.append(content_text)
+    return texts
 
 
 def _parse_csv(content: bytes) -> list[dict]:

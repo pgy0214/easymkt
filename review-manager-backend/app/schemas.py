@@ -15,6 +15,7 @@ class ReviewAccountCreate(BaseModel):
     label: str
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
+    adspower_profile_id: Optional[str] = None
     has_login_issue: bool = False
     password: Optional[str] = None  # crud가 암호화해서 저장, 평문은 DB에 안 남음
 
@@ -24,6 +25,7 @@ class ReviewAccountUpdate(BaseModel):
     label: Optional[str] = None
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
+    adspower_profile_id: Optional[str] = None
     has_login_issue: Optional[bool] = None
     password: Optional[str] = None  # 빈 문자열이면 비밀번호 삭제, None이면 안 건드림
 
@@ -37,12 +39,17 @@ class ReviewAccountOut(BaseModel):
     label: str
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
+    adspower_profile_id: Optional[str] = None
     has_login_issue: bool = False
     created_at: datetime.datetime
 
     # ORM 컬럼명(password_encrypted)과 달라서 자동 매핑 안 됨 — crud.account_to_out이
     # 복호화해서 채워줌 (work_days_raw→work_days와 동일한 패턴)
     password: Optional[str] = None
+
+
+class AccountLaunchOut(BaseModel):
+    debug_port: Optional[str] = None
 
 
 # --- Reviewer ---
@@ -201,6 +208,7 @@ class ReviewTargetCreate(BaseModel):
     regional_features: Optional[str] = None
     menu_items: Optional[list[MenuItemIn]] = None  # 최대 3개, 영수증 생성에도 사용
     photos_per_review: int = 1  # 리뷰 1건당 배정할 사진 갯수
+    review_length: int = 80  # 리뷰 원고 목표 글자수 (50/80/100)
 
 
 class ReviewTargetUpdate(BaseModel):
@@ -216,12 +224,7 @@ class ReviewTargetUpdate(BaseModel):
     regional_features: Optional[str] = None
     menu_items: Optional[list[MenuItemIn]] = None
     photos_per_review: Optional[int] = None
-
-
-class TargetGuidelineParseOut(BaseModel):
-    guideline: Optional[str] = None
-    regional_features: Optional[str] = None
-    menu_items: Optional[list[MenuItemIn]] = None
+    review_length: Optional[int] = None
 
 
 class TargetPhotoOut(BaseModel):
@@ -229,6 +232,24 @@ class TargetPhotoOut(BaseModel):
 
     id: int
     file_path: str
+
+
+class TargetReviewTextOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    content: str
+
+
+class ReviewTextGenerateIn(BaseModel):
+    guideline: Optional[str] = None
+    regional_features: Optional[str] = None
+    review_length: int = 80
+    menu_items: Optional[list[MenuItemIn]] = None
+
+
+class ReviewTextGenerateOut(BaseModel):
+    text: str
 
 
 class ReviewTargetOut(BaseModel):
@@ -262,6 +283,8 @@ class ReviewTargetOut(BaseModel):
     reference_photo_path: Optional[str] = None
     photos_per_review: int = 1
     photos: list[TargetPhotoOut] = []
+    review_length: int = 80
+    review_texts: list[TargetReviewTextOut] = []
 
     # denormalized, filled in by the router — 캠페인 목록의 진행중/완료 필터에 사용
     completed_count: int = 0
@@ -299,6 +322,9 @@ class TaskOut(BaseModel):
     # denormalized, filled in by the router — 캠페인 사진 풀에서 라운드로빈으로
     # 배정된 이 작업의 사진들 (crud.assign_photos_for_task)
     assigned_photo_paths: list[str] = []
+    # denormalized, filled in by the router — 업로드분에서 1:1 배정되거나 부족분은
+    # AI(app.review_writer)로 생성된 리뷰 원고 (crud.assign_review_text_for_task)
+    assigned_review_text: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -414,6 +440,7 @@ class TaskBriefOut(BaseModel):
     menu_items: Optional[list[MenuItemIn]] = None
     reference_photo_path: Optional[str] = None
     assigned_photo_paths: list[str] = []
+    assigned_review_text: Optional[str] = None
     receipt_image_path: Optional[str] = None
 
 

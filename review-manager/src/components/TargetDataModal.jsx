@@ -96,6 +96,21 @@ export default function TargetDataModal({ targetId, onClose }) {
                   </div>
                 </div>
               )}
+              {target.review_texts?.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-500">
+                    리뷰 원고 풀 (업로드 {target.review_texts.length}건 · 리뷰 글자수 {target.review_length}자,
+                    부족분은 AI 자동생성)
+                  </p>
+                  <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto text-slate-700">
+                    {target.review_texts.map((text) => (
+                      <li key={text.id} className="rounded border border-slate-200 bg-white p-1.5">
+                        {text.content}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </section>
 
             <section className="space-y-2">
@@ -146,6 +161,14 @@ function TaskDataRow({ task }) {
           >
             제출한 결과 보기
           </a>
+        </div>
+      )}
+      {task.assigned_review_text && (
+        <div className="mt-1">
+          <p className="text-xs text-slate-500">배정된 리뷰 원고</p>
+          <p className="mt-1 whitespace-pre-wrap rounded border border-slate-200 bg-slate-50 p-1.5 text-xs text-slate-700">
+            {task.assigned_review_text}
+          </p>
         </div>
       )}
       {task.assigned_photo_paths?.length > 0 && (

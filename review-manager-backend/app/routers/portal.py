@@ -101,7 +101,7 @@ def get_pool(
 
     results = []
     for task in crud.get_open_pool_tasks(db, platforms):
-        out = crud.task_to_out(task)
+        out = crud.task_to_out(db, task)
         my_accounts = [a for a in reviewer.accounts if a.platform == task.platform]
         out.eligible_account_ids = crud.get_eligible_account_ids(
             db, my_accounts, task.review_target.store_id
@@ -114,7 +114,7 @@ def get_pool(
 def get_my_tasks(
     reviewer: models.Reviewer = Depends(get_current_reviewer), db: Session = Depends(get_db)
 ):
-    return [crud.task_to_out(t) for t in crud.get_reviewer_tasks(db, reviewer.id)]
+    return [crud.task_to_out(db, t) for t in crud.get_reviewer_tasks(db, reviewer.id)]
 
 
 @router.post("/tasks/{task_id}/claim", response_model=schemas.TaskOut)
@@ -133,7 +133,7 @@ def claim_task(
     if not account or account.reviewer_id != reviewer.id:
         raise HTTPException(status_code=400, detail="본인 소유 계정이 아닙니다")
     try:
-        return crud.task_to_out(crud.claim_task(db, task, account))
+        return crud.task_to_out(db, crud.claim_task(db, task, account))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -148,7 +148,7 @@ def submit_my_result(
     task = crud.get_task(db, task_id)
     if not task or not task.review_account or task.review_account.reviewer_id != reviewer.id:
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
-    return crud.task_to_out(crud.update_task_result(db, task, data.result_link))
+    return crud.task_to_out(db, crud.update_task_result(db, task, data.result_link))
 
 
 @router.get("/tasks/{task_id}/brief", response_model=schemas.TaskBriefOut)
@@ -169,5 +169,6 @@ def get_task_brief(
         menu_items=crud.decode_menu_items(target.menu_items_json) if target else None,
         reference_photo_path=target.reference_photo_path if target else None,
         assigned_photo_paths=crud.assign_photos_for_task(task),
+        assigned_review_text=crud.assign_review_text_for_task(db, task),
         receipt_image_path=task.receipt_image_path,
     )

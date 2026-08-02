@@ -102,7 +102,7 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="block text-xs text-slate-500">건당 단가 (원, 리뷰어 정산)</label>
+            <label className="block text-xs text-slate-500">리뷰어 단가 (원)</label>
             <input
               type="number"
               min="0"
@@ -112,7 +112,7 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-xs text-slate-500">건당 판매금액 (원, 선택)</label>
+            <label className="block text-xs text-slate-500">판매단가 (원, 선택)</label>
             <input
               type="number"
               min="0"
@@ -263,7 +263,6 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
               onChange={(e) => setPhotosPerReview(e.target.value)}
               className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
             />
-            <p className="mt-1 text-xs text-slate-400">설정한 갯수대로 리뷰1개에 적용됩니다.</p>
           </div>
         </div>
 

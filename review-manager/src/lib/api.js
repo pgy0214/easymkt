@@ -68,6 +68,7 @@ export const api = {
     request(`/accounts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteAccount: (id) => request(`/accounts/${id}`, { method: 'DELETE' }),
   getAccountStoreHistory: (id) => request(`/accounts/${id}/store-history`),
+  launchAccount: (id) => request(`/accounts/${id}/launch`, { method: 'POST' }),
 
   getStores: (platform) => request(`/stores${toQueryString({ platform })}`),
   createStore: (data) => request('/stores', { method: 'POST', body: JSON.stringify(data) }),
@@ -110,16 +111,20 @@ export const api = {
   },
   deleteTargetPhoto: (targetId, photoId) =>
     request(`/targets/${targetId}/photos/${photoId}`, { method: 'DELETE' }),
-  parseTargetGuideline: async (file) => {
+  uploadTargetReviewTexts: async (id, file) => {
     const form = new FormData()
     form.append('file', file)
-    const res = await fetch(`${BASE_URL}/targets/parse-guideline`, { method: 'POST', body: form })
+    const res = await fetch(`${BASE_URL}/targets/${id}/review-texts`, { method: 'POST', body: form })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       throw new Error(body.detail || `요청 실패 (${res.status})`)
     }
     return res.json()
   },
+  deleteTargetReviewText: (targetId, textId) =>
+    request(`/targets/${targetId}/review-texts/${textId}`, { method: 'DELETE' }),
+  previewReviewText: (data) =>
+    request('/targets/preview-review-text', { method: 'POST', body: JSON.stringify(data) }),
 
   getTasks: (params = {}) => request(`/tasks${toQueryString(params)}`),
   updateTaskResult: (id, resultLink) =>

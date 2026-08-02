@@ -7,7 +7,7 @@ import secrets
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app import crypto, models, photo_washer, schemas
+from app import crypto, models, photo_washer, review_writer, schemas
 
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 ALLOWED_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -289,6 +289,7 @@ def create_account(
         label=data.label,
         profile_url=data.profile_url,
         ip_address=data.ip_address,
+        adspower_profile_id=data.adspower_profile_id,
         has_login_issue=data.has_login_issue,
         password_encrypted=crypto.encrypt(data.password) if data.password else None,
     )
@@ -317,6 +318,8 @@ def update_account(
         account.profile_url = data.profile_url
     if data.ip_address is not None:
         account.ip_address = data.ip_address
+    if data.adspower_profile_id is not None:
+        account.adspower_profile_id = data.adspower_profile_id
     if data.has_login_issue is not None:
         account.has_login_issue = data.has_login_issue
     if data.password is not None:
@@ -507,6 +510,70 @@ def delete_target_photo(db: Session, photo: models.TargetPhoto) -> None:
     db.commit()
 
 
+def save_target_review_texts(
+    db: Session, target: models.ReviewTarget, texts: list[str]
+) -> list[models.TargetReviewText]:
+    """엑셀로 업로드된 리뷰 원고를 풀에 추가한다 — 순서대로 저장되며, 작업(Task) 생성
+    순서에 1:1로 배정된다(assign_review_text_for_task, 사진과 달리 라운드로빈으로
+    반복 사용하지 않음)."""
+    saved = []
+    for content in texts:
+        text = models.TargetReviewText(review_target_id=target.id, content=content)
+        db.add(text)
+        saved.append(text)
+    db.commit()
+    for text in saved:
+        db.refresh(text)
+    return saved
+
+
+def get_target_review_text(db: Session, text_id: int) -> models.TargetReviewText | None:
+    return db.query(models.TargetReviewText).filter(models.TargetReviewText.id == text_id).first()
+
+
+def delete_target_review_text(db: Session, text: models.TargetReviewText) -> None:
+    db.delete(text)
+    db.commit()
+
+
+def assign_review_text_for_task(db: Session, task: models.Task) -> str | None:
+    """이 작업(Task)에 배정할 리뷰 원고를 고른다 — 업로드된 원고 풀에서 작업 생성
+    순서대로 1건씩 소진하며, 풀이 부족하면 남은 작업은 처음 조회되는 시점에
+    app.review_writer로 생성해 Task.assigned_review_text에 캐싱한다(한 번 생성되면
+    재생성하지 않음 — 매번 다른 원고가 배정되면 관리자/리뷰어가 혼란스러움)."""
+    if task.assigned_review_text:
+        return task.assigned_review_text
+
+    target = task.review_target
+    if target is None:
+        return None
+
+    texts = target.review_texts  # TargetReviewText.id순 정렬됨
+    tasks = sorted(target.tasks, key=lambda t: t.id)
+    try:
+        task_index = tasks.index(task)
+    except ValueError:
+        return None
+
+    if task_index < len(texts):
+        task.assigned_review_text = texts[task_index].content
+        db.commit()
+        return task.assigned_review_text
+
+    if not review_writer.is_configured():
+        return None
+
+    generated = review_writer.generate_review_text(
+        guideline=target.guideline,
+        regional_features=target.regional_features,
+        length=target.review_length,
+        menu_items=decode_menu_items(target.menu_items_json),
+    )
+    task.assigned_review_text = generated
+    db.commit()
+    return generated
+
+
 def assign_photos_for_task(task: models.Task) -> list[str]:
     """캠페인 사진 풀에서 이 작업(Task)에 배정할 사진 경로를 라운드로빈으로 고른다 —
     캠페인의 photos_per_review 설정값만큼, 작업마다 겹치지 않게(풀이 부족하면 순환)."""
@@ -562,6 +629,8 @@ def update_target(
         target.menu_items_json = encode_menu_items(data.menu_items)
     if data.photos_per_review is not None:
         target.photos_per_review = data.photos_per_review
+    if data.review_length is not None:
+        target.review_length = data.review_length
     db.commit()
     db.refresh(target)
     return target
@@ -600,6 +669,7 @@ def create_review_target(
         regional_features=data.regional_features,
         menu_items_json=encode_menu_items(data.menu_items),
         photos_per_review=data.photos_per_review,
+        review_length=data.review_length,
     )
     db.add(target)
     db.flush()
@@ -622,7 +692,7 @@ def create_review_target(
 
 # --- Task ---
 
-def task_to_out(task: models.Task) -> schemas.TaskOut:
+def task_to_out(db: Session, task: models.Task) -> schemas.TaskOut:
     account = task.review_account
     reviewer = account.reviewer if account else None
     target = task.review_target
@@ -640,6 +710,7 @@ def task_to_out(task: models.Task) -> schemas.TaskOut:
         out.store_name = target.store.name
         out.store_url = target.store.url
     out.assigned_photo_paths = assign_photos_for_task(task)
+    out.assigned_review_text = assign_review_text_for_task(db, task)
     return out
 
 

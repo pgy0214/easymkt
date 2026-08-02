@@ -382,6 +382,7 @@ function TaskBriefModal({ token, taskId, onClose }) {
     !brief.menu_items?.length &&
     !brief.reference_photo_path &&
     !brief.assigned_photo_paths?.length &&
+    !brief.assigned_review_text &&
     !brief.receipt_image_path
 
   return (
@@ -433,6 +434,13 @@ function TaskBriefModal({ token, taskId, onClose }) {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {brief.assigned_review_text && (
+              <div>
+                <p className="text-xs font-medium text-slate-500">이 리뷰에 쓸 원고</p>
+                <p className="whitespace-pre-wrap text-slate-700">{brief.assigned_review_text}</p>
               </div>
             )}
 
