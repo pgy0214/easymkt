@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import os
 import re
 import secrets
@@ -8,6 +9,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import crypto, models, photo_washer, review_writer, schemas
+
+logger = logging.getLogger(__name__)
 
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 ALLOWED_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -582,12 +585,16 @@ def assign_review_text_for_task(db: Session, task: models.Task) -> str | None:
     if not review_writer.is_configured():
         return None
 
-    generated = review_writer.generate_review_text(
-        guideline=target.guideline,
-        regional_features=target.regional_features,
-        length=target.review_length,
-        menu_items=decode_menu_items(target.menu_items_json),
-    )
+    try:
+        generated = review_writer.generate_review_text(
+            guideline=target.guideline,
+            regional_features=target.regional_features,
+            length=target.review_length,
+            menu_items=decode_menu_items(target.menu_items_json),
+        )
+    except Exception:
+        logger.exception("Task %s 리뷰 원고 AI 생성 실패", task.id)
+        return None
     task.assigned_review_text = generated
     db.commit()
     return generated
