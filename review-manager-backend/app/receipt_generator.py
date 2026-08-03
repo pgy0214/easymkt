@@ -241,6 +241,26 @@ def _random_time_in_range(hours_range: str | None) -> tuple[int, int, int]:
     return random.randint(17, 21), random.randint(0, 59), random.randint(0, 59)
 
 
+def _time_diff_hours(a: time, b: time) -> float:
+    seconds_a = a.hour * 3600 + a.minute * 60 + a.second
+    seconds_b = b.hour * 3600 + b.minute * 60 + b.second
+    return abs(seconds_a - seconds_b) / 3600
+
+
+def pick_time_with_gap(
+    hours_range: str | None, existing_times: list[time], min_gap_hours: int = 4, attempts: int = 30
+) -> time | None:
+    """매장 대표시간 범위 안에서, 같은 계정·같은 날짜에 이미 쓴 시간들과 전부
+    min_gap_hours 이상 차이나는 시간을 찾는다(같은 사람이 물리적으로 이동 불가능한
+    거리를 같은 시간대에 방문한 것처럼 보이지 않도록). 못 찾으면 None."""
+    for _ in range(attempts):
+        hour, minute, second = _random_time_in_range(hours_range)
+        candidate = time(hour=hour, minute=minute, second=second)
+        if all(_time_diff_hours(candidate, existing) >= min_gap_hours for existing in existing_times):
+            return candidate
+    return None
+
+
 # ============================ MAIN ROUTINE (레거시 make_one_receipt 이식) ============================
 def generate_receipt(
     *,
@@ -407,20 +427,19 @@ def generate_receipt_for_store(store, card_rules: list[dict], target_date: date_
 
 
 def generate_receipt_for_task(
-    task, store, menu_items: list[dict] | None, card_rules: list[dict]
+    task, store, menu_items: list[dict] | None, card_rules: list[dict], receipt_time: time
 ) -> str | None:
-    """작업(Task)의 확정된 영수증 날짜(naver_available_date)로 영수증 이미지를 생성.
-    메뉴가 등록 안 된 캠페인은 건너뛰고 None을 반환 — 이 경우 관리자가 캠페인에
-    메뉴를 채운 뒤 나중에 다시 시도해야 함."""
+    """작업(Task)의 확정된 영수증 날짜(naver_available_date)+시간(receipt_time)으로 영수증
+    이미지를 생성. 시간은 호출자가 미리 골라서 넘겨준다(같은 계정·같은 날짜의 다른 작업들과
+    최소 간격을 확인하는 책임은 pick_time_with_gap()/호출자 쪽에 있음). 메뉴가 등록 안 된
+    캠페인은 건너뛰고 None을 반환 — 이 경우 관리자가 캠페인에 메뉴를 채운 뒤 나중에 다시
+    시도해야 함."""
     if not menu_items:
         return None
     if not task.naver_available_date:
         return None
 
-    hour, minute, second = _random_time_in_range(store.representative_hours)
-    dt = datetime.combine(task.naver_available_date, datetime.min.time()).replace(
-        hour=hour, minute=minute, second=second
-    )
+    dt = datetime.combine(task.naver_available_date, receipt_time)
 
     output_path = os.path.join(UPLOADS_DIR, "receipts", f"task_{task.id}.jpg")
     generate_receipt(

@@ -8,6 +8,17 @@ ReviewerCategory = Literal["admin", "reviewer", "experience", "press"]
 Gender = Literal["male", "female"]
 
 
+# --- Admin dashboard login ---
+
+class AdminLoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class AdminLoginOut(BaseModel):
+    token: str
+
+
 # --- ReviewAccount ---
 
 class ReviewAccountCreate(BaseModel):
@@ -428,6 +439,31 @@ class OtpVerifyIn(BaseModel):
 class OtpVerifyOut(BaseModel):
     token: str
     reviewer: ReviewerOut
+
+
+class KakaoConfigOut(BaseModel):
+    configured: bool
+    client_id: Optional[str] = None
+    redirect_uri: Optional[str] = None
+
+
+class KakaoExchangeIn(BaseModel):
+    code: str
+
+
+class KakaoExchangeOut(BaseModel):
+    linked: bool
+    token: Optional[str] = None
+    reviewer: Optional[ReviewerOut] = None
+    kakao_access_token: Optional[str] = None  # linked=False일 때만: confirm 단계에 그대로 전달
+    suggested_name: Optional[str] = None
+
+
+class KakaoConfirmIn(BaseModel):
+    phone: str
+    code: str  # SMS OTP 코드
+    kakao_access_token: str  # exchange가 돌려준 값 — 서버가 다시 카카오에 검증
+    name: Optional[str] = None
 
 
 class PortalClaimIn(BaseModel):

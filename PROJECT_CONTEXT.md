@@ -1085,9 +1085,79 @@ review_target 등)은 그때그때 직접 삭제하며 정리함.
       테스트 캠페인은 삭제해 DB를 깨끗하게 유지.
     - **남은 일**: 원고 엑셀 업로드 UI를 실제 파일로(파일 input에 진짜 파일 주입) 끝까지
       테스트하진 못함(브라우저 자동화 도구로 실제 파일 선택 주입이 마땅치 않았음) —
-      `api.uploadTargetReviewTexts` 호출 자체는 로직상 검증되지 않은 상태. `.env`의
-      `ANTHROPIC_API_KEY`는 아직 빈 값 — 사용자가 실제 키를 넣기 전까지 AI 자동생성/예시보기
-      기능은 동작하지 않음(에러 없이 조용히 건너뜀).
+      `api.uploadTargetReviewTexts` 호출 자체는 로직상 검증되지 않은 상태. `ANTHROPIC_API_KEY`는
+      항목 66에서 실제 키를 채워 넣어 이제 동작함.
+
+66. **관리자/리뷰어 로그인 + 관리자계정 즉시실행 연결 + 영수증 물리적 타당성 규칙 (12차 배치, 사용자가 4개 항목으로 나눠 요청).**
+    - **① 관리자 대시보드 로그인.** 지금까지 `App.jsx`(관리자 전체 화면)에 인증이 전혀
+      없어서 URL만 알면 누구나 전체 리뷰어/정산 데이터에 접근 가능했음 — 이번에 처음
+      추가. 관리자가 1명뿐인 앱이라 별도 DB 테이블 대신 `.env`의 `ADMIN_USERNAME`/
+      `ADMIN_PASSWORD_HASH`(bcrypt 해시)로 관리, `POST /api/admin/login`(신설
+      `app/routers/admin.py`)이 검증 후 `auth.issue_admin_token()`으로 JWT 발급(시크릿은
+      `ADMIN_JWT_SECRET` — 리뷰어용 `PORTAL_JWT_SECRET`과 반드시 분리해서 리뷰어 토큰이
+      관리자 토큰으로 재사용되는 것을 차단). 기존에 인증이 없던 9개 라우터(reviewers/
+      accounts/stores/targets/tasks/settlement/settings/notify/card_rules, 44개 엔드포인트)는
+      각 엔드포인트를 건드리지 않고 `main.py`의 `include_router(..., dependencies=[Depends(
+      admin.get_current_admin)])` 한 줄씩으로 일괄 보호 — `portal.router`는 자체 보호 로직이
+      있어 그대로 둠. 프론트는 `AdminLogin.jsx`(신설) + `App.jsx`에 `localStorage` 기반
+      토큰 게이트(포털의 `portal_token` 패턴과 동일하게 `admin_token`) + 헤더에 로그아웃
+      버튼 추가. `lib/api.js`의 공용 `request()`가 `admin_token`이 있으면 자동으로
+      `Authorization: Bearer`를 붙이도록 수정해서 기존 ~40개 admin API 호출부와 5개의
+      raw `fetch` 업로드 호출(`uploadRequest`로 통합)을 하나도 건드리지 않고 인증을 통과시킴.
+    - **② 리뷰어 포털에 카카오 로그인 추가 (전화번호 OTP는 그대로 유지, 선택지 추가).**
+      리뷰어 자가가입(미등록 번호+이름으로 OTP 요청 시 자동 계정 생성)은 이미 있던 기능이라
+      그대로 재사용. 본인인증 방식은 사용자가 "네이버 OAuth 연동(계정 소유를 확실히 증명)"과
+      "예전처럼 이메일 인증(이메일 소유만 증명, 네이버 계정 소유는 증명 안 됨)" 중 추천을
+      물어봐서 네이버 OAuth를 권했으나, 최종적으로 "폰번호 본인인증만 하는 식으로 하자"고
+      확정 — 이미 100% 구축된 SMS OTP(`crud.issue_otp`/`verify_otp`)를 그대로 재사용,
+      새 인증수단(이메일/네이버 OAuth) 추가 없음. `Reviewer.kakao_id`(신규 컬럼) +
+      신규 `app/kakao.py`(카카오 OAuth 코드교환/프로필조회 얇은 래퍼, `app/adspower.py`와
+      동일 패턴) + `portal.py`에 `GET /kakao/config`, `POST /kakao/exchange`,
+      `POST /kakao/confirm` 3개 엔드포인트. 플로우: 카카오 로그인 → 이미 연결된 계정이면
+      즉시 로그인, 아니면 (보안상 클라이언트가 보낸 kakao_id를 그대로 믿지 않고 액세스
+      토큰을 다시 서버에서 검증) 기존 전화번호 OTP 폼으로 전환해 인증 성공 시에만
+      `kakao_id`를 리뷰어 레코드에 연결 — 이렇게 해야 "그 사람 전화번호를 아는 제3자가
+      임의의 카카오 계정을 남의 기존 리뷰어 레코드(작업내역/정산 데이터 포함)에 연결"하는
+      계정탈취를 막을 수 있음. `KAKAO_REST_API_KEY`/`KAKAO_CLIENT_SECRET`/
+      `KAKAO_REDIRECT_URI`는 `.env`에 빈 값 — 사용자가 카카오 개발자센터에서 앱을 만들어야
+      실제 로그인까지 테스트 가능(ANTHROPIC_API_KEY와 동일한 "사용자가 키를 직접 채우는" 패턴).
+    - **③ 관리자계정(자체보유) 작업배정 → 즉시실행 연결.** `AccountTaskModal.jsx`에서
+      "배정" 버튼으로 오픈풀 작업을 배정한 뒤 모달을 닫고 목록에서 다시 찾아 ▶ 버튼을
+      눌러야 했던 왕복을 없앰 — 모달 제목 옆에 `row.adspower_profile_id`가 있을 때만
+      "지금 실행" 버튼을 추가해 기존 `api.launchAccount()`(11차 배치에서 구현)를 바로 호출.
+      새 백엔드 작업 없음, 프론트 버튼 하나만 추가.
+    - **④ 관리자계정에도 영수증 물리적 타당성 규칙 적용.** 사용자 확인: "같은 계정이
+      같은 날짜에 여러 건을 받으면 영수증 시간이 최소 4시간 이상 차이나야 한다(지역 이동
+      시간을 감안했을 때 부산 10시·서울 11시처럼 물리적으로 불가능한 조합을 막기 위해)"
+      + "모든 영수증은 작성 시점 기준으로 이미 지난 날짜/시간이어야 한다." 코드 확인
+      결과 후자는 `naver_date_check.find_next_available_date()`가 항상 `오늘-1일` 이전만
+      고르므로 이미 구조적으로 만족(코드 변경 없음). 전자는 새로 구현 — `Task.receipt_time`
+      (신규 컬럼, 실제 영수증에 찍힌 시:분:초를 DB에 저장, 기존엔 이미지에만 찍히고
+      비교 불가능했음) + `crud.get_receipt_times_for_account_on_date()` +
+      `receipt_generator.pick_time_with_gap()`(매장 대표시간 안에서 최대 30번 무작위 시도,
+      기존 시간들과 전부 4시간 이상 차이나는 후보를 찾고 못 찾으면 `None`) —
+      `naver_date_check._generate_receipt_if_possible()`가 영수증 생성 전에 같은 계정·같은
+      날짜의 기존 시간들을 모아 이 함수로 유효한 시간을 고르고, 못 고르면(자리가 물리적으로
+      없으면) 메뉴 미등록 케이스와 동일하게 조용히 건너뛰고 로그만 남김(관리자 화면엔
+      기존처럼 "영수증 미생성"). `generate_receipt_for_task()`는 더 이상 내부에서 랜덤으로
+      시간을 고르지 않고 호출자가 넘겨준 `receipt_time`을 그대로 사용하도록 시그니처 변경
+      (시간 선택과 렌더링 책임 분리). 관리자가 AccountTaskModal의 "배정" 버튼으로 배정하는
+      경로도 `crud.claim_task()`를 포털 셀프클레임과 완전히 동일하게 타므로, 매장 쿨다운
+      규칙(`is_account_eligible_for_store`)은 이미 자체보유 계정에도 적용되어 있었음(추가
+      작업 불필요, 확인만 함).
+    - **검증**: 백엔드 — 인증 없이 보호된 엔드포인트 호출 시 401, 관리자 로그인 성공/실패
+      각각 확인, 토큰으로 보호된 엔드포인트 정상 호출, `kakao/config`·`kakao/exchange`가
+      미설정 상태에서 크래시 없이 적절한 메시지 반환, 포털 `otp/request`가 새 인증 코드
+      영향 없이 그대로 동작(회귀 확인 — 테스트로 만든 리뷰어는 삭제). `pick_time_with_gap()`
+      단위 테스트로 간격 유지·불가능한 경우 `None` 반환 둘 다 확인. 브라우저 — 관리자
+      로그인 게이트 확인, 로그인 후 기존 8개 탭 전부 정상 동작(자동 Bearer 헤더 주입이
+      기존 호출을 깨지 않음 확인), 포털 OTP 화면 기존과 동일하게 동작, 카카오 버튼은
+      미설정 상태라 안 보이는 것 확인.
+    - **남은 일**: 카카오 로그인은 사용자가 카카오 개발자센터 앱을 만들고
+      `KAKAO_REST_API_KEY`/`KAKAO_CLIENT_SECRET`을 채워야 실제 플로우(신규 연결/기존 계정
+      연결/재로그인) 테스트 가능. 관리자 비밀번호는 이번 배치에서 임의 생성한 값으로
+      `.env`에 채워뒀고 사용자에게 평문으로 전달함 — UI에서 바꾸는 기능은 아직 없어서
+      바꾸려면 새 bcrypt 해시를 생성해 `.env`를 직접 수정해야 함.
 
 ## 아직 안 된 것 / 알려진 제약
 

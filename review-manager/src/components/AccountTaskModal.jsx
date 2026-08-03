@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { Play, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
 import { formatDate, formatKRW, STATUS_LABEL } from '../lib/format.js'
@@ -57,6 +57,7 @@ export default function AccountTaskModal({ row, onClose }) {
   const [assigningId, setAssigningId] = useState(null)
   const [error, setError] = useState(null)
   const [storeSearch, setStoreSearch] = useState('')
+  const [launching, setLaunching] = useState(false)
 
   async function refresh() {
     setLoading(true)
@@ -131,6 +132,17 @@ export default function AccountTaskModal({ row, onClose }) {
     }
   }
 
+  async function handleLaunch() {
+    setLaunching(true)
+    try {
+      await api.launchAccount(row.id)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setLaunching(false)
+    }
+  }
+
   async function handleSubmitResult(taskId, link) {
     try {
       await api.updateTaskResult(taskId, link)
@@ -149,9 +161,22 @@ export default function AccountTaskModal({ row, onClose }) {
         className="w-full max-w-2xl space-y-4 rounded-lg bg-white p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-semibold text-slate-800">
-          {row.name} — {row.label} 작업 관리
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-slate-800">
+            {row.name} — {row.label} 작업 관리
+          </h3>
+          {row.adspower_profile_id && (
+            <button
+              type="button"
+              onClick={handleLaunch}
+              disabled={launching}
+              className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <Play size={12} />
+              {launching ? '실행 중...' : '지금 실행'}
+            </button>
+          )}
+        </div>
 
         <div>
           <p className="mb-1 text-xs font-medium text-slate-500">

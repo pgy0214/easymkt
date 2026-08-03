@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from app import auth, crud, models, schemas, sms
+from app import auth, crud, kakao, models, schemas, sms
 from app.database import get_db
 
 router = APIRouter(prefix="/api/portal", tags=["portal"])
@@ -55,6 +55,46 @@ def verify_otp(data: schemas.OtpVerifyIn, db: Session = Depends(get_db)):
     reviewer = crud.get_reviewer_by_contact(db, data.phone)
     if not reviewer or not crud.verify_otp(db, reviewer, data.code):
         raise HTTPException(status_code=400, detail="인증번호가 올바르지 않거나 만료되었습니다")
+    token = auth.issue_token(reviewer.id)
+    return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer))
+
+
+@router.get("/kakao/config", response_model=schemas.KakaoConfigOut)
+def kakao_config():
+    if not kakao.is_configured():
+        return schemas.KakaoConfigOut(configured=False)
+    return schemas.KakaoConfigOut(
+        configured=True, client_id=kakao.client_id(), redirect_uri=kakao.redirect_uri()
+    )
+
+
+@router.post("/kakao/exchange", response_model=schemas.KakaoExchangeOut)
+def kakao_exchange(data: schemas.KakaoExchangeIn, db: Session = Depends(get_db)):
+    if not kakao.is_configured():
+        raise HTTPException(status_code=500, detail="카카오 로그인이 설정되지 않았습니다")
+    access_token = kakao.exchange_code_for_token(data.code)
+    profile = kakao.get_kakao_profile(access_token)
+    reviewer = crud.get_reviewer_by_kakao_id(db, profile["kakao_id"])
+    if reviewer:
+        token = auth.issue_token(reviewer.id)
+        return schemas.KakaoExchangeOut(linked=True, token=token, reviewer=crud.reviewer_to_out(reviewer))
+    return schemas.KakaoExchangeOut(
+        linked=False, kakao_access_token=access_token, suggested_name=profile.get("nickname")
+    )
+
+
+@router.post("/kakao/confirm", response_model=schemas.OtpVerifyOut)
+def kakao_confirm(data: schemas.KakaoConfirmIn, db: Session = Depends(get_db)):
+    # kakao_id는 클라이언트를 신뢰하지 않고 액세스 토큰으로 서버에서 다시 조회한다
+    profile = kakao.get_kakao_profile(data.kakao_access_token)
+    reviewer = crud.get_reviewer_by_contact(db, data.phone)
+    if not reviewer or not crud.verify_otp(db, reviewer, data.code):
+        raise HTTPException(status_code=400, detail="인증번호가 올바르지 않거나 만료되었습니다")
+    existing = crud.get_reviewer_by_kakao_id(db, profile["kakao_id"])
+    if existing and existing.id != reviewer.id:
+        raise HTTPException(status_code=400, detail="이미 다른 계정에 연결된 카카오 계정입니다")
+    reviewer.kakao_id = profile["kakao_id"]
+    db.commit()
     token = auth.issue_token(reviewer.id)
     return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer))
 

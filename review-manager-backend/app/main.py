@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()  # must run before routers/sms/auth modules read env vars at import time
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -14,6 +14,7 @@ from app.database import Base, engine
 from app.migrations import run_migrations
 from app.routers import (
     accounts,
+    admin,
     card_rules,
     notify,
     portal,
@@ -51,16 +52,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(reviewers.router)
-app.include_router(accounts.router)
-app.include_router(stores.router)
-app.include_router(targets.router)
-app.include_router(tasks.router)
-app.include_router(settlement.router)
-app.include_router(settings.router)
+app.include_router(admin.router)
+app.include_router(reviewers.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(accounts.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(stores.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(targets.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(tasks.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(settlement.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(settings.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(portal.router)
-app.include_router(notify.router)
-app.include_router(card_rules.router)
+app.include_router(notify.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(card_rules.router, dependencies=[Depends(admin.get_current_admin)])
 
 
 @app.get("/api/health")

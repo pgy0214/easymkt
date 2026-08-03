@@ -404,6 +404,53 @@ export default function TargetForm() {
                   리뷰 원고 자료 (리뷰어가 포털에서 "리뷰 자료 보기"로 확인)
                 </p>
                 <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-xs text-slate-500">
+                      리뷰원고 엑셀 업로드 (원하시는 원고 직접 등록하세요, 부족한 수량은 아래 가이드라인으로 AI가 자동 생성합니다.)
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        ref={reviewTextInputRef}
+                        type="file"
+                        accept=".xlsx,.csv"
+                        onChange={(e) => setReviewTextFile(e.target.files[0] || null)}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => reviewTextInputRef.current?.click()}
+                        className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                      >
+                        <Upload size={12} />
+                        엑셀 선택
+                      </button>
+                      <button
+                        type="button"
+                        onClick={downloadReviewTextTemplate}
+                        className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                      >
+                        <Download size={12} />
+                        샘플 양식
+                      </button>
+                    </div>
+                  </div>
+                  {reviewTextFile && (
+                    <span className="mt-1 flex w-fit items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                      {reviewTextFile.name}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReviewTextFile(null)
+                          if (reviewTextInputRef.current) reviewTextInputRef.current.value = ''
+                        }}
+                        className="text-slate-400 hover:text-red-600"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  )}
+                </div>
+                <div>
                   <label className="block text-xs text-slate-500">
                     원고 가이드라인 (엑셀 업로드분이 부족할 때 AI가 참고하는 예시 — 자유롭게 고쳐서 쓰세요)
                   </label>
@@ -488,53 +535,6 @@ export default function TargetForm() {
                       </div>
                     ))}
                   </div>
-                </div>
-                <div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="block text-xs text-slate-500">
-                      리뷰 원고 엑셀 업로드 (번호+리뷰내용 — 작업 건수만큼 순서대로 배정되고, 부족한 만큼은 위 가이드라인으로 AI가 자동 생성합니다)
-                    </label>
-                    <div className="flex items-center gap-1">
-                      <input
-                        ref={reviewTextInputRef}
-                        type="file"
-                        accept=".xlsx,.csv"
-                        onChange={(e) => setReviewTextFile(e.target.files[0] || null)}
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => reviewTextInputRef.current?.click()}
-                        className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
-                      >
-                        <Upload size={12} />
-                        엑셀 선택
-                      </button>
-                      <button
-                        type="button"
-                        onClick={downloadReviewTextTemplate}
-                        className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
-                      >
-                        <Download size={12} />
-                        샘플 양식
-                      </button>
-                    </div>
-                  </div>
-                  {reviewTextFile && (
-                    <span className="mt-1 flex w-fit items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                      {reviewTextFile.name}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReviewTextFile(null)
-                          if (reviewTextInputRef.current) reviewTextInputRef.current.value = ''
-                        }}
-                        className="text-slate-400 hover:text-red-600"
-                      >
-                        <X size={10} />
-                      </button>
-                    </span>
-                  )}
                 </div>
                 <div>
                   <label className="flex items-center gap-2 text-xs text-slate-500">

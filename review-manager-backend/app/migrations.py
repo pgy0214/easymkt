@@ -43,6 +43,9 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "reviewers", "blog_url", "blog_url TEXT")
         _add_column_if_missing(conn, "reviewers", "blog_index", "blog_index TEXT")
 
+        # reviewers: kakao_id — 카카오 로그인 연동 시 저장 (전화번호 OTP로 확인 후에만 연결)
+        _add_column_if_missing(conn, "reviewers", "kakao_id", "kakao_id TEXT")
+
         # review_accounts: ip_address — IP assigned per admin-owned account
         _add_column_if_missing(conn, "review_accounts", "ip_address", "ip_address TEXT")
         _add_column_if_missing(
@@ -161,6 +164,10 @@ def run_migrations(engine) -> None:
 
         # tasks: receipt_image_path — 영수증 이미지, naver_available_date가 정해지면 자동 생성
         _add_column_if_missing(conn, "tasks", "receipt_image_path", "receipt_image_path TEXT")
+
+        # tasks: receipt_time — 영수증에 찍힌 실제 시:분:초. 같은 계정이 같은 날짜에 여러 건을
+        # 받을 때 물리적으로 불가능한 시간(4시간 이내 간격)이 나오지 않도록 비교하는 데 쓴다.
+        _add_column_if_missing(conn, "tasks", "receipt_time", "receipt_time TIME")
 
         # review_targets: photos_per_review — 리뷰 1건당 배정할 사진 갯수(캠페인 사진 풀에서
         # 라운드로빈으로 골라줌). target_photos 테이블 자체는 create_all이 만든다.

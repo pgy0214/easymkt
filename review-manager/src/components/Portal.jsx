@@ -33,6 +33,38 @@ function LoginFlow({ onLoggedIn }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [message, setMessage] = useState(null)
+  const [kakaoConfig, setKakaoConfig] = useState(null)
+  const [kakaoAccessToken, setKakaoAccessToken] = useState(null) // set once linked=false로 확인 단계에 들어가면
+  const [checkingKakaoRedirect, setCheckingKakaoRedirect] = useState(false)
+
+  useEffect(() => {
+    portalApi.kakaoConfig().then(setKakaoConfig).catch(() => setKakaoConfig({ configured: false }))
+
+    const code = new URLSearchParams(window.location.search).get('code')
+    if (!code) return
+    setCheckingKakaoRedirect(true)
+    window.history.replaceState({}, '', window.location.pathname)
+    portalApi
+      .kakaoExchange(code)
+      .then((result) => {
+        if (result.linked) {
+          onLoggedIn(result.token)
+          return
+        }
+        setKakaoAccessToken(result.kakao_access_token)
+        if (result.suggested_name) setName(result.suggested_name)
+        setNeedName(true)
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setCheckingKakaoRedirect(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleKakaoLogin() {
+    if (!kakaoConfig?.configured) return
+    const url = `https://kauth.kakao.com/oauth/authorize?client_id=${kakaoConfig.client_id}&redirect_uri=${encodeURIComponent(kakaoConfig.redirect_uri)}&response_type=code`
+    window.location.href = url
+  }
 
   async function handleRequestOtp(e) {
     e.preventDefault()
@@ -59,7 +91,14 @@ function LoginFlow({ onLoggedIn }) {
     setSubmitting(true)
     setError(null)
     try {
-      const result = await portalApi.verifyOtp(phone.trim(), code.trim())
+      const result = kakaoAccessToken
+        ? await portalApi.kakaoConfirm({
+            phone: phone.trim(),
+            code: code.trim(),
+            kakao_access_token: kakaoAccessToken,
+            name: name.trim() || undefined,
+          })
+        : await portalApi.verifyOtp(phone.trim(), code.trim())
       onLoggedIn(result.token)
     } catch (err) {
       setError(err.message)
@@ -68,9 +107,23 @@ function LoginFlow({ onLoggedIn }) {
     }
   }
 
+  if (checkingKakaoRedirect) {
+    return (
+      <div className="mx-auto mt-16 max-w-sm rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+        카카오 로그인 확인 중...
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto mt-16 max-w-sm rounded-lg border border-slate-200 bg-white p-6">
       <h1 className="mb-4 text-lg font-semibold text-slate-900">리뷰어 포털</h1>
+
+      {kakaoAccessToken && (
+        <p className="mb-3 text-sm text-blue-700">
+          카카오 로그인 확인됨 — 이 계정에 연결할 전화번호로 인증번호를 받아주세요.
+        </p>
+      )}
 
       {step === 'phone' && (
         <form onSubmit={handleRequestOtp} className="space-y-3">
@@ -124,6 +177,18 @@ function LoginFlow({ onLoggedIn }) {
           </button>
           {error && <p className="text-sm text-red-600">{error}</p>}
         </form>
+      )}
+
+      {!kakaoAccessToken && kakaoConfig?.configured && (
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            onClick={handleKakaoLogin}
+            className="w-full rounded bg-[#FEE500] px-4 py-1.5 text-sm font-medium text-[#191600] hover:brightness-95"
+          >
+            카카오로 로그인
+          </button>
+        </div>
       )}
     </div>
   )

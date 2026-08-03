@@ -1,16 +1,41 @@
 const BASE_URL = 'http://localhost:8000/api'
 export const API_ORIGIN = 'http://localhost:8000'
+const ADMIN_TOKEN_KEY = 'admin_token'
+
+function adminAuthHeader() {
+  const token = localStorage.getItem(ADMIN_TOKEN_KEY)
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers: { 'Content-Type': 'application/json', ...adminAuthHeader(), ...options.headers },
   })
+  if (res.status === 401 && !path.startsWith('/portal')) {
+    localStorage.removeItem(ADMIN_TOKEN_KEY)
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail || `요청 실패 (${res.status})`)
   }
   if (res.status === 204) return null
+  return res.json()
+}
+
+async function uploadRequest(path, form) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    body: form,
+    headers: adminAuthHeader(),
+  })
+  if (res.status === 401) {
+    localStorage.removeItem(ADMIN_TOKEN_KEY)
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `요청 실패 (${res.status})`)
+  }
   return res.json()
 }
 
@@ -30,6 +55,9 @@ function authedRequest(path, token, options = {}) {
 }
 
 export const api = {
+  login: (username, password) =>
+    request('/admin/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+
   getReviewers: () => request('/reviewers'),
   createReviewer: (data) =>
     request('/reviewers', { method: 'POST', body: JSON.stringify(data) }),
@@ -37,26 +65,16 @@ export const api = {
     request(`/reviewers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteReviewer: (id) => request(`/reviewers/${id}`, { method: 'DELETE' }),
 
-  importReviewers: async (file, category = 'reviewer') => {
+  importReviewers: (file, category = 'reviewer') => {
     const form = new FormData()
     form.append('file', file)
     form.append('category', category)
-    const res = await fetch(`${BASE_URL}/reviewers/import`, { method: 'POST', body: form })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.detail || `요청 실패 (${res.status})`)
-    }
-    return res.json()
+    return uploadRequest('/reviewers/import', form)
   },
-  importAdminAccounts: async (file) => {
+  importAdminAccounts: (file) => {
     const form = new FormData()
     form.append('file', file)
-    const res = await fetch(`${BASE_URL}/reviewers/import-admin`, { method: 'POST', body: form })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.detail || `요청 실패 (${res.status})`)
-    }
-    return res.json()
+    return uploadRequest('/reviewers/import-admin', form)
   },
 
   createAccount: (reviewerId, data) =>
@@ -89,37 +107,22 @@ export const api = {
     request(`/targets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   getTarget: (id) => request(`/targets/${id}`),
   deleteTarget: (id) => request(`/targets/${id}`, { method: 'DELETE' }),
-  uploadTargetPhoto: async (id, file) => {
+  uploadTargetPhoto: (id, file) => {
     const form = new FormData()
     form.append('file', file)
-    const res = await fetch(`${BASE_URL}/targets/${id}/photo`, { method: 'POST', body: form })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.detail || `요청 실패 (${res.status})`)
-    }
-    return res.json()
+    return uploadRequest(`/targets/${id}/photo`, form)
   },
-  uploadTargetPhotos: async (id, files) => {
+  uploadTargetPhotos: (id, files) => {
     const form = new FormData()
     files.forEach((file) => form.append('files', file))
-    const res = await fetch(`${BASE_URL}/targets/${id}/photos`, { method: 'POST', body: form })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.detail || `요청 실패 (${res.status})`)
-    }
-    return res.json()
+    return uploadRequest(`/targets/${id}/photos`, form)
   },
   deleteTargetPhoto: (targetId, photoId) =>
     request(`/targets/${targetId}/photos/${photoId}`, { method: 'DELETE' }),
-  uploadTargetReviewTexts: async (id, file) => {
+  uploadTargetReviewTexts: (id, file) => {
     const form = new FormData()
     form.append('file', file)
-    const res = await fetch(`${BASE_URL}/targets/${id}/review-texts`, { method: 'POST', body: form })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.detail || `요청 실패 (${res.status})`)
-    }
-    return res.json()
+    return uploadRequest(`/targets/${id}/review-texts`, form)
   },
   deleteTargetReviewText: (targetId, textId) =>
     request(`/targets/${targetId}/review-texts/${textId}`, { method: 'DELETE' }),
@@ -159,6 +162,12 @@ export const portalApi = {
     request('/portal/otp/request', { method: 'POST', body: JSON.stringify({ phone, name }) }),
   verifyOtp: (phone, code) =>
     request('/portal/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) }),
+
+  kakaoConfig: () => request('/portal/kakao/config'),
+  kakaoExchange: (code) =>
+    request('/portal/kakao/exchange', { method: 'POST', body: JSON.stringify({ code }) }),
+  kakaoConfirm: (data) =>
+    request('/portal/kakao/confirm', { method: 'POST', body: JSON.stringify(data) }),
 
   me: (token) => authedRequest('/portal/me', token),
   addAccount: (token, data) =>

@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Time,
 )
 from sqlalchemy.orm import relationship
 
@@ -35,6 +36,7 @@ class Reviewer(Base):
     birth_date = Column(Date, nullable=True)
     otp_code = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
+    kakao_id = Column(String, nullable=True)  # 카카오 로그인 연동 시 저장, 전화번호 OTP 인증 후에만 연결
     created_at = Column(DateTime, default=utcnow)
 
     accounts = relationship(
@@ -172,6 +174,7 @@ class Task(Base):
     last_expired_at = Column(DateTime, nullable=True)  # for admin dashboard notice
 
     naver_available_date = Column(Date, nullable=True)  # "영수증 날짜"
+    receipt_time = Column(Time, nullable=True)  # 영수증에 찍힌 실제 시:분:초 (같은 계정·같은 날짜 4시간 간격 체크용)
     result_link = Column(String, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     receipt_image_path = Column(String, nullable=True)  # naver_available_date가 정해지면 자동 생성

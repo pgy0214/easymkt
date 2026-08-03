@@ -27,6 +27,25 @@ def get_reviewer_by_contact(db: Session, phone: str) -> models.Reviewer | None:
     return db.query(models.Reviewer).filter(models.Reviewer.contact_info == phone).first()
 
 
+def get_reviewer_by_kakao_id(db: Session, kakao_id: str) -> models.Reviewer | None:
+    return db.query(models.Reviewer).filter(models.Reviewer.kakao_id == kakao_id).first()
+
+
+def get_receipt_times_for_account_on_date(
+    db: Session, account_id: int, date, exclude_task_id: int | None = None
+) -> list:
+    """같은 계정이 같은 날짜에 이미 확정한 영수증 시간들 — 물리적으로 불가능한(4시간 이내)
+    시간이 새로 배정되지 않도록 비교하는 기준."""
+    query = db.query(models.Task.receipt_time).filter(
+        models.Task.review_account_id == account_id,
+        models.Task.naver_available_date == date,
+        models.Task.receipt_time.isnot(None),
+    )
+    if exclude_task_id is not None:
+        query = query.filter(models.Task.id != exclude_task_id)
+    return [row[0] for row in query.all()]
+
+
 def issue_otp(db: Session, reviewer: models.Reviewer) -> str:
     code = f"{secrets.randbelow(1_000_000):06d}"
     reviewer.otp_code = code
