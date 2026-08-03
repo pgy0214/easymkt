@@ -354,6 +354,20 @@ class TaskOut(BaseModel):
     eligible_account_ids: Optional[list[int]] = None
 
 
+class PoolGroupOut(BaseModel):
+    """포털 오픈풀 — 매장(캠페인)당 한 줄로 묶은 요약. 개별 Task 목록이 아님."""
+
+    review_target_id: int
+    store_id: Optional[int] = None
+    store_name: Optional[str] = None
+    platform: Platform
+    unit_price: int
+    remaining_today: int
+    total_today: int
+    sample_task_id: int  # "할게요" 클레임 시 실제로 클레임할 작업 id (그룹 내 아무 것이나 동일)
+    eligible_account_ids: list[int] = []
+
+
 class TaskResultUpdate(BaseModel):
     result_link: str
 

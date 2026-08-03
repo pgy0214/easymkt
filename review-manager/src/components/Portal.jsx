@@ -328,11 +328,11 @@ function PortalHome({ token, onLogout }) {
       <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="font-medium text-slate-800">가능한 작업 (오픈풀)</h2>
         {pool.length === 0 && <p className="text-sm text-slate-400">지금 가져갈 수 있는 작업이 없습니다.</p>}
-        {pool.map((task) => (
+        {pool.map((group) => (
           <PoolTaskRow
-            key={task.id}
-            task={task}
-            myAccounts={reviewer.accounts.filter((a) => a.platform === task.platform)}
+            key={group.review_target_id}
+            group={group}
+            myAccounts={reviewer.accounts.filter((a) => a.platform === group.platform)}
             onClaim={handleClaim}
           />
         ))}
@@ -349,17 +349,18 @@ function PortalHome({ token, onLogout }) {
   )
 }
 
-function PoolTaskRow({ task, myAccounts, onClaim }) {
-  const eligibleIds = new Set(task.eligible_account_ids ?? myAccounts.map((a) => a.id))
+function PoolTaskRow({ group, myAccounts, onClaim }) {
+  const eligibleIds = new Set(group.eligible_account_ids ?? myAccounts.map((a) => a.id))
   const eligibleAccounts = myAccounts.filter((a) => eligibleIds.has(a.id))
   const [accountId, setAccountId] = useState(eligibleAccounts[0]?.id ?? '')
 
   return (
     <div className="flex items-center justify-between rounded border border-slate-100 px-3 py-2 text-sm">
       <div>
-        <div className="font-medium text-slate-700">{task.store_name}</div>
+        <div className="font-medium text-slate-700">{group.store_name}</div>
         <div className="text-xs text-slate-500">
-          {PLATFORM_LABEL[task.platform]} · 건당 {formatKRW(task.settlement_amount)}
+          {PLATFORM_LABEL[group.platform]} · 건당 {formatKRW(group.unit_price)} · 오늘{' '}
+          {group.remaining_today}/{group.total_today} 남음
         </div>
         {eligibleAccounts.length === 0 && (
           <div className="text-xs text-amber-600">
@@ -383,7 +384,7 @@ function PoolTaskRow({ task, myAccounts, onClaim }) {
             </select>
           )}
           <button
-            onClick={() => onClaim(task.id, accountId)}
+            onClick={() => onClaim(group.sample_task_id, accountId)}
             disabled={!accountId}
             className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
           >

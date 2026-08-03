@@ -144,7 +144,7 @@ def delete_my_account(
     return {"ok": True}
 
 
-@router.get("/pool", response_model=list[schemas.TaskOut])
+@router.get("/pool", response_model=list[schemas.PoolGroupOut])
 def get_pool(
     reviewer: models.Reviewer = Depends(get_current_reviewer), db: Session = Depends(get_db)
 ):
@@ -153,16 +153,7 @@ def get_pool(
     platforms = sorted({a.platform for a in reviewer.accounts})
     if not platforms:
         return []
-
-    results = []
-    for task in crud.get_open_pool_tasks(db, platforms):
-        out = crud.task_to_out(db, task)
-        my_accounts = [a for a in reviewer.accounts if a.platform == task.platform]
-        out.eligible_account_ids = crud.get_eligible_account_ids(
-            db, my_accounts, task.review_target.store_id
-        )
-        results.append(out)
-    return results
+    return crud.get_open_pool_summary(db, platforms, reviewer)
 
 
 @router.get("/tasks/mine", response_model=list[schemas.TaskOut])

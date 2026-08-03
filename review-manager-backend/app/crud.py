@@ -964,6 +964,57 @@ def get_open_pool_tasks(db: Session, platforms: list[str]) -> list[models.Task]:
     return [t for t in tasks if under_daily_limit(t)]
 
 
+def get_open_pool_summary(
+    db: Session, platforms: list[str], reviewer: models.Reviewer
+) -> list[schemas.PoolGroupOut]:
+    """포털 오픈풀 — 개별 작업을 하나씩 나열하지 않고 매장(캠페인)당 한 줄로 묶어서,
+    오늘 기준 잔여/총 건수를 계산해 돌려준다. task_to_out을 거치지 않으므로 원고
+    AI생성·사진배정처럼 무거운 계산이 붙지 않아 빠르다."""
+    tasks = get_open_pool_tasks(db, platforms)
+
+    start_utc, end_utc = _kst_today_utc_range()
+    by_target: dict[int, list[models.Task]] = {}
+    for t in tasks:
+        by_target.setdefault(t.review_target_id, []).append(t)
+
+    groups = []
+    for target_id, target_tasks in by_target.items():
+        target = target_tasks[0].review_target
+        store = target.store
+        open_count = len(target_tasks)
+        if target.daily_limit is not None:
+            claimed_today = (
+                db.query(models.Task)
+                .filter(
+                    models.Task.review_target_id == target_id,
+                    models.Task.claimed_at >= start_utc,
+                    models.Task.claimed_at < end_utc,
+                )
+                .count()
+            )
+            total_today = target.daily_limit
+            remaining_today = max(0, min(open_count, target.daily_limit - claimed_today))
+        else:
+            total_today = open_count
+            remaining_today = open_count
+
+        my_accounts = [a for a in reviewer.accounts if a.platform == target.platform]
+        groups.append(
+            schemas.PoolGroupOut(
+                review_target_id=target_id,
+                store_id=store.id if store else None,
+                store_name=store.name if store else None,
+                platform=target.platform,
+                unit_price=target.unit_price,
+                remaining_today=remaining_today,
+                total_today=total_today,
+                sample_task_id=min(t.id for t in target_tasks),
+                eligible_account_ids=get_eligible_account_ids(db, my_accounts, target.store_id),
+            )
+        )
+    return groups
+
+
 def get_reviewer_tasks(db: Session, reviewer_id: int) -> list[models.Task]:
     return (
         db.query(models.Task)
