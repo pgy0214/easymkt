@@ -8,6 +8,25 @@ const TOKEN_KEY = 'portal_token'
 
 export default function Portal() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
+  const [checkingDevAutoLogin, setCheckingDevAutoLogin] = useState(!token)
+
+  useEffect(() => {
+    if (token) return
+    portalApi
+      .devAutoLogin()
+      .then((result) => {
+        if (result.enabled && result.token) {
+          localStorage.setItem(TOKEN_KEY, result.token)
+          setToken(result.token)
+        }
+      })
+      .finally(() => setCheckingDevAutoLogin(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (!token && checkingDevAutoLogin) {
+    return null
+  }
 
   if (!token) {
     return <LoginFlow onLoggedIn={(t) => { localStorage.setItem(TOKEN_KEY, t); setToken(t) }} />

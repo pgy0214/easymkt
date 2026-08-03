@@ -163,6 +163,8 @@ export const portalApi = {
   verifyOtp: (phone, code) =>
     request('/portal/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) }),
 
+  devAutoLogin: () => request('/portal/dev-autologin'),
+
   kakaoConfig: () => request('/portal/kakao/config'),
   kakaoExchange: (code) =>
     request('/portal/kakao/exchange', { method: 'POST', body: JSON.stringify({ code }) }),

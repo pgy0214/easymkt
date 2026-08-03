@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -7,6 +8,20 @@ from app import auth, crud, kakao, models, schemas, sms
 from app.database import get_db
 
 router = APIRouter(prefix="/api/portal", tags=["portal"])
+
+
+@router.get("/dev-autologin", response_model=schemas.PortalDevAutoLoginOut)
+def dev_autologin(db: Session = Depends(get_db)):
+    """개발 단계 전용 — PORTAL_DEV_BYPASS_REVIEWER_ID가 .env에 설정돼 있으면 OTP
+    없이 그 리뷰어로 바로 로그인할 토큰을 내준다. 배포 환경에서는 반드시 비워둘 것
+    (비워두면 이 엔드포인트는 항상 {enabled: false}만 반환하고 아무 토큰도 안 줌)."""
+    raw_id = os.environ.get("PORTAL_DEV_BYPASS_REVIEWER_ID")
+    if not raw_id:
+        return schemas.PortalDevAutoLoginOut(enabled=False)
+    reviewer = crud.get_reviewer(db, int(raw_id))
+    if not reviewer:
+        return schemas.PortalDevAutoLoginOut(enabled=False)
+    return schemas.PortalDevAutoLoginOut(enabled=True, token=auth.issue_token(reviewer.id))
 
 
 def get_current_reviewer(

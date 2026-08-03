@@ -441,6 +441,11 @@ class OtpVerifyOut(BaseModel):
     reviewer: ReviewerOut
 
 
+class PortalDevAutoLoginOut(BaseModel):
+    enabled: bool
+    token: Optional[str] = None
+
+
 class KakaoConfigOut(BaseModel):
     configured: bool
     client_id: Optional[str] = None
