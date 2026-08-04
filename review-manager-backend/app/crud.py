@@ -585,6 +585,12 @@ def assign_review_text_for_task(db: Session, task: models.Task) -> str | None:
     if not review_writer.is_configured():
         return None
 
+    # 아직 아무도 클레임하지 않은 오픈풀 작업까지 미리 AI로 원고를 생성해두면
+    # (특히 크레딧 부족/레이트리밋으로 매번 실패할 때) 오픈풀 목록 조회 자체가
+    # 매우 느려진다 — 실제로 작업 중인(클레임된) 건에 한해서만 생성한다.
+    if task.status == "open":
+        return None
+
     try:
         generated = review_writer.generate_review_text(
             guideline=target.guideline,
