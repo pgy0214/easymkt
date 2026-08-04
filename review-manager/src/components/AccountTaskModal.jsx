@@ -1,51 +1,111 @@
-import { Play, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, Play, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { api } from '../lib/api.js'
+import { API_ORIGIN, api } from '../lib/api.js'
 import { formatDate, formatKRW, STATUS_LABEL } from '../lib/format.js'
 
 function HistoryRow({ task, onSubmitResult }) {
   const [linkInput, setLinkInput] = useState('')
+  const [showMaterials, setShowMaterials] = useState(false)
   const canEnterResult = task.status === 'ready' || (task.platform === 'kakao' && task.status === 'claimed')
   const isCompleted = task.status === 'completed'
+  const hasMaterials =
+    task.assigned_review_text || task.assigned_photo_paths?.length > 0 || task.receipt_image_path
 
   return (
-    <tr>
-      <td className="px-2 py-1.5 text-slate-700">{task.store_name || '-'}</td>
-      <td className="px-2 py-1.5 text-slate-500">{STATUS_LABEL[task.status] ?? task.status}</td>
-      <td className="px-2 py-1.5 text-xs text-slate-500">
-        {task.platform === 'naver' && <div>영수증: {formatDate(task.naver_available_date)}</div>}
-        <div>작성일: {formatDate(task.review_posted_date)}</div>
-      </td>
-      <td className="px-2 py-1.5">
-        {isCompleted ? (
-          <a
-            href={task.result_link}
-            target="_blank"
-            rel="noreferrer"
-            className="text-blue-600 hover:underline"
-          >
-            결과 보기
-          </a>
-        ) : canEnterResult ? (
-          <div className="flex gap-1">
-            <input
-              value={linkInput}
-              onChange={(e) => setLinkInput(e.target.value)}
-              placeholder="결과 링크"
-              className="w-28 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
-            />
-            <button
-              onClick={() => linkInput.trim() && onSubmitResult(task.id, linkInput.trim())}
-              className="rounded bg-slate-800 px-2 py-0.5 text-xs text-white hover:bg-slate-700"
-            >
-              완료
-            </button>
+    <>
+      <tr>
+        <td className="px-2 py-1.5 text-slate-700">
+          <div className="flex items-center gap-1">
+            {hasMaterials && (
+              <button
+                type="button"
+                onClick={() => setShowMaterials((v) => !v)}
+                className="text-slate-400 hover:text-slate-700"
+                title="원고/사진/영수증 보기"
+              >
+                {showMaterials ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
+            )}
+            {task.store_name || '-'}
           </div>
-        ) : (
-          <span className="text-xs text-slate-400">대기중</span>
-        )}
-      </td>
-    </tr>
+        </td>
+        <td className="px-2 py-1.5 text-slate-500">{STATUS_LABEL[task.status] ?? task.status}</td>
+        <td className="px-2 py-1.5 text-xs text-slate-500">
+          {task.platform === 'naver' && <div>영수증: {formatDate(task.naver_available_date)}</div>}
+          <div>작성일: {formatDate(task.review_posted_date)}</div>
+        </td>
+        <td className="px-2 py-1.5">
+          {isCompleted ? (
+            <a
+              href={task.result_link}
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              결과 보기
+            </a>
+          ) : canEnterResult ? (
+            <div className="flex gap-1">
+              <input
+                value={linkInput}
+                onChange={(e) => setLinkInput(e.target.value)}
+                placeholder="결과 링크"
+                className="w-28 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+              />
+              <button
+                onClick={() => linkInput.trim() && onSubmitResult(task.id, linkInput.trim())}
+                className="rounded bg-slate-800 px-2 py-0.5 text-xs text-white hover:bg-slate-700"
+              >
+                완료
+              </button>
+            </div>
+          ) : (
+            <span className="text-xs text-slate-400">대기중</span>
+          )}
+        </td>
+      </tr>
+      {showMaterials && (
+        <tr>
+          <td colSpan={4} className="bg-slate-50 px-3 py-2">
+            <div className="space-y-2">
+              {task.assigned_review_text && (
+                <div>
+                  <p className="text-xs text-slate-500">배정된 리뷰 원고</p>
+                  <p className="mt-1 whitespace-pre-wrap rounded border border-slate-200 bg-white p-1.5 text-xs text-slate-700">
+                    {task.assigned_review_text}
+                  </p>
+                </div>
+              )}
+              {task.assigned_photo_paths?.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-500">배정된 사진 ({task.assigned_photo_paths.length}장)</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {task.assigned_photo_paths.map((path) => (
+                      <img
+                        key={path}
+                        src={`${API_ORIGIN}${path}`}
+                        alt="배정된 사진"
+                        className="h-16 w-16 rounded border border-slate-200 object-cover"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {task.receipt_image_path && (
+                <div>
+                  <p className="text-xs text-slate-500">영수증 이미지</p>
+                  <img
+                    src={`${API_ORIGIN}${task.receipt_image_path}`}
+                    alt="영수증 이미지"
+                    className="mt-1 max-h-64 rounded border border-slate-200"
+                  />
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   )
 }
 
