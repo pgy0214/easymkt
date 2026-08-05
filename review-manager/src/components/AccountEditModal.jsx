@@ -14,6 +14,20 @@ export default function AccountEditModal({ row, onClose, onSaved }) {
   const [adspowerProfileId, setAdspowerProfileId] = useState(row.adspower_profile_id || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [detecting, setDetecting] = useState(false)
+
+  async function handleDetectProfileUrl() {
+    setDetecting(true)
+    setError(null)
+    try {
+      const account = await api.detectProfileUrl(row.id)
+      setProfileUrl(account.profile_url || '')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDetecting(false)
+    }
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -125,12 +139,29 @@ export default function AccountEditModal({ row, onClose, onSaved }) {
         </div>
         {platform === 'naver' && (
           <div>
-            <label className="block text-xs text-slate-500">네이버 마이플레이스 URL</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs text-slate-500">네이버 마이플레이스 URL</label>
+              {adspowerProfileId.trim() && (
+                <button
+                  type="button"
+                  onClick={handleDetectProfileUrl}
+                  disabled={detecting}
+                  className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                >
+                  {detecting ? '감지 중...' : 'AdsPower에서 자동감지'}
+                </button>
+              )}
+            </div>
             <input
               value={profileUrl}
               onChange={(e) => setProfileUrl(e.target.value)}
               className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
             />
+            {adspowerProfileId.trim() && (
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                AdsPower에서 이 계정이 이미 네이버에 로그인되어 있어야 감지됩니다.
+              </p>
+            )}
           </div>
         )}
         <div>

@@ -51,3 +51,28 @@ def launch_account(account_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"AdsPower 실행 실패: {e}")
     return schemas.AccountLaunchOut(debug_port=data.get("debug_port"))
+
+
+@router.post("/{account_id}/detect-profile-url", response_model=schemas.ReviewAccountOut)
+def detect_profile_url(account_id: int, db: Session = Depends(get_db)):
+    """AdsPower로 이미 로그인해둔 계정의 브라우저를 열어 네이버 마이플레이스
+    주소를 자동으로 읽어와 profile_url에 저장한다."""
+    account = crud.get_account(db, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
+    if account.platform != "naver":
+        raise HTTPException(status_code=400, detail="네이버 계정만 지원합니다")
+    if not account.adspower_profile_id:
+        raise HTTPException(status_code=400, detail="이 계정에는 AdsPower 프로필이 연결되어 있지 않습니다")
+    if not adspower.is_configured():
+        raise HTTPException(status_code=400, detail="AdsPower API 키가 서버에 설정되어 있지 않습니다")
+    try:
+        url = adspower.detect_naver_profile_url(account.adspower_profile_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"마이플레이스 주소 감지 실패: {e}")
+    account.profile_url = url
+    db.commit()
+    db.refresh(account)
+    return crud.account_to_out(account)

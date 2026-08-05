@@ -87,6 +87,7 @@ export const api = {
   deleteAccount: (id) => request(`/accounts/${id}`, { method: 'DELETE' }),
   getAccountStoreHistory: (id) => request(`/accounts/${id}/store-history`),
   launchAccount: (id) => request(`/accounts/${id}/launch`, { method: 'POST' }),
+  detectProfileUrl: (id) => request(`/accounts/${id}/detect-profile-url`, { method: 'POST' }),
 
   getStores: (platform) => request(`/stores${toQueryString({ platform })}`),
   createStore: (data) => request('/stores', { method: 'POST', body: JSON.stringify(data) }),
