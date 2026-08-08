@@ -6,6 +6,9 @@ import AccountForm from './AccountForm.jsx'
 import CopyButton from './CopyButton.jsx'
 import ImageCopyButton from './ImageCopyButton.jsx'
 import ImageDownloadButton from './ImageDownloadButton.jsx'
+import WorkRulesModal from './WorkRulesModal.jsx'
+
+const WORK_RULES_KEY = 'workRulesAcknowledged_v1'
 
 const TOKEN_KEY = 'portal_token'
 
@@ -224,6 +227,16 @@ function PortalHome({ token, onLogout }) {
   const [loading, setLoading] = useState(true)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
   const [availability, setAvailability] = useState(null)
+  const [rulesAcknowledged, setRulesAcknowledged] = useState(
+    () => localStorage.getItem(WORK_RULES_KEY) === 'true',
+  )
+  const [showRules, setShowRules] = useState(false)
+
+  function handleAcknowledgeRules() {
+    localStorage.setItem(WORK_RULES_KEY, 'true')
+    setRulesAcknowledged(true)
+    setShowRules(false)
+  }
 
   async function refresh() {
     setLoading(true)
@@ -398,22 +411,49 @@ function PortalHome({ token, onLogout }) {
             group={group}
             myAccounts={reviewer.accounts.filter((a) => a.platform === group.platform)}
             onClaim={handleClaim}
+            disabled={checkingAvailability}
           />
         ))}
       </section>
 
       <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="font-medium text-slate-800">내 작업</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium text-slate-800">내 작업</h2>
+          <button
+            type="button"
+            onClick={() => setShowRules(true)}
+            className={`rounded border px-2 py-1 text-xs font-medium ${
+              rulesAcknowledged
+                ? 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                : 'border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100'
+            }`}
+          >
+            {rulesAcknowledged ? '작업수칙 다시보기' : '작업수칙확인하기'}
+          </button>
+        </div>
+        {!rulesAcknowledged && (
+          <p className="text-xs text-amber-600">먼저 작업수칙을 확인해야 작업을 진행할 수 있어요.</p>
+        )}
         {myTasks.length === 0 && <p className="text-sm text-slate-400">진행 중인 작업이 없습니다.</p>}
         {myTasks.map((task) => (
-          <MyTaskRow key={task.id} task={task} token={token} onSubmitResult={handleSubmitResult} />
+          <MyTaskRow
+            key={task.id}
+            task={task}
+            token={token}
+            onSubmitResult={handleSubmitResult}
+            locked={!rulesAcknowledged}
+          />
         ))}
       </section>
+
+      {showRules && (
+        <WorkRulesModal onClose={() => setShowRules(false)} onAcknowledge={handleAcknowledgeRules} />
+      )}
     </div>
   )
 }
 
-function PoolTaskRow({ group, myAccounts, onClaim }) {
+function PoolTaskRow({ group, myAccounts, onClaim, disabled }) {
   const eligibleIds = new Set(group.eligible_account_ids ?? myAccounts.map((a) => a.id))
   const eligibleAccounts = myAccounts.filter((a) => eligibleIds.has(a.id))
   const [accountId, setAccountId] = useState(eligibleAccounts[0]?.id ?? '')
@@ -449,7 +489,7 @@ function PoolTaskRow({ group, myAccounts, onClaim }) {
           )}
           <button
             onClick={() => onClaim(group.sample_task_id, accountId)}
-            disabled={!accountId}
+            disabled={!accountId || disabled}
             className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
           >
             작업신청
@@ -460,7 +500,7 @@ function PoolTaskRow({ group, myAccounts, onClaim }) {
   )
 }
 
-function MyTaskRow({ task, token, onSubmitResult }) {
+function MyTaskRow({ task, token, onSubmitResult, locked }) {
   const [link, setLink] = useState('')
   const [showBrief, setShowBrief] = useState(false)
   const canSubmit = task.status === 'ready' || (task.platform === 'kakao' && task.status === 'claimed')
@@ -474,7 +514,9 @@ function MyTaskRow({ task, token, onSubmitResult }) {
           <button
             type="button"
             onClick={() => setShowBrief(true)}
-            className="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
+            disabled={locked}
+            title={locked ? '먼저 작업수칙을 확인해주세요' : undefined}
+            className="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             리뷰 자료 보기
           </button>
@@ -512,11 +554,14 @@ function MyTaskRow({ task, token, onSubmitResult }) {
             value={link}
             onChange={(e) => setLink(e.target.value)}
             placeholder="결과 링크"
-            className="w-40 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+            disabled={locked}
+            className="w-40 rounded border border-slate-300 px-1.5 py-0.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
           />
           <button
             onClick={() => link.trim() && onSubmitResult(task.id, link.trim())}
-            className="rounded bg-slate-800 px-2 py-0.5 text-xs text-white hover:bg-slate-700"
+            disabled={locked}
+            title={locked ? '먼저 작업수칙을 확인해주세요' : undefined}
+            className="rounded bg-slate-800 px-2 py-0.5 text-xs text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             제출
           </button>

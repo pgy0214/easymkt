@@ -1,4 +1,5 @@
 import datetime
+import random
 import time as time_module
 
 from bs4 import BeautifulSoup
@@ -103,22 +104,38 @@ def _generate_receipt_if_possible(db, task: models.Task) -> None:
     card_rules = crud.card_rules_as_dicts(db)
 
     account = task.review_account
-    if not account or not account.time_slot:
-        logger.info(
-            "Task %s: 계정에 시간대(오전/오후/밤)가 배정되지 않아 영수증 생성을 보류합니다",
-            task.id,
-        )
+    if not account:
         return
+    is_admin_account = bool(account.reviewer and account.reviewer.category == "admin")
 
-    hours_range = receipt_generator.clip_band_to_store_hours(account.time_slot, store.representative_hours)
-    if hours_range is None:
-        logger.warning(
-            "Task %s: 계정 시간대(%s)와 매장 영업시간(%s)이 겹치지 않아 영수증 생성을 건너뜁니다",
-            task.id,
-            account.time_slot,
-            store.representative_hours,
-        )
-        return
+    if is_admin_account:
+        # 관리자(자체보유) 계정 — 우리가 영수증을 직접 만들기 때문에 오전/오후/밤을
+        # 정확하게 나눠서 분배할 수 있다. 계정에 고정 시간대가 지정돼 있으면 그걸
+        # 쓰고(관리자가 특정 계정을 특정 시간대에 고정하고 싶을 때 수동 지정),
+        # 없으면 이 매장에서 실제로 가능한 밴드 중 하나를 무작위로 고른다 — 굳이
+        # 미리 계정마다 배정해둘 필요 없이 매번 랜덤으로 오전/오후/밤에 고르게 분배된다.
+        available_bands = receipt_generator.bands_available_for_store(store.representative_hours)
+        if not available_bands:
+            logger.warning(
+                "Task %s: 매장 영업시간(%s)과 겹치는 시간대가 없어 영수증 생성을 건너뜁니다",
+                task.id,
+                store.representative_hours,
+            )
+            return
+        if account.time_slot in available_bands:
+            hours_range = available_bands[account.time_slot]
+        else:
+            hours_range = random.choice(list(available_bands.values()))
+    else:
+        # 일반 리뷰어 계정 — 시간대 구분 없이 항상 매장 영업시간 중 "밤" 구간으로만
+        # 영수증을 만든다.
+        hours_range = receipt_generator.clip_band_to_store_hours("night", store.representative_hours)
+        if hours_range is None:
+            logger.warning(
+                "Task %s: 매장이 밤 시간대(18~21시)에 영업하지 않아 영수증 생성을 건너뜁니다",
+                task.id,
+            )
+            return
 
     # 같은 계정이 같은 날짜에 이미 확정한 영수증 시간들과 최소 4시간 이상 떨어진
     # 시간을 골라야 물리적으로 이동 불가능한(예: 부산 10시·서울 11시) 배정이 안 된다.

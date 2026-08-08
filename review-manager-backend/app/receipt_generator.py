@@ -281,6 +281,18 @@ def clip_band_to_store_hours(time_slot: str, hours_range: str | None) -> str | N
     return f"{start // 60:02d}:{start % 60:02d}~{end // 60:02d}:{end % 60:02d}"
 
 
+def bands_available_for_store(hours_range: str | None) -> dict[str, str]:
+    """이 매장 영업시간과 실제로 겹치는 시간대 밴드만 {밴드이름: 잘린범위} 형태로
+    돌려준다. 관리자계정에 고정 시간대가 없을 때, 그 계정 대신 이 중에서 무작위로
+    하나를 골라 쓰는 데 사용한다(항상 오전/오후/밤 중 실제 가능한 것만 후보가 됨)."""
+    result = {}
+    for slot in TIME_SLOT_BANDS:
+        clipped = clip_band_to_store_hours(slot, hours_range)
+        if clipped:
+            result[slot] = clipped
+    return result
+
+
 def _time_diff_hours(a: time, b: time) -> float:
     seconds_a = a.hour * 3600 + a.minute * 60 + a.second
     seconds_b = b.hour * 3600 + b.minute * 60 + b.second
