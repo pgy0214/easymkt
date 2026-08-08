@@ -1159,6 +1159,33 @@ review_target 등)은 그때그때 직접 삭제하며 정리함.
       `.env`에 채워뒀고 사용자에게 평문으로 전달함 — UI에서 바꾸는 기능은 아직 없어서
       바꾸려면 새 bcrypt 해시를 생성해 `.env`를 직접 수정해야 함.
 
+- **원고/사진/영수증 클립보드 복사 버튼 추가(2026-08-08).** 리뷰어 포털(`TaskBriefModal`)에서
+  더 이상 원고 가이드라인/지역특징/메뉴 원문을 노출하지 않고, AI가 완성한
+  `assigned_review_text`만 보여주며 옆에 텍스트 복사 버튼(`CopyButton.jsx`, 기존 컴포넌트
+  재사용)을 붙였다. 사진/영수증 이미지는 새로 만든 `ImageCopyButton.jsx`로 클릭 한 번에
+  클립보드에 PNG로 복사된다 — `navigator.clipboard.write([new ClipboardItem({'image/png':
+  blob})])`을 쓰는데, Chrome이 안정적으로 지원하는 포맷이 PNG뿐이라 원본이 JPG여도
+  canvas로 다시 그려서 변환한다. 프론트(:5173)와 백엔드(:8000) 포트가 달라 `fetch(url)`
+  결과를 바로 `<img>`에 물리면 canvas가 "오염"돼 `toBlob()`이 막히는데, `URL.
+  createObjectURL(blob)`으로 만든 **blob: URL**을 거치면 원래 출처가 어디든 canvas가
+  same-origin으로 취급해준다 — 이 패턴이 핵심. `AccountTaskModal.jsx`의 자료보기 섹션에도
+  동일하게 적용(관리자계정도 직접 리뷰를 올려야 하므로). Clipboard API는 진짜 사용자
+  클릭(user gesture) 안에서 호출해야 동작 — 스크립트로 흉내낸 클릭은 브라우저가 거부한다
+  (자동화 테스트 중 실제로 확인함, 버그 아니라 정상적인 브라우저 보안 동작).
+- **계정별 영수증 시간대(오전/오후/밤) 배정 시스템 추가(2026-08-08).** "4시간 텀"만으로는
+  부족하고, 계정마다 항상 같은 시간대에만 영수증을 만들어야 한다는 사용자 지적에 따라
+  구현. 기본 밴드는 11:00~15:00(오전)/15:00~18:00(오후)/18:00~21:00(밤) 세 구간 고정이며,
+  매장 실제 대표시간(`Store.representative_hours`)과 겹치는 부분만 잘라서 쓴다
+  (`receipt_generator.clip_band_to_store_hours`) — 예: 매장이 13~20시만 영업하면 밴드가
+  13~15/15~18/18~20으로 잘림, 겹치는 부분이 아예 없으면(예: 밤 밴드인데 매장이 17시에
+  닫음) 그 계정은 그 매장에서 영수증을 못 만듦. `ReviewAccount.time_slot`(nullable, 'morning'
+  |'afternoon'|'night')이 미설정이면 `naver_date_check._generate_receipt_if_possible`가
+  영수증 생성 자체를 보류(기존 "메뉴 없음"과 같은 조용한 스킵 패턴). 기존 4시간 간격 체크
+  (`pick_time_with_gap`)는 그대로 유지하되 클리핑된 범위 안에서만 후보 시간을 고르도록
+  호출부만 바꿈. 관리자계정 화면에 "선택 시간대 랜덤배정" 일괄 버튼(`POST /api/accounts/
+  bulk-assign-time-slot`, 미배정 계정만 채우고 이미 배정된 계정은 안 건드림 — 여러 번 눌러도
+  안전) + `AccountEditModal`에 계정별 수동 변경 드롭다운 추가.
+
 ## 아직 안 된 것 / 알려진 제약
 
 - 캠페인 삭제(`crud.delete_target`) 시 `reference_photo_path`/`TargetPhoto` 파일이
