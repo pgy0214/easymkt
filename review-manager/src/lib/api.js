@@ -183,6 +183,8 @@ export const portalApi = {
   deleteAccount: (token, id) => authedRequest(`/portal/accounts/${id}`, token, { method: 'DELETE' }),
 
   getPool: (token) => authedRequest('/portal/pool', token),
+  checkAvailability: (token) =>
+    authedRequest('/portal/accounts/check-availability', token, { method: 'POST' }),
   getMyTasks: (token) => authedRequest('/portal/tasks/mine', token),
   getTaskBrief: (token, taskId) => authedRequest(`/portal/tasks/${taskId}/brief`, token),
   claimTask: (token, taskId, accountId) =>

@@ -33,12 +33,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-3 sm:px-4 sm:py-4">
-        <h1 className="text-base font-semibold text-slate-900 sm:text-lg">
-          리뷰몬 <span className="font-normal text-slate-400">(관리자모드)</span>
+    <div className="min-h-screen bg-gray-100">
+      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-3 py-3 sm:px-4 sm:py-4">
+        <h1 className="text-base font-semibold text-gray-900 sm:text-lg">
+          이지리뷰 <span className="font-normal text-gray-400">(관리자모드)</span>
         </h1>
-        <button onClick={handleLogout} className="text-sm text-slate-500 hover:text-slate-800">
+        <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-800">
           로그아웃
         </button>
       </header>

@@ -109,10 +109,7 @@ export default function AccountForm({ onCreate, showIp = false }) {
         <p>· 계정 아이디는 여러 리뷰 계정을 구분하기 편하도록 적어두는 용도입니다.</p>
         {form.platform === 'naver' && (
           <p>
-            · 마이플레이스 URL 찾는 법: 네이버 지도 앱 → 하단 'MY' 탭 → 내 프로필 →
-            공유 아이콘 → 링크 복사 → 이 화면으로 돌아와서 붙여넣기 버튼 클릭 (또는 PC:
-            map.naver.com 로그인 → 우측 상단 프로필 → 마이플레이스 → 주소창 URL 복사).
-            앱 버전에 따라 메뉴 위치가 다를 수 있어요.{' '}
+            · 마이플레이스 URL 찾는법 :{' '}
             <a
               href="https://m.place.naver.com/my"
               target="_blank"
@@ -121,7 +118,8 @@ export default function AccountForm({ onCreate, showIp = false }) {
             >
               마이플레이스 열기
               <ExternalLink size={11} />
-            </a>
+            </a>{' '}
+            클릭 후 ▶ 내 프로필 공유아이콘 클릭 ▶ 링크복사 ▶ 붙여넣기
           </p>
         )}
       </div>

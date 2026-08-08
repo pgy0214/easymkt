@@ -15,6 +15,7 @@ legacy version are:
     the store's representative business hours) instead of the legacy
     script's own random day-offset cycle
 """
+import io
 import os
 import random
 import re
@@ -22,6 +23,8 @@ from datetime import date as date_cls
 from datetime import datetime, time
 
 from PIL import Image, ImageDraw, ImageFont
+
+from app import photo_washer
 
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 
@@ -407,8 +410,14 @@ def generate_receipt(
         draw_mixed_right(d, R, y, val, f_text, f_digit)
         y += 34
 
+    buf = io.BytesIO()
+    img.crop((0, 0, W, y + 30)).save(buf, format="JPEG")
+    # 카메라 사진과 마찬가지로 EXIF를 세탁한다 — 영수증에 찍힌 거래일시와 어긋나지
+    # 않도록 target_date를 그 시각으로 맞춘다(레코더/카메라 종류만 무작위).
+    washed = photo_washer.wash_photo(buf.getvalue(), target_date=dt)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    img.crop((0, 0, W, y + 30)).save(output_path)
+    with open(output_path, "wb") as f:
+        f.write(washed)
     return output_path
 
 

@@ -67,6 +67,13 @@ class AccountLaunchOut(BaseModel):
     debug_port: Optional[str] = None
 
 
+class AccountAvailabilityOut(BaseModel):
+    account_id: int
+    label: str
+    available_date: Optional[datetime.date] = None
+    error: Optional[str] = None
+
+
 class BulkAssignTimeSlotIn(BaseModel):
     account_ids: list[int]
 

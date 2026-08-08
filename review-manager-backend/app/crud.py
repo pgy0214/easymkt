@@ -849,6 +849,9 @@ def _task_reference_date(task: models.Task) -> datetime.date | None:
     return None
 
 
+_ACTIVE_TASK_STATUSES = ("claimed", "checking_date", "ready")
+
+
 def is_account_eligible_for_store(
     db: Session, account_id: int, store_id: int, now: datetime.datetime | None = None
 ) -> bool:
@@ -856,6 +859,19 @@ def is_account_eligible_for_store(
     store = get_store(db, store_id)
     if not store:
         return True
+    has_active_task = (
+        db.query(models.Task)
+        .join(models.ReviewTarget, models.Task.review_target_id == models.ReviewTarget.id)
+        .filter(
+            models.Task.review_account_id == account_id,
+            models.ReviewTarget.store_id == store_id,
+            models.Task.status.in_(_ACTIVE_TASK_STATUSES),
+        )
+        .first()
+        is not None
+    )
+    if has_active_task:
+        return False
     last_task = get_last_completed_task_for_store(db, account_id, store_id)
     if not last_task:
         return True

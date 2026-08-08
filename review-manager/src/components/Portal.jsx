@@ -1,4 +1,4 @@
-import { LogOut, Trash2 } from 'lucide-react'
+import { ExternalLink, LogOut, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { API_ORIGIN, portalApi } from '../lib/api.js'
 import { formatDateTime, formatKRW, PLATFORM_LABEL } from '../lib/format.js'
@@ -139,7 +139,7 @@ function LoginFlow({ onLoggedIn }) {
 
   return (
     <div className="mx-auto mt-16 max-w-sm rounded-lg border border-slate-200 bg-white p-6">
-      <h1 className="mb-4 text-lg font-semibold text-slate-900">리뷰어 포털</h1>
+      <h1 className="mb-4 text-lg font-semibold text-slate-900">리뷰어 로그인</h1>
 
       {kakaoAccessToken && (
         <p className="mb-3 text-sm text-blue-700">
@@ -222,6 +222,8 @@ function PortalHome({ token, onLogout }) {
   const [myTasks, setMyTasks] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const [availability, setAvailability] = useState(null)
 
   async function refresh() {
     setLoading(true)
@@ -268,6 +270,18 @@ function PortalHome({ token, onLogout }) {
       await refresh()
     } catch (err) {
       alert(err.message)
+    }
+  }
+
+  async function handleCheckAvailability() {
+    setCheckingAvailability(true)
+    setAvailability(null)
+    try {
+      setAvailability(await portalApi.checkAvailability(token))
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setCheckingAvailability(false)
     }
   }
 
@@ -320,16 +334,63 @@ function PortalHome({ token, onLogout }) {
               </span>
               <span className="font-medium text-slate-700">{account.label}</span>
             </div>
-            <button onClick={() => handleDeleteAccount(account.id)} className="text-slate-400 hover:text-red-600">
-              <Trash2 size={14} />
-            </button>
+            <div className="flex items-center gap-2">
+              {account.profile_url && (
+                <a
+                  href={account.profile_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-0.5 text-xs text-blue-600 hover:underline"
+                >
+                  마이플레이스
+                  <ExternalLink size={11} />
+                </a>
+              )}
+              <button onClick={() => handleDeleteAccount(account.id)} className="text-slate-400 hover:text-red-600">
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
         ))}
         <AccountForm onCreate={handleAddAccount} />
       </section>
 
       <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="font-medium text-slate-800">가능한 작업 (오픈풀)</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium text-slate-800">가능한 작업</h2>
+          <button
+            type="button"
+            onClick={handleCheckAvailability}
+            disabled={checkingAvailability}
+            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {checkingAvailability ? '확인 중...' : '가능한 계정 확인하기'}
+          </button>
+        </div>
+        {checkingAvailability && (
+          <p className="text-xs text-slate-400">
+            내 계정 마이플레이스를 직접 확인하고 있어요. 계정당 몇 초씩 걸릴 수 있어요...
+          </p>
+        )}
+        {availability && (
+          <div className="space-y-1 rounded border border-slate-100 bg-slate-50 p-2 text-xs">
+            {availability.length === 0 && (
+              <p className="text-slate-400">마이플레이스 URL이 등록된 네이버 계정이 없습니다.</p>
+            )}
+            {availability.map((a) => (
+              <p key={a.account_id} className="text-slate-600">
+                {a.label}:{' '}
+                {a.error ? (
+                  <span className="text-red-600">확인 실패 ({a.error})</span>
+                ) : a.available_date ? (
+                  <span className="text-green-600">{a.available_date} 작성 가능</span>
+                ) : (
+                  <span className="text-amber-600">최근 7일 모두 사용해서 작성 가능한 날짜 없음</span>
+                )}
+              </p>
+            ))}
+          </div>
+        )}
         {pool.length === 0 && <p className="text-sm text-slate-400">지금 가져갈 수 있는 작업이 없습니다.</p>}
         {pool.map((group) => (
           <PoolTaskRow
@@ -391,7 +452,7 @@ function PoolTaskRow({ group, myAccounts, onClaim }) {
             disabled={!accountId}
             className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            할게요
+            작업신청
           </button>
         </div>
       )}

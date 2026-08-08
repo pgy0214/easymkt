@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { api } from '../lib/api.js'
+import Button from './ui/Button.jsx'
+import Input from './ui/Input.jsx'
 
 export default function AdminLogin({ onLoggedIn }) {
   const [username, setUsername] = useState('')
@@ -22,38 +24,30 @@ export default function AdminLogin({ onLoggedIn }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6">
-        <h1 className="mb-4 text-lg font-semibold text-slate-900">
-          리뷰몬 <span className="font-normal text-slate-400">관리자 로그인</span>
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
+      <div className="w-full max-w-sm rounded-card border border-gray-200 bg-white p-6">
+        <h1 className="mb-4 text-lg font-semibold text-gray-900">
+          이지리뷰 <span className="font-normal text-gray-400">관리자 로그인</span>
         </h1>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-xs text-slate-500">아이디</label>
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoFocus
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500">비밀번호</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-          >
+          <Input
+            label="아이디"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoFocus
+            className="w-full"
+          />
+          <Input
+            label="비밀번호"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full"
+          />
+          <Button type="submit" disabled={submitting} className="w-full">
             {submitting ? '로그인 중...' : '로그인'}
-          </button>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          </Button>
+          {error && <p className="text-sm text-danger-text">{error}</p>}
         </form>
       </div>
     </div>

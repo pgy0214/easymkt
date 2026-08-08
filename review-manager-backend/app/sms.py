@@ -54,7 +54,7 @@ def send_otp_sms(phone: str, code: str) -> None:
     """Send an OTP code via Aligo (알리고). Requires ALIGO_USER_ID, ALIGO_API_KEY,
     ALIGO_SENDER in the environment (.env) — the actual registered sender number
     must be pre-approved in the Aligo dashboard."""
-    send_sms(phone, f"[리뷰관리] 인증번호는 {code} 입니다. 5분 내에 입력해주세요.")
+    send_sms(phone, f"[이지리뷰] 인증번호는 {code} 입니다. 5분 내에 입력해주세요.")
 
 
 def send_kakao_alimtalk(

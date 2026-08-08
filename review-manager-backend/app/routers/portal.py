@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from app import auth, crud, kakao, models, schemas, sms
+from app.crawlers import naver_date_check
 from app.database import get_db
 
 router = APIRouter(prefix="/api/portal", tags=["portal"])
@@ -154,6 +155,30 @@ def get_pool(
     if not platforms:
         return []
     return crud.get_open_pool_summary(db, platforms, reviewer)
+
+
+@router.post("/accounts/check-availability", response_model=list[schemas.AccountAvailabilityOut])
+def check_availability(
+    reviewer: models.Reviewer = Depends(get_current_reviewer), db: Session = Depends(get_db)
+):
+    """스케줄러(2분 주기)를 기다리지 않고, 지금 이 순간 내 계정들의 마이플레이스를
+    직접 크롤링해서 리뷰 가능한 날짜가 있는지 즉시 확인한다. 계정 1개당 실제
+    브라우저를 띄워 확인하므로 몇 초씩 걸릴 수 있다."""
+    results = []
+    for account in reviewer.accounts:
+        if account.platform != "naver" or not account.profile_url:
+            continue
+        try:
+            date = naver_date_check.find_next_available_date(account.profile_url)
+        except Exception as e:
+            results.append(
+                schemas.AccountAvailabilityOut(account_id=account.id, label=account.label, error=str(e))
+            )
+            continue
+        results.append(
+            schemas.AccountAvailabilityOut(account_id=account.id, label=account.label, available_date=date)
+        )
+    return results
 
 
 @router.get("/tasks/mine", response_model=list[schemas.TaskOut])
