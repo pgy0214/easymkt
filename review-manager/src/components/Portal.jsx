@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { API_ORIGIN, portalApi } from '../lib/api.js'
 import { formatDateTime, formatKRW, PLATFORM_LABEL } from '../lib/format.js'
 import AccountForm from './AccountForm.jsx'
+import CopyButton from './CopyButton.jsx'
+import ImageCopyButton from './ImageCopyButton.jsx'
 
 const TOKEN_KEY = 'portal_token'
 
@@ -462,9 +464,6 @@ function TaskBriefModal({ token, taskId, onClose }) {
 
   const hasNothing =
     brief &&
-    !brief.guideline &&
-    !brief.regional_features &&
-    !brief.menu_items?.length &&
     !brief.reference_photo_path &&
     !brief.assigned_photo_paths?.length &&
     !brief.assigned_review_text &&
@@ -495,36 +494,12 @@ function TaskBriefModal({ token, taskId, onClose }) {
               <p className="text-slate-400">아직 등록된 원고 자료가 없습니다.</p>
             )}
 
-            {brief.guideline && (
-              <div>
-                <p className="text-xs font-medium text-slate-500">원고 가이드라인</p>
-                <p className="whitespace-pre-wrap text-slate-700">{brief.guideline}</p>
-              </div>
-            )}
-
-            {brief.regional_features && (
-              <div>
-                <p className="text-xs font-medium text-slate-500">지역적 특징</p>
-                <p className="whitespace-pre-wrap text-slate-700">{brief.regional_features}</p>
-              </div>
-            )}
-
-            {brief.menu_items?.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-slate-500">메뉴</p>
-                <ul className="text-slate-700">
-                  {brief.menu_items.map((item, i) => (
-                    <li key={i}>
-                      {item.name} — {formatKRW(item.price)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             {brief.assigned_review_text && (
               <div>
-                <p className="text-xs font-medium text-slate-500">이 리뷰에 쓸 원고</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-slate-500">이 리뷰에 쓸 원고</p>
+                  <CopyButton value={brief.assigned_review_text} label="원고" />
+                </div>
                 <p className="whitespace-pre-wrap text-slate-700">{brief.assigned_review_text}</p>
               </div>
             )}
@@ -547,12 +522,14 @@ function TaskBriefModal({ token, taskId, onClose }) {
                 </p>
                 <div className="mt-1 grid grid-cols-2 gap-2">
                   {brief.assigned_photo_paths.map((path) => (
-                    <img
-                      key={path}
-                      src={`${API_ORIGIN}${path}`}
-                      alt="배정된 사진"
-                      className="rounded border border-slate-200"
-                    />
+                    <div key={path} className="space-y-1">
+                      <img
+                        src={`${API_ORIGIN}${path}`}
+                        alt="배정된 사진"
+                        className="rounded border border-slate-200"
+                      />
+                      <ImageCopyButton src={`${API_ORIGIN}${path}`} label="사진 복사" />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -566,6 +543,9 @@ function TaskBriefModal({ token, taskId, onClose }) {
                   alt="영수증 이미지"
                   className="mt-1 max-h-96 rounded border border-slate-200"
                 />
+                <div className="mt-1">
+                  <ImageCopyButton src={`${API_ORIGIN}${brief.receipt_image_path}`} label="영수증 복사" />
+                </div>
               </div>
             ) : (
               <p className="text-xs text-slate-400">
