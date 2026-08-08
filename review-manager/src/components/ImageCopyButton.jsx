@@ -30,7 +30,7 @@ async function copyImageToClipboard(url) {
   }
 }
 
-export default function ImageCopyButton({ src, label }) {
+export default function ImageCopyButton({ src, label, size = 'sm' }) {
   const [state, setState] = useState('idle') // idle | copying | copied | error
 
   async function handleClick() {
@@ -44,6 +44,24 @@ export default function ImageCopyButton({ src, label }) {
       alert(err.message || '이미지 복사에 실패했습니다 — 브라우저가 지원하지 않을 수 있어요')
       setState('idle')
     }
+  }
+
+  if (size === 'lg') {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={state === 'copying'}
+        className={`inline-flex items-center gap-1.5 rounded-lg border-2 px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+          state === 'copied'
+            ? 'border-green-300 bg-green-50 text-green-700'
+            : 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100'
+        }`}
+      >
+        {state === 'copied' ? <Check size={16} /> : <Copy size={16} />}
+        {state === 'copying' ? '복사 중...' : state === 'copied' ? '복사됨' : label ? `${label} 복사하기` : '복사하기'}
+      </button>
+    )
   }
 
   return (

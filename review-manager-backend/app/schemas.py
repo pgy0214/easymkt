@@ -357,6 +357,7 @@ class TaskOut(BaseModel):
     reviewer_contact_info: Optional[str] = None
     reviewer_category: Optional[str] = None
     account_label: Optional[str] = None
+    account_profile_url: Optional[str] = None
     store_id: Optional[int] = None
     store_name: Optional[str] = None
     store_url: Optional[str] = None

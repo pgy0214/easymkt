@@ -756,6 +756,7 @@ def task_to_out(db: Session, task: models.Task) -> schemas.TaskOut:
         out.reviewer_category = reviewer.category
     if account is not None:
         out.account_label = account.label
+        out.account_profile_url = account.profile_url
     if target is not None and target.store is not None:
         out.store_id = target.store.id
         out.store_name = target.store.name

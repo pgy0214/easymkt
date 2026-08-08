@@ -5,6 +5,7 @@ import { formatDateTime, formatKRW, PLATFORM_LABEL } from '../lib/format.js'
 import AccountForm from './AccountForm.jsx'
 import CopyButton from './CopyButton.jsx'
 import ImageCopyButton from './ImageCopyButton.jsx'
+import ImageDownloadButton from './ImageDownloadButton.jsx'
 
 const TOKEN_KEY = 'portal_token'
 
@@ -418,6 +419,24 @@ function MyTaskRow({ task, token, onSubmitResult }) {
           </button>
         </div>
       </div>
+      {(task.account_label || task.account_profile_url) && (
+        <div className="mt-0.5 text-xs text-slate-500">
+          작업 계정: {task.account_label || '-'}
+          {task.account_profile_url && (
+            <>
+              {' · '}
+              <a
+                href={task.account_profile_url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                플레이스 주소 열기
+              </a>
+            </>
+          )}
+        </div>
+      )}
       {task.claim_deadline && task.status !== 'completed' && (
         <div className="text-xs text-slate-500">기한: {formatDateTime(task.claim_deadline)}</div>
       )}
@@ -497,10 +516,10 @@ function TaskBriefModal({ token, taskId, onClose }) {
             {brief.assigned_review_text && (
               <div>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-slate-500">이 리뷰에 쓸 원고</p>
-                  <CopyButton value={brief.assigned_review_text} label="원고" />
+                  <p className="text-base font-bold text-slate-800">원고</p>
+                  <CopyButton value={brief.assigned_review_text} label="원고" size="lg" />
                 </div>
-                <p className="whitespace-pre-wrap text-slate-700">{brief.assigned_review_text}</p>
+                <p className="mt-1 whitespace-pre-wrap text-slate-700">{brief.assigned_review_text}</p>
               </div>
             )}
 
@@ -517,18 +536,26 @@ function TaskBriefModal({ token, taskId, onClose }) {
 
             {brief.assigned_photo_paths?.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-slate-500">
-                  이 리뷰에 사용할 사진 ({brief.assigned_photo_paths.length}장)
+                <p className="text-base font-bold text-slate-800">
+                  첨부사진 ({brief.assigned_photo_paths.length}장)
                 </p>
-                <div className="mt-1 grid grid-cols-2 gap-2">
-                  {brief.assigned_photo_paths.map((path) => (
-                    <div key={path} className="space-y-1">
+                <div className="mt-2 space-y-3">
+                  {brief.assigned_photo_paths.map((path, i) => (
+                    <div key={path} className="space-y-2">
                       <img
                         src={`${API_ORIGIN}${path}`}
                         alt="배정된 사진"
-                        className="rounded border border-slate-200"
+                        className="w-full rounded border border-slate-200"
                       />
-                      <ImageCopyButton src={`${API_ORIGIN}${path}`} label="사진 복사" />
+                      <div className="flex flex-wrap gap-2">
+                        <ImageCopyButton src={`${API_ORIGIN}${path}`} label="사진" size="lg" />
+                        <ImageDownloadButton
+                          src={`${API_ORIGIN}${path}`}
+                          filename={`사진_${i + 1}.jpg`}
+                          label="사진"
+                          size="lg"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -537,14 +564,20 @@ function TaskBriefModal({ token, taskId, onClose }) {
 
             {brief.receipt_image_path ? (
               <div>
-                <p className="text-xs font-medium text-slate-500">영수증 이미지</p>
+                <p className="text-base font-bold text-slate-800">영수증이미지</p>
                 <img
                   src={`${API_ORIGIN}${brief.receipt_image_path}`}
                   alt="영수증 이미지"
-                  className="mt-1 max-h-96 rounded border border-slate-200"
+                  className="mt-1 w-full max-h-96 rounded border border-slate-200"
                 />
-                <div className="mt-1">
-                  <ImageCopyButton src={`${API_ORIGIN}${brief.receipt_image_path}`} label="영수증 복사" />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <ImageCopyButton src={`${API_ORIGIN}${brief.receipt_image_path}`} label="영수증" size="lg" />
+                  <ImageDownloadButton
+                    src={`${API_ORIGIN}${brief.receipt_image_path}`}
+                    filename="영수증.jpg"
+                    label="영수증"
+                    size="lg"
+                  />
                 </div>
               </div>
             ) : (
