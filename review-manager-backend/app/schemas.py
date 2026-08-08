@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 Platform = Literal["naver", "kakao"]
 ReviewerCategory = Literal["admin", "reviewer", "experience", "press"]
 Gender = Literal["male", "female"]
+TimeSlot = Literal["morning", "afternoon", "night"]
 
 
 # --- Admin dashboard login ---
@@ -27,6 +28,7 @@ class ReviewAccountCreate(BaseModel):
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
     adspower_profile_id: Optional[str] = None
+    time_slot: Optional[TimeSlot] = None
     has_login_issue: bool = False
     password: Optional[str] = None  # crud가 암호화해서 저장, 평문은 DB에 안 남음
 
@@ -37,6 +39,7 @@ class ReviewAccountUpdate(BaseModel):
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
     adspower_profile_id: Optional[str] = None
+    time_slot: Optional[TimeSlot] = None
     has_login_issue: Optional[bool] = None
     password: Optional[str] = None  # 빈 문자열이면 비밀번호 삭제, None이면 안 건드림
 
@@ -51,6 +54,7 @@ class ReviewAccountOut(BaseModel):
     profile_url: Optional[str] = None
     ip_address: Optional[str] = None
     adspower_profile_id: Optional[str] = None
+    time_slot: Optional[TimeSlot] = None
     has_login_issue: bool = False
     created_at: datetime.datetime
 
@@ -61,6 +65,14 @@ class ReviewAccountOut(BaseModel):
 
 class AccountLaunchOut(BaseModel):
     debug_port: Optional[str] = None
+
+
+class BulkAssignTimeSlotIn(BaseModel):
+    account_ids: list[int]
+
+
+class BulkAssignTimeSlotOut(BaseModel):
+    assigned_count: int
 
 
 # --- Reviewer ---

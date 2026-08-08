@@ -243,4 +243,8 @@ def run_migrations(engine) -> None:
                     rule,
                 )
 
+        # review_accounts: time_slot — 이 계정이 영수증을 만들 시간대 밴드
+        # ('morning'|'afternoon'|'night'). 미설정 계정은 영수증 생성을 보류한다.
+        _add_column_if_missing(conn, "review_accounts", "time_slot", "time_slot TEXT")
+
         conn.commit()

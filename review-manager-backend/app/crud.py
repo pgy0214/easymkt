@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import random
 import re
 import secrets
 
@@ -312,6 +313,7 @@ def create_account(
         profile_url=data.profile_url,
         ip_address=data.ip_address,
         adspower_profile_id=data.adspower_profile_id,
+        time_slot=data.time_slot,
         has_login_issue=data.has_login_issue,
         password_encrypted=crypto.encrypt(data.password) if data.password else None,
     )
@@ -342,6 +344,8 @@ def update_account(
         account.ip_address = data.ip_address
     if data.adspower_profile_id is not None:
         account.adspower_profile_id = data.adspower_profile_id
+    if data.time_slot is not None:
+        account.time_slot = data.time_slot
     if data.has_login_issue is not None:
         account.has_login_issue = data.has_login_issue
     if data.password is not None:
@@ -349,6 +353,21 @@ def update_account(
     db.commit()
     db.refresh(account)
     return account
+
+
+def bulk_assign_time_slots(db: Session, account_ids: list[int]) -> int:
+    """선택된 계정 중 시간대(오전/오후/밤)가 아직 없는 계정에만 랜덤으로 하나씩
+    배정한다. 이미 배정된 계정은 건드리지 않아 여러 번 눌러도 안전하다."""
+    accounts = (
+        db.query(models.ReviewAccount)
+        .filter(models.ReviewAccount.id.in_(account_ids), models.ReviewAccount.time_slot.is_(None))
+        .all()
+    )
+    slots = list(schemas.TimeSlot.__args__)
+    for account in accounts:
+        account.time_slot = random.choice(slots)
+    db.commit()
+    return len(accounts)
 
 
 def delete_account(db: Session, account: models.ReviewAccount) -> None:

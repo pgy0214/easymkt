@@ -17,6 +17,13 @@ def update_account(
     return crud.account_to_out(crud.update_account(db, account, data))
 
 
+@router.post("/bulk-assign-time-slot", response_model=schemas.BulkAssignTimeSlotOut)
+def bulk_assign_time_slot(data: schemas.BulkAssignTimeSlotIn, db: Session = Depends(get_db)):
+    """선택한 계정 중 시간대(오전/오후/밤) 미배정 계정에만 랜덤으로 배정한다."""
+    count = crud.bulk_assign_time_slots(db, data.account_ids)
+    return schemas.BulkAssignTimeSlotOut(assigned_count=count)
+
+
 @router.delete("/{account_id}")
 def delete_account(account_id: int, db: Session = Depends(get_db)):
     account = crud.get_account(db, account_id)

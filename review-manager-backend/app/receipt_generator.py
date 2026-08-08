@@ -241,6 +241,43 @@ def _random_time_in_range(hours_range: str | None) -> tuple[int, int, int]:
     return random.randint(17, 21), random.randint(0, 59), random.randint(0, 59)
 
 
+# 계정별 고정 시간대 밴드 — "부산에서 12시에 쓰고 서울에서 13시에 쓰는" 것처럼 물리적으로
+# 불가능해 보이지 않도록, 계정마다 항상 같은 시간대(오전/오후/밤)에만 영수증을 만든다.
+TIME_SLOT_BANDS = {
+    "morning": (11 * 60, 15 * 60),
+    "afternoon": (15 * 60, 18 * 60),
+    "night": (18 * 60, 21 * 60),
+}
+
+
+def _parse_hours_range(hours_range: str | None) -> tuple[int, int] | None:
+    if not hours_range:
+        return None
+    m = re.match(r"(\d{1,2}):(\d{2})~(\d{1,2}):(\d{2})", hours_range)
+    if not m:
+        return None
+    start_h, start_m, end_h, end_m = map(int, m.groups())
+    start_total, end_total = start_h * 60 + start_m, end_h * 60 + end_m
+    return (start_total, end_total) if end_total > start_total else None
+
+
+def clip_band_to_store_hours(time_slot: str, hours_range: str | None) -> str | None:
+    """계정의 고정 시간대 밴드를 매장의 실제 대표시간과 교집합으로 잘라 "HH:MM~HH:MM"
+    문자열로 돌려준다. 매장이 그 시간대에 아예 영업을 안 하면(교집합이 없으면) None —
+    이 계정은 이 매장에 대해서는 이 밴드로 영수증을 만들 수 없다는 뜻이다."""
+    band = TIME_SLOT_BANDS.get(time_slot)
+    if not band:
+        return None
+    store_range = _parse_hours_range(hours_range)
+    if not store_range:
+        return None
+    start = max(band[0], store_range[0])
+    end = min(band[1], store_range[1])
+    if end <= start:
+        return None
+    return f"{start // 60:02d}:{start % 60:02d}~{end // 60:02d}:{end % 60:02d}"
+
+
 def _time_diff_hours(a: time, b: time) -> float:
     seconds_a = a.hour * 3600 + a.minute * 60 + a.second
     seconds_b = b.hour * 3600 + b.minute * 60 + b.second

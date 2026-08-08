@@ -88,6 +88,11 @@ export const api = {
   getAccountStoreHistory: (id) => request(`/accounts/${id}/store-history`),
   launchAccount: (id) => request(`/accounts/${id}/launch`, { method: 'POST' }),
   detectProfileUrl: (id) => request(`/accounts/${id}/detect-profile-url`, { method: 'POST' }),
+  bulkAssignTimeSlot: (accountIds) =>
+    request('/accounts/bulk-assign-time-slot', {
+      method: 'POST',
+      body: JSON.stringify({ account_ids: accountIds }),
+    }),
 
   getStores: (platform) => request(`/stores${toQueryString({ platform })}`),
   createStore: (data) => request('/stores', { method: 'POST', body: JSON.stringify(data) }),

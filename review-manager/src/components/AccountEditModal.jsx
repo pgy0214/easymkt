@@ -12,6 +12,7 @@ export default function AccountEditModal({ row, onClose, onSaved }) {
   const [profileUrl, setProfileUrl] = useState(row.profile_url || '')
   const [ipAddress, setIpAddress] = useState(row.ip_address || '')
   const [adspowerProfileId, setAdspowerProfileId] = useState(row.adspower_profile_id || '')
+  const [timeSlot, setTimeSlot] = useState(row.time_slot || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [detecting, setDetecting] = useState(false)
@@ -47,6 +48,7 @@ export default function AccountEditModal({ row, onClose, onSaved }) {
           profile_url: platform === 'naver' ? profileUrl.trim() || null : null,
           ip_address: ipAddress.trim() || null,
           adspower_profile_id: adspowerProfileId.trim() || null,
+          time_slot: timeSlot || null,
         }),
       ])
       onSaved({ ...row, ...account, name: reviewer.name, gender: reviewer.gender, birth_date: reviewer.birth_date, contact_info: reviewer.contact_info })
@@ -182,6 +184,23 @@ export default function AccountEditModal({ row, onClose, onSaved }) {
           />
           <p className="mt-0.5 text-[11px] text-slate-400">
             설정하면 목록에서 "실행" 버튼으로 이 계정의 AdsPower 브라우저 창을 바로 띄울 수 있어요.
+          </p>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500">시간대 (영수증 작성 시간대)</label>
+          <select
+            value={timeSlot}
+            onChange={(e) => setTimeSlot(e.target.value)}
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          >
+            <option value="">미배정 (영수증 생성 보류)</option>
+            <option value="morning">오전 (11:00~15:00)</option>
+            <option value="afternoon">오후 (15:00~18:00)</option>
+            <option value="night">밤 (18:00~21:00)</option>
+          </select>
+          <p className="mt-0.5 text-[11px] text-slate-400">
+            평소에는 목록의 "선택 시간대 랜덤배정" 버튼으로 자동 배정하고, 여기서는 특정
+            계정만 수동으로 바꾸고 싶을 때 사용하세요.
           </p>
         </div>
 

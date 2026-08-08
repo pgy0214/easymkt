@@ -1,4 +1,4 @@
-import { Download, ExternalLink, Pencil, Play, Plus, Search, Send, Trash2, Upload } from 'lucide-react'
+import { Clock, Download, ExternalLink, Pencil, Play, Plus, Search, Send, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import AccountEditModal from './AccountEditModal.jsx'
@@ -15,6 +15,12 @@ const GENDER_BADGE = {
 const GENDER_SHORT = {
   male: '남',
   female: '여',
+}
+
+const TIME_SLOT_LABEL = {
+  morning: '오전 (11-15시)',
+  afternoon: '오후 (15-18시)',
+  night: '밤 (18-21시)',
 }
 
 // 화면 표시 전용 압축 형식(YYMMDD, 예: 1957-07-10 → "570710") — 일괄등록 시에도
@@ -71,6 +77,7 @@ export default function AdminAccountManager() {
   const [checkingEligibility, setCheckingEligibility] = useState(false)
   const [selectedKeys, setSelectedKeys] = useState(new Set())
   const [bulkAssigning, setBulkAssigning] = useState(false)
+  const [assigningTimeSlot, setAssigningTimeSlot] = useState(false)
   const [launchingId, setLaunchingId] = useState(null)
   const fileInputRef = useRef(null)
 
@@ -268,6 +275,21 @@ export default function AdminAccountManager() {
   }
 
   const selectedRows = useMemo(() => rows.filter((r) => selectedKeys.has(rowKey(r))), [rows, selectedKeys])
+
+  async function handleBulkAssignTimeSlot() {
+    const accountIds = selectedRows.filter((r) => r.id != null).map((r) => r.id)
+    if (accountIds.length === 0) return
+    setAssigningTimeSlot(true)
+    try {
+      const result = await api.bulkAssignTimeSlot(accountIds)
+      alert(`${result.assigned_count}개 계정에 시간대를 배정했습니다 (이미 배정된 계정은 건너뜀)`)
+      await refresh()
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setAssigningTimeSlot(false)
+    }
+  }
 
   async function handleBulkDelete() {
     if (!confirm(`선택한 ${selectedRows.length}개 계정을 삭제할까요?`)) return
@@ -508,6 +530,15 @@ export default function AdminAccountManager() {
                   선택 작업 배분
                 </button>
                 <button
+                  onClick={handleBulkAssignTimeSlot}
+                  disabled={assigningTimeSlot}
+                  className="flex items-center gap-1 rounded border border-purple-200 bg-purple-50 px-2 py-1 text-xs text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+                  title="시간대가 아직 없는 계정에만 오전/오후/밤 중 하나를 랜덤으로 배정합니다"
+                >
+                  <Clock size={12} />
+                  {assigningTimeSlot ? '배정 중...' : '선택 시간대 랜덤배정'}
+                </button>
+                <button
                   onClick={handleBulkDelete}
                   className="flex items-center gap-1 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
                 >
@@ -553,6 +584,7 @@ export default function AdminAccountManager() {
                 <th className="px-1.5 py-0.5">계정 아이디</th>
                 <th className="px-1.5 py-0.5">비밀번호</th>
                 <th className="px-1.5 py-0.5">URL</th>
+                <th className="px-1.5 py-0.5">시간대</th>
                 <th className="px-1.5 py-0.5">상태</th>
                 <th className="px-1.5 py-0.5" />
               </tr>
@@ -611,6 +643,17 @@ export default function AdminAccountManager() {
                       >
                         <ExternalLink size={13} />
                       </a>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td className="px-1.5 py-0.5 text-slate-500">
+                    {row.id != null ? (
+                      row.time_slot ? (
+                        TIME_SLOT_LABEL[row.time_slot]
+                      ) : (
+                        <span className="text-amber-600">미배정</span>
+                      )
                     ) : (
                       '-'
                     )}

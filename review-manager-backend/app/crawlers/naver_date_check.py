@@ -102,12 +102,30 @@ def _generate_receipt_if_possible(db, task: models.Task) -> None:
     menu_items = crud.decode_menu_items(target.menu_items_json)
     card_rules = crud.card_rules_as_dicts(db)
 
+    account = task.review_account
+    if not account or not account.time_slot:
+        logger.info(
+            "Task %s: 계정에 시간대(오전/오후/밤)가 배정되지 않아 영수증 생성을 보류합니다",
+            task.id,
+        )
+        return
+
+    hours_range = receipt_generator.clip_band_to_store_hours(account.time_slot, store.representative_hours)
+    if hours_range is None:
+        logger.warning(
+            "Task %s: 계정 시간대(%s)와 매장 영업시간(%s)이 겹치지 않아 영수증 생성을 건너뜁니다",
+            task.id,
+            account.time_slot,
+            store.representative_hours,
+        )
+        return
+
     # 같은 계정이 같은 날짜에 이미 확정한 영수증 시간들과 최소 4시간 이상 떨어진
     # 시간을 골라야 물리적으로 이동 불가능한(예: 부산 10시·서울 11시) 배정이 안 된다.
     existing_times = crud.get_receipt_times_for_account_on_date(
         db, task.review_account_id, task.naver_available_date, exclude_task_id=task.id
     )
-    receipt_time = receipt_generator.pick_time_with_gap(store.representative_hours, existing_times)
+    receipt_time = receipt_generator.pick_time_with_gap(hours_range, existing_times)
     if receipt_time is None:
         logger.warning(
             "Task %s: 같은 계정·같은 날짜(%s)에 4시간 간격을 낼 시간 자리가 없어 영수증 생성을 건너뜁니다",

@@ -54,6 +54,7 @@ class ReviewAccount(Base):
     profile_url = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)  # 관리자(자체보유) 계정에 배정된 IP
     adspower_profile_id = Column(String, nullable=True)  # AdsPower 프로필 user_id — 설정하면 "실행" 버튼으로 해당 창을 바로 띄울 수 있음
+    time_slot = Column(String, nullable=True)  # 'morning'|'afternoon'|'night' — 영수증 시간 배정 밴드. 미설정이면 영수증 생성 보류
     has_login_issue = Column(Boolean, nullable=False, default=False)  # 로그인 불가 등 문제 발생 시 관리자 체크용
     password_encrypted = Column(String, nullable=True)  # Fernet 암호화된 계정 비밀번호 (app/crypto.py)
     created_at = Column(DateTime, default=utcnow)
