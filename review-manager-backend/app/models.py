@@ -263,6 +263,10 @@ class ExperienceCampaign(Base):
     review_deadline = Column(Date, nullable=True)
     is_recurring = Column(Boolean, nullable=False, default=False)  # 값만 저장, 자동 재등록 로직은 없음
     image_path = Column(String, nullable=True)  # 캠페인 카드 대표 이미지 (선택)
+    # 모집 희망사항 — 광고주가 원하는 블로거 조건, 관리자 전용(포털/리뷰어에는 노출 안 함)
+    target_age_group = Column(String, nullable=True)
+    target_region = Column(String, nullable=True)
+    target_blog_index = Column(String, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     store = relationship("Store")

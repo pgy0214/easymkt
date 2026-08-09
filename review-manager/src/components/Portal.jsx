@@ -1,4 +1,4 @@
-import { ExternalLink, LogOut, Trash2 } from 'lucide-react'
+import { ExternalLink, LogOut, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { API_ORIGIN, portalApi } from '../lib/api.js'
 import {
@@ -649,7 +649,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   if (!reviewer) return null
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4">
+    <div className={`mx-auto space-y-6 p-4 ${mode === 'experience' ? 'max-w-6xl' : 'max-w-3xl'}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <img src="/logo.svg" alt="" className="h-8 w-8 shrink-0" />
@@ -986,6 +986,20 @@ function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
 
 const CAMPAIGN_DDAY_MS = 24 * 60 * 60 * 1000
 
+// recruit_start/recruit_end는 타임존 표기 없는 UTC 문자열이라 'Z'를 붙여야 로컬시각과
+// 올바르게 비교/표시된다(CampaignManager.jsx의 동일한 변환 로직과 짝)
+function campaignDaysLeft(recruitEnd) {
+  const recruitEndUtc = recruitEnd.includes('Z') ? recruitEnd : `${recruitEnd}Z`
+  return Math.ceil((new Date(recruitEndUtc) - new Date()) / CAMPAIGN_DDAY_MS)
+}
+
+function formatCampaignDate(value) {
+  if (!value) return '-'
+  const date = new Date(value.includes('Z') ? value : `${value}Z`)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 function ExperienceProfileCard({ token, reviewer, onUpdated }) {
   const [blogUrl, setBlogUrl] = useState(reviewer.blog_url || '')
   const [blogIndex, setBlogIndex] = useState(reviewer.blog_index || '')
@@ -1113,6 +1127,7 @@ function ExperienceCampaignList({ token }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [applyingId, setApplyingId] = useState(null)
+  const [detailCampaign, setDetailCampaign] = useState(null)
 
   async function refresh() {
     setLoading(true)
@@ -1136,6 +1151,7 @@ function ExperienceCampaignList({ token }) {
     try {
       const updated = await portalApi.applyToExperienceCampaign(token, campaignId)
       setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? updated : c)))
+      setDetailCampaign((prev) => (prev && prev.id === campaignId ? updated : prev))
     } catch (err) {
       alert(err.message)
     } finally {
@@ -1151,16 +1167,17 @@ function ExperienceCampaignList({ token }) {
       {!loading && campaigns.length === 0 && (
         <p className="text-sm text-gray-400">지금 신청할 수 있는 캠페인이 없습니다.</p>
       )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
         {campaigns.map((c) => {
-          // recruit_end는 타임존 표기 없는 UTC 문자열이라 'Z'를 붙여야 로컬시각과
-          // 올바르게 비교된다(CampaignManager.jsx의 toUtcNaiveIso/formatUtcToLocal과 동일한 이유)
-          const recruitEndUtc = c.recruit_end.includes('Z') ? c.recruit_end : `${c.recruit_end}Z`
-          const daysLeft = Math.ceil((new Date(recruitEndUtc) - new Date()) / CAMPAIGN_DDAY_MS)
-          const isFull = c.applicant_count >= c.capacity
+          const daysLeft = campaignDaysLeft(c.recruit_end)
           return (
-            <div key={c.id} className="overflow-hidden rounded-card border border-gray-200 bg-white">
-              <div className="relative aspect-[4/3] w-full bg-gray-100">
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setDetailCampaign(c)}
+              className="overflow-hidden rounded-card border border-gray-200 bg-white text-left hover:border-brand-300"
+            >
+              <div className="relative aspect-square w-full bg-gray-100">
                 {c.image_path ? (
                   <img
                     src={`${API_ORIGIN}${c.image_path}`}
@@ -1168,46 +1185,153 @@ function ExperienceCampaignList({ token }) {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-gray-300">
+                  <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-300">
                     이미지 없음
                   </div>
                 )}
-                <span className="absolute left-2 top-2 rounded-btn bg-white/90 px-2 py-0.5 text-xs font-medium text-gray-700 shadow-sm">
-                  {c.campaign_type}
-                </span>
                 <span
-                  className={`absolute right-2 top-2 rounded-btn px-2 py-0.5 text-xs font-medium shadow-sm ${
+                  className={`absolute right-1 top-1 rounded-btn px-1.5 py-0.5 text-[10px] font-medium shadow-sm ${
                     daysLeft <= 1 ? 'bg-danger-bg text-danger-text' : 'bg-white/90 text-gray-500'
                   }`}
                 >
-                  {daysLeft <= 0 ? '마감임박' : `${daysLeft}일 남음`}
+                  {daysLeft <= 0 ? '마감임박' : `${daysLeft}일`}
                 </span>
-              </div>
-              <div className="p-3">
-                <div className="font-medium text-gray-800">{c.store_name}</div>
-                {c.store_region && <div className="text-xs text-gray-500">{c.store_region}</div>}
-                <div className="mt-1 text-xs text-gray-500">
-                  {c.content_type} · {c.product_name}
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-500">
-                    신청 {c.applicant_count}명 / {c.capacity}명
+                {c.already_applied && (
+                  <span className="absolute left-1 top-1 rounded-btn bg-brand-600/90 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                    신청완료
                   </span>
-                  <Button
-                    size="sm"
-                    variant={c.already_applied ? 'outline' : 'primary'}
-                    disabled={c.already_applied || (isFull && !c.already_applied) || applyingId === c.id}
-                    onClick={() => handleApply(c.id)}
-                  >
-                    {c.already_applied ? '신청완료' : isFull ? '마감' : applyingId === c.id ? '신청 중...' : '신청하기'}
-                  </Button>
+                )}
+              </div>
+              <div className="p-1.5">
+                <div className="truncate text-xs font-medium text-gray-800">{c.store_name}</div>
+                <div className="truncate text-[11px] text-gray-400">
+                  {c.content_type} · {c.store_region || c.product_name}
                 </div>
               </div>
-            </div>
+            </button>
           )
         })}
       </div>
+      {detailCampaign && (
+        <ExperienceCampaignDetailModal
+          campaign={detailCampaign}
+          applying={applyingId === detailCampaign.id}
+          onApply={() => handleApply(detailCampaign.id)}
+          onClose={() => setDetailCampaign(null)}
+        />
+      )}
     </Card>
+  )
+}
+
+function ExperienceCampaignDetailModal({ campaign: c, applying, onApply, onClose }) {
+  const daysLeft = campaignDaysLeft(c.recruit_end)
+  const isFull = c.applicant_count >= c.capacity
+
+  return (
+    <Modal open onClose={onClose} size="lg">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-btn bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              {c.campaign_type}
+            </span>
+            <span className="rounded-btn bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              {c.content_type}
+            </span>
+            <span className={`text-xs font-medium ${daysLeft <= 1 ? 'text-danger-text' : 'text-gray-400'}`}>
+              {daysLeft <= 0 ? '마감임박' : `${daysLeft}일 남음`}
+            </span>
+          </div>
+          <h3 className="mt-1 text-lg font-semibold text-gray-900">{c.store_name}</h3>
+          {c.store_region && <p className="text-xs text-gray-500">{c.store_region}</p>}
+        </div>
+        <button onClick={onClose} className="shrink-0 text-gray-400 hover:text-gray-700">
+          <X size={18} />
+        </button>
+      </div>
+
+      {c.image_path && (
+        <img
+          src={`${API_ORIGIN}${c.image_path}`}
+          alt=""
+          className="mt-3 max-h-64 w-full rounded-card object-cover"
+        />
+      )}
+
+      <div className="mt-3 space-y-3 text-sm">
+        <div className="rounded-btn border border-gray-100 bg-gray-50 p-2.5">
+          <p className="text-xs font-medium text-gray-500">캠페인 상품</p>
+          <p className="text-gray-800">
+            {c.product_name}
+            {c.product_price ? ` · ${formatKRW(c.product_price)}` : ''}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+          <div>
+            <span className="text-gray-400">모집 기간</span>
+            <br />
+            {formatCampaignDate(c.recruit_start)} ~ {formatCampaignDate(c.recruit_end)}
+          </div>
+          <div>
+            <span className="text-gray-400">제출마감일</span>
+            <br />
+            {c.review_deadline || '-'}
+          </div>
+          <div>
+            <span className="text-gray-400">모집 인원</span>
+            <br />
+            신청 {c.applicant_count}명 / {c.capacity}명
+          </div>
+        </div>
+
+        {(c.main_keyword || c.sub_keyword) && (
+          <div>
+            <p className="text-xs font-medium text-gray-500">키워드</p>
+            <p className="text-gray-700">{[c.main_keyword, c.sub_keyword].filter(Boolean).join(' / ')}</p>
+          </div>
+        )}
+
+        {c.content_guide && (
+          <div>
+            <p className="text-xs font-medium text-gray-500">가이드라인</p>
+            <p className="whitespace-pre-wrap text-gray-700">{c.content_guide}</p>
+          </div>
+        )}
+
+        <div>
+          <p className="text-xs font-medium text-gray-500">방문 정보</p>
+          <p className="text-gray-700">
+            {c.reservation_required ? '예약 필요' : '예약 없이 방문 가능'}
+            {c.contact_name && ` · 담당자 ${c.contact_name}`}
+            {c.contact_method && c.contact_info && ` · ${c.contact_method} ${c.contact_info}`}
+          </p>
+          {c.extra_info && <p className="mt-1 whitespace-pre-wrap text-xs text-gray-500">{c.extra_info}</p>}
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-end gap-2">
+        {c.store_url && (
+          <a
+            href={c.store_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            구경하기
+            <ExternalLink size={14} />
+          </a>
+        )}
+        <Button
+          variant={c.already_applied ? 'outline' : 'primary'}
+          disabled={c.already_applied || (isFull && !c.already_applied) || applying}
+          onClick={onApply}
+        >
+          {c.already_applied ? '신청완료' : isFull ? '마감' : applying ? '신청 중...' : '신청하기'}
+        </Button>
+      </div>
+    </Modal>
   )
 }
 

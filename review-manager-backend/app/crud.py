@@ -1445,6 +1445,9 @@ def create_experience_campaign(db: Session, data: schemas.ExperienceCampaignCrea
         recruit_end=data.recruit_end,
         review_deadline=data.review_deadline,
         is_recurring=data.is_recurring,
+        target_age_group=data.target_age_group,
+        target_region=data.target_region,
+        target_blog_index=data.target_blog_index,
     )
     db.add(campaign)
     db.commit()
@@ -1460,6 +1463,7 @@ def update_experience_campaign(
         "capacity", "content_guide", "main_keyword", "sub_keyword", "reservation_required",
         "contact_name", "contact_method", "contact_info",
         "extra_info", "recruit_start", "recruit_end", "review_deadline", "is_recurring",
+        "target_age_group", "target_region", "target_blog_index",
     ):
         value = getattr(data, field)
         if value is not None:
@@ -1577,15 +1581,26 @@ def get_portal_experience_campaigns(
                 id=c.id,
                 store_name=c.store.name if c.store else "",
                 store_region=c.store.region if c.store else None,
+                store_url=c.store.url if c.store else None,
                 campaign_type=c.campaign_type,
                 content_type=c.content_type,
                 product_name=c.product_name,
+                product_price=c.product_price,
                 capacity=c.capacity,
                 applicant_count=applicant_count,
+                recruit_start=c.recruit_start,
                 recruit_end=c.recruit_end,
                 review_deadline=c.review_deadline,
                 already_applied=c.id in applied_campaign_ids,
                 image_path=c.image_path,
+                content_guide=c.content_guide,
+                main_keyword=c.main_keyword,
+                sub_keyword=c.sub_keyword,
+                reservation_required=c.reservation_required,
+                contact_name=c.contact_name,
+                contact_method=c.contact_method,
+                contact_info=c.contact_info,
+                extra_info=c.extra_info,
             )
         )
     return results

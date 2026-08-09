@@ -287,4 +287,9 @@ def run_migrations(engine) -> None:
             conn, "experience_campaigns", "image_path", "image_path TEXT"
         )
 
+        # experience_campaigns: 모집 희망사항 — 관리자 전용(리뷰어에게는 노출 안 함)
+        _add_column_if_missing(conn, "experience_campaigns", "target_age_group", "target_age_group TEXT")
+        _add_column_if_missing(conn, "experience_campaigns", "target_region", "target_region TEXT")
+        _add_column_if_missing(conn, "experience_campaigns", "target_blog_index", "target_blog_index TEXT")
+
         conn.commit()

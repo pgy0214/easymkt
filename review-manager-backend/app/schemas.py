@@ -644,6 +644,10 @@ class ExperienceCampaignCreate(BaseModel):
     recruit_end: datetime.datetime
     review_deadline: Optional[datetime.date] = None
     is_recurring: bool = False
+    # 모집 희망사항 — 광고주가 원하는 블로거 조건, 관리자 전용(리뷰어에게는 노출 안 함)
+    target_age_group: Optional[str] = None
+    target_region: Optional[str] = None
+    target_blog_index: Optional[str] = None
 
 
 class ExperienceCampaignUpdate(BaseModel):
@@ -665,6 +669,9 @@ class ExperienceCampaignUpdate(BaseModel):
     recruit_end: Optional[datetime.datetime] = None
     review_deadline: Optional[datetime.date] = None
     is_recurring: Optional[bool] = None
+    target_age_group: Optional[str] = None
+    target_region: Optional[str] = None
+    target_blog_index: Optional[str] = None
 
 
 class ExperienceCampaignOut(BaseModel):
@@ -691,6 +698,9 @@ class ExperienceCampaignOut(BaseModel):
     review_deadline: Optional[datetime.date] = None
     is_recurring: bool
     image_path: Optional[str] = None
+    target_age_group: Optional[str] = None
+    target_region: Optional[str] = None
+    target_blog_index: Optional[str] = None
     created_at: datetime.datetime
 
     # denormalized, filled in by crud
@@ -724,12 +734,26 @@ class PortalExperienceCampaignOut(BaseModel):
     id: int
     store_name: str
     store_region: Optional[str] = None
+    store_url: Optional[str] = None  # "구경하기" 버튼용 — 매장/상품 페이지 바로가기
     campaign_type: CampaignType
     content_type: ContentType
     product_name: str
+    product_price: Optional[int] = None
     capacity: int
     applicant_count: int
+    recruit_start: datetime.datetime
     recruit_end: datetime.datetime
     review_deadline: Optional[datetime.date] = None
     already_applied: bool
     image_path: Optional[str] = None
+
+    # 캠페인 상세 — 가이드라인/키워드/방문정보. 모집 희망사항(target_*)은 광고주
+    # 전용 정보라 여기 포함하지 않는다(리뷰어에게 노출 금지).
+    content_guide: Optional[str] = None
+    main_keyword: Optional[str] = None
+    sub_keyword: Optional[str] = None
+    reservation_required: bool = False
+    contact_name: Optional[str] = None
+    contact_method: Optional[str] = None
+    contact_info: Optional[str] = None
+    extra_info: Optional[str] = None

@@ -1,6 +1,7 @@
 import { Plus, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api, API_ORIGIN, experienceCampaignApi } from '../lib/api.js'
+import { AGE_GROUP_OPTIONS, BLOG_INDEX_OPTIONS, REGION_OPTIONS } from '../lib/format.js'
 import Badge from './ui/Badge.jsx'
 import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
@@ -58,6 +59,9 @@ const EMPTY = {
   recruit_end: '',
   review_deadline: '',
   is_recurring: false,
+  target_age_group: '',
+  target_region: '',
+  target_blog_index: '',
 }
 
 export default function CampaignManager() {
@@ -125,6 +129,9 @@ export default function CampaignManager() {
         recruit_end: localDateToUtcNaiveIso(form.recruit_end, true),
         review_deadline: form.review_deadline || null,
         is_recurring: form.is_recurring,
+        target_age_group: form.target_age_group || null,
+        target_region: form.target_region || null,
+        target_blog_index: form.target_blog_index || null,
       })
       if (campaignImage) {
         await experienceCampaignApi.uploadImage(created.id, campaignImage)
@@ -425,6 +432,59 @@ export default function CampaignManager() {
                 rows={2}
                 className="w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
               />
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-gray-100 pt-3">
+            <p className="text-xs font-medium text-gray-500">
+              모집 희망사항 <span className="font-normal text-gray-400">(선택 — 리뷰어에게는 보이지 않습니다)</span>
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500">희망 연령대</label>
+                <select
+                  value={form.target_age_group}
+                  onChange={(e) => setForm({ ...form, target_age_group: e.target.value })}
+                  className="w-full rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
+                >
+                  <option value="">상관없음</option>
+                  {AGE_GROUP_OPTIONS.map((age) => (
+                    <option key={age} value={age}>
+                      {age}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500">희망 지역</label>
+                <select
+                  value={form.target_region}
+                  onChange={(e) => setForm({ ...form, target_region: e.target.value })}
+                  className="w-full rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
+                >
+                  <option value="">상관없음</option>
+                  {REGION_OPTIONS.map((region) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500">희망 지수</label>
+                <select
+                  value={form.target_blog_index}
+                  onChange={(e) => setForm({ ...form, target_blog_index: e.target.value })}
+                  className="w-full rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
+                >
+                  <option value="">상관없음</option>
+                  {BLOG_INDEX_OPTIONS.map((idx) => (
+                    <option key={idx} value={idx}>
+                      {idx}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
