@@ -1256,3 +1256,65 @@ def get_card_rule(db: Session, rule_id: int) -> models.CardRule | None:
 def delete_card_rule(db: Session, rule: models.CardRule) -> None:
     db.delete(rule)
     db.commit()
+
+
+def import_card_rules(db: Session, rows: list[dict]) -> schemas.ReviewerImportResult:
+    """영수증 카드정보 일괄등록 — CardRuleModal 수동등록 폼(POST /card-rules)과
+    동일한 5개 필드를 받아 반복 생성한다. 같은 카드번호+승인번호 앞자리 조합이
+    이미 있으면 건너뛴다(카드정보를 무작위로 골라 쓰는 용도라 완전 중복은 의미 없음)."""
+    created = 0
+    skipped_duplicate = 0
+    skipped_invalid = 0
+    seen_keys: set[tuple[str, str, str]] = set()
+
+    for row in rows:
+        card_prefix_1 = re.sub(r"\D", "", row.get("card_prefix_1") or "")
+        card_prefix_2 = re.sub(r"\D", "", row.get("card_prefix_2") or "")
+        approval_prefix = re.sub(r"\D", "", row.get("approval_prefix") or "")
+        acquirer = (row.get("acquirer") or "").strip()
+        card_type = (row.get("card_type") or "").strip()
+
+        if (
+            len(card_prefix_1) != 4
+            or len(card_prefix_2) != 4
+            or not approval_prefix
+            or len(approval_prefix) > 7
+            or not acquirer
+            or not card_type
+        ):
+            skipped_invalid += 1
+            continue
+
+        key = (card_prefix_1, card_prefix_2, approval_prefix)
+        if key in seen_keys:
+            skipped_duplicate += 1
+            continue
+        existing = (
+            db.query(models.CardRule)
+            .filter(
+                models.CardRule.card_prefix_1 == card_prefix_1,
+                models.CardRule.card_prefix_2 == card_prefix_2,
+                models.CardRule.approval_prefix == approval_prefix,
+            )
+            .first()
+        )
+        if existing:
+            skipped_duplicate += 1
+            continue
+        seen_keys.add(key)
+
+        db.add(
+            models.CardRule(
+                card_prefix_1=card_prefix_1,
+                card_prefix_2=card_prefix_2,
+                approval_prefix=approval_prefix,
+                acquirer=acquirer,
+                card_type=card_type,
+            )
+        )
+        created += 1
+
+    db.commit()
+    return schemas.ReviewerImportResult(
+        created=created, skipped_duplicate=skipped_duplicate, skipped_invalid=skipped_invalid
+    )

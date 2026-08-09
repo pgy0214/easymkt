@@ -134,6 +134,38 @@ def parse_admin_account_rows(content: bytes, filename: str) -> list[dict]:
     return results
 
 
+CARD_PREFIX_1_HEADERS = {"카드번호 앞 4자리", "카드번호앞4자리"}
+CARD_PREFIX_2_HEADERS = {"카드번호 다음 4자리", "카드번호다음4자리"}
+APPROVAL_PREFIX_HEADERS = {"승인번호 앞자리", "승인번호앞자리"}
+ACQUIRER_HEADERS = {"매입사명", "매입사"}
+CARD_TYPE_HEADERS = {"카드종류"}
+
+
+def parse_card_rule_rows(content: bytes, filename: str) -> list[dict]:
+    """영수증 카드정보 일괄등록 시트 파서 — CardRuleModal 수동등록 폼과 동일한 5개
+    필드(카드번호 앞/뒤 4자리, 승인번호 앞자리, 매입사명, 카드종류)를 그대로 받는다.
+    자릿수/숫자 형식 검증은 crud.import_card_rules에서 한다."""
+    if filename.lower().endswith(".csv"):
+        rows = _parse_csv(content)
+    else:
+        rows = _parse_xlsx(content)
+
+    results = []
+    for row in rows:
+        if not any(v is not None and str(v).strip() for v in row.values()):
+            continue
+        results.append(
+            {
+                "card_prefix_1": _first_matching(row, CARD_PREFIX_1_HEADERS),
+                "card_prefix_2": _first_matching(row, CARD_PREFIX_2_HEADERS),
+                "approval_prefix": _first_matching(row, APPROVAL_PREFIX_HEADERS),
+                "acquirer": _first_matching(row, ACQUIRER_HEADERS),
+                "card_type": _first_matching(row, CARD_TYPE_HEADERS),
+            }
+        )
+    return results
+
+
 REVIEW_TEXT_HEADERS = {"리뷰내용", "리뷰 내용", "원고", "내용"}
 
 

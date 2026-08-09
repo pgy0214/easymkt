@@ -161,6 +161,11 @@ export const api = {
   getCardRules: () => request('/card-rules'),
   createCardRule: (data) => request('/card-rules', { method: 'POST', body: JSON.stringify(data) }),
   deleteCardRule: (id) => request(`/card-rules/${id}`, { method: 'DELETE' }),
+  importCardRules: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest('/card-rules/import', form)
+  },
 }
 
 export const portalApi = {
