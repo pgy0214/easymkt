@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
+from app.crawlers import naver_store_info
 from app.database import get_db
 from app.routers.portal import get_current_reviewer
 
@@ -11,6 +12,16 @@ router = APIRouter(prefix="/api/advertiser", tags=["advertiser"])
 @router.get("/me", response_model=schemas.ReviewerOut)
 def get_me(reviewer: models.Reviewer = Depends(get_current_reviewer)):
     return crud.reviewer_to_out(reviewer)
+
+
+@router.post("/stores/fetch-info", response_model=schemas.StoreInfoFetchOut)
+def fetch_store_info(
+    data: schemas.StoreInfoFetchIn, reviewer: models.Reviewer = Depends(get_current_reviewer)
+):
+    try:
+        return naver_store_info.fetch_store_info(data.url)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"매장 정보를 가져오지 못했습니다: {e}")
 
 
 @router.get("/stores", response_model=list[schemas.StoreOut])

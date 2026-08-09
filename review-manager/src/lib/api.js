@@ -260,6 +260,11 @@ export const portalApi = {
 
 export const advertiserApi = {
   me: (token) => authedRequest('/advertiser/me', token),
+  fetchStoreInfo: (token, url) =>
+    authedRequest('/advertiser/stores/fetch-info', token, {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    }),
   getStores: (token) => authedRequest('/advertiser/stores', token),
   createStore: (token, data) =>
     authedRequest('/advertiser/stores', token, { method: 'POST', body: JSON.stringify(data) }),

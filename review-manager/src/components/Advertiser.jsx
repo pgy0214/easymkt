@@ -1,7 +1,8 @@
-import { LogOut, Plus, X } from 'lucide-react'
+import { Loader2, LogOut, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { advertiserApi, portalApi } from '../lib/api.js'
-import { formatUtcToLocalDate, localDateToUtcNaiveIso } from '../lib/format.js'
+import { formatBusinessNumber, formatUtcToLocalDate, localDateToUtcNaiveIso } from '../lib/format.js'
+import ProductRowsEditor from './ProductRowsEditor.jsx'
 import Badge from './ui/Badge.jsx'
 import Button from './ui/Button.jsx'
 import Card from './ui/Card.jsx'
@@ -142,6 +143,7 @@ function LoginFlow({ onLoggedIn }) {
 
   return (
     <div className="mx-auto mt-16 max-w-sm rounded-card border border-gray-200 bg-white p-6">
+      <img src="/logo.svg" alt="" className="mx-auto mb-3 h-12 w-12" />
       <h1 className="mb-4 text-center text-lg font-semibold text-gray-900">
         이지리뷰 <span className="font-normal text-gray-400">광고주 {TITLE_BY_STEP[step]}</span>
       </h1>
@@ -248,14 +250,7 @@ function LoginFlow({ onLoggedIn }) {
 const CAMPAIGN_TYPES = ['방문형', '배송형']
 const CONTENT_TYPES = ['블로그', '인스타그램', '유튜브', '틱톡']
 
-const EMPTY_STORE = {
-  platform: 'naver',
-  name: '',
-  url: '',
-  business_registration_number: '',
-  representative_name: '',
-  phone: '',
-}
+const EMPTY_STORE = { platform: 'naver', url: '' }
 
 const EMPTY_CAMPAIGN = {
   store_id: '',
@@ -278,6 +273,16 @@ function AdvertiserHome({ token, onLogout }) {
   const [storeModalOpen, setStoreModalOpen] = useState(false)
   const [campaignModalOpen, setCampaignModalOpen] = useState(false)
   const [storeForm, setStoreForm] = useState(EMPTY_STORE)
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState(null)
+  const [fetched, setFetched] = useState(null) // { name, address, representative_hours, representative_product }
+  const [productInput, setProductInput] = useState('')
+  const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState('')
+  const [representativeName, setRepresentativeName] = useState('')
+  const [phone, setPhone] = useState('')
+  // ProductRowsEditor는 마운트 시점에만 value를 행으로 파싱하므로, 새 URL을
+  // 조회할 때마다 key를 바꿔 강제로 다시 마운트시켜야 그 값이 반영된다.
+  const [productEditorKey, setProductEditorKey] = useState(0)
   const [campaignForm, setCampaignForm] = useState(EMPTY_CAMPAIGN)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -301,14 +306,62 @@ function AdvertiserHome({ token, onLogout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function handleCreateStore(e) {
-    e.preventDefault()
+  function resetStoreForm() {
+    setStoreForm(EMPTY_STORE)
+    setFetched(null)
+    setFetchError(null)
+    setProductInput('')
+    setBusinessRegistrationNumber('')
+    setRepresentativeName('')
+    setPhone('')
+    setProductEditorKey((k) => k + 1)
+  }
+
+  async function handleFetchStoreInfo() {
+    const url = storeForm.url.trim()
+    if (!url) return
+    if (storeForm.platform !== 'naver') {
+      setFetchError('카카오맵은 아직 자동입력을 지원하지 않아요.')
+      return
+    }
+    setFetching(true)
+    setFetchError(null)
+    setFetched(null)
+    try {
+      const info = await advertiserApi.fetchStoreInfo(token, url)
+      setFetched(info)
+      setProductInput(info.representative_product || '')
+      setProductEditorKey((k) => k + 1)
+      if (!info.name) {
+        setFetchError('매장명을 찾지 못했어요. URL이 맞는지 확인하고 다시 시도해주세요.')
+      }
+    } catch (err) {
+      setFetchError(err.message)
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  const businessInfoComplete = businessRegistrationNumber.trim() && representativeName.trim() && phone.trim()
+
+  async function handleCreateStore() {
+    if (!fetched || !fetched.name || !businessInfoComplete) return
     setSubmitting(true)
     setError(null)
     try {
-      await advertiserApi.createStore(token, storeForm)
+      await advertiserApi.createStore(token, {
+        platform: storeForm.platform,
+        name: fetched.name,
+        url: storeForm.url.trim(),
+        address: fetched.address || null,
+        representative_hours: fetched.representative_hours || null,
+        representative_product: productInput.trim() || null,
+        business_registration_number: businessRegistrationNumber.trim() || null,
+        representative_name: representativeName.trim() || null,
+        phone: phone.trim() || null,
+      })
       setStoreModalOpen(false)
-      setStoreForm(EMPTY_STORE)
+      resetStoreForm()
       await refresh()
     } catch (err) {
       setError(err.message)
@@ -348,7 +401,10 @@ function AdvertiserHome({ token, onLogout }) {
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-900">이지리뷰 광고주센터</h1>
+        <div className="flex items-center gap-2">
+          <img src="/logo.svg" alt="" className="h-7 w-7" />
+          <h1 className="text-lg font-semibold text-gray-900">이지리뷰 광고주센터</h1>
+        </div>
         <button onClick={onLogout} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
           <LogOut size={14} />
           로그아웃
@@ -358,7 +414,13 @@ function AdvertiserHome({ token, onLogout }) {
       <Card>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold text-gray-800">내 매장</h2>
-          <Button size="sm" onClick={() => setStoreModalOpen(true)}>
+          <Button
+            size="sm"
+            onClick={() => {
+              resetStoreForm()
+              setStoreModalOpen(true)
+            }}
+          >
             <Plus size={14} className="mr-1 inline" />
             매장 등록
           </Button>
@@ -420,36 +482,133 @@ function AdvertiserHome({ token, onLogout }) {
       {storeModalOpen && (
         <Modal open onClose={() => setStoreModalOpen(false)}>
           <h3 className="mb-3 font-semibold text-gray-800">매장 등록</h3>
-          <form onSubmit={handleCreateStore} className="space-y-3">
+          <div className="space-y-3">
             <div>
               <label className="block text-xs text-gray-500">플랫폼</label>
               <select
                 value={storeForm.platform}
-                onChange={(e) => setStoreForm({ ...storeForm, platform: e.target.value })}
+                onChange={(e) => {
+                  resetStoreForm()
+                  setStoreForm((prev) => ({ ...prev, platform: e.target.value }))
+                }}
                 className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
               >
-                <option value="naver">네이버</option>
-                <option value="kakao">카카오</option>
+                <option value="naver">네이버영수증</option>
+                <option value="kakao">카카오맵</option>
               </select>
             </div>
-            <Input label="매장/업체명" value={storeForm.name} onChange={(e) => setStoreForm({ ...storeForm, name: e.target.value })} required />
-            <Input label="매장 URL" value={storeForm.url} onChange={(e) => setStoreForm({ ...storeForm, url: e.target.value })} required />
-            <Input
-              label="사업자번호"
-              value={storeForm.business_registration_number}
-              onChange={(e) => setStoreForm({ ...storeForm, business_registration_number: e.target.value })}
-            />
-            <Input
-              label="대표자명"
-              value={storeForm.representative_name}
-              onChange={(e) => setStoreForm({ ...storeForm, representative_name: e.target.value })}
-            />
-            <Input label="연락처" value={storeForm.phone} onChange={(e) => setStoreForm({ ...storeForm, phone: e.target.value })} />
-            {error && <p className="text-sm text-danger-text">{error}</p>}
-            <Button type="submit" variant="primary" disabled={submitting} className="w-full">
-              등록
-            </Button>
-          </form>
+            <div>
+              <label className="block text-xs text-gray-500">매장 URL</label>
+              <div className="flex gap-1">
+                <Input
+                  value={storeForm.url}
+                  onChange={(e) => {
+                    setStoreForm((prev) => ({ ...prev, url: e.target.value }))
+                    setFetched(null)
+                    setFetchError(null)
+                  }}
+                  placeholder="https://naver.me/..."
+                  className="w-full"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleFetchStoreInfo}
+                  disabled={fetching || !storeForm.url.trim()}
+                  className="shrink-0"
+                >
+                  {fetching && <Loader2 size={12} className="animate-spin" />}
+                  {fetching ? '가져오는 중...' : '입력완료'}
+                </Button>
+              </div>
+              {fetching && (
+                <p className="mt-1 flex items-center gap-1 text-xs text-gray-400">
+                  <Loader2 size={12} className="animate-spin" />
+                  네이버에서 매장 정보를 가져오고 있어요 (몇 초 걸릴 수 있어요)...
+                </p>
+              )}
+            </div>
+
+            {fetchError && <p className="text-xs text-danger-text">{fetchError}</p>}
+
+            {fetched && (
+              <div className="space-y-3 rounded-btn border border-gray-200 bg-gray-50 p-3">
+                <p className="text-xs font-medium text-gray-500">
+                  아래 내용은 네이버에서 가져온 정보라 직접 수정할 수 없어요 (대표상품 제외). URL이
+                  잘못됐다면 위에서 URL을 고치고 "입력완료"를 다시 눌러주세요.
+                </p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div>
+                    <span className="block text-xs text-gray-500">매장명</span>
+                    <p className="text-sm text-gray-800">{fetched.name || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500">매장주소</span>
+                    <p className="text-sm text-gray-800">{fetched.address || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500">대표시간</span>
+                    <p className="text-sm text-gray-800">{fetched.representative_hours || '-'}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 border-t border-gray-200 pt-3">
+                  <p className="text-xs text-gray-500">영수증 생성에 쓰이는 사업자 정보 (필수)</p>
+                  <Input
+                    value={businessRegistrationNumber}
+                    onChange={(e) => setBusinessRegistrationNumber(formatBusinessNumber(e.target.value))}
+                    placeholder="사업자번호 (예: 250-07-00453)"
+                    className="w-full"
+                  />
+                  <Input
+                    value={representativeName}
+                    onChange={(e) => setRepresentativeName(e.target.value)}
+                    placeholder="대표자명"
+                    className="w-full"
+                  />
+                  <Input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="전화번호 (예: 0507-1412-5171)"
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <span className="block text-xs text-gray-500">대표상품</span>
+                  {fetched.representative_product ? (
+                    <p className="text-sm text-gray-800">{fetched.representative_product}</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-amber-600">
+                        *플레이스에 등록된 정보를 찾을 수가 없습니다 직접 입력해주세요.
+                      </p>
+                      <div className="mt-1">
+                        <ProductRowsEditor key={productEditorKey} value={productInput} onChange={setProductInput} />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {error && <p className="text-sm text-danger-text">{error}</p>}
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleCreateStore}
+                  disabled={submitting || !fetched.name || !businessInfoComplete}
+                  className="w-full"
+                >
+                  {submitting ? '등록 중...' : '확인, 이 정보로 매장 등록'}
+                </Button>
+                {!businessInfoComplete && (
+                  <p className="text-xs text-gray-400">
+                    사업자번호/대표자명/전화번호를 모두 입력해야 등록할 수 있어요.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </Modal>
       )}
 
