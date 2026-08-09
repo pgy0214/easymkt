@@ -262,6 +262,7 @@ class ExperienceCampaign(Base):
     recruit_end = Column(DateTime, nullable=False)
     review_deadline = Column(Date, nullable=True)
     is_recurring = Column(Boolean, nullable=False, default=False)  # 값만 저장, 자동 재등록 로직은 없음
+    image_path = Column(String, nullable=True)  # 캠페인 카드 대표 이미지 (선택)
     created_at = Column(DateTime, default=utcnow)
 
     store = relationship("Store")

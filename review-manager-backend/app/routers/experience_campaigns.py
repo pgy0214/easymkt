@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
@@ -28,6 +28,20 @@ def update_experience_campaign(
     if not campaign:
         raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
     return crud.update_experience_campaign(db, campaign, data)
+
+
+@router.post("/{campaign_id}/image", response_model=schemas.ExperienceCampaignOut)
+async def upload_experience_campaign_image(
+    campaign_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)
+):
+    campaign = crud.get_experience_campaign(db, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    content = await file.read()
+    try:
+        return crud.save_experience_campaign_image(db, campaign, content, file.filename or "image.jpg")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.delete("/{campaign_id}")

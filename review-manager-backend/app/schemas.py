@@ -100,6 +100,7 @@ class ReviewerCreate(BaseModel):
     birth_date: Optional[datetime.date] = None
     applied_at: Optional[datetime.datetime] = None  # 체험단 전용, 지원 시각
     application_status: Optional[ApplicationStatus] = None  # 체험단 전용
+    topics: Optional[list[str]] = None  # 체험단 전용, 관심 주제
 
 
 class ReviewerUpdate(BaseModel):
@@ -117,6 +118,7 @@ class ReviewerUpdate(BaseModel):
     birth_date: Optional[datetime.date] = None
     applied_at: Optional[datetime.datetime] = None
     application_status: Optional[ApplicationStatus] = None
+    topics: Optional[list[str]] = None
 
 
 class ReviewerOut(BaseModel):
@@ -688,6 +690,7 @@ class ExperienceCampaignOut(BaseModel):
     recruit_end: datetime.datetime
     review_deadline: Optional[datetime.date] = None
     is_recurring: bool
+    image_path: Optional[str] = None
     created_at: datetime.datetime
 
     # denormalized, filled in by crud
@@ -729,3 +732,4 @@ class PortalExperienceCampaignOut(BaseModel):
     recruit_end: datetime.datetime
     review_deadline: Optional[datetime.date] = None
     already_applied: bool
+    image_path: Optional[str] = None

@@ -148,6 +148,7 @@ def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewe
         birth_date=data.birth_date,
         applied_at=applied_at,
         application_status=application_status,
+        topics=",".join(data.topics) if data.topics else None,
     )
     db.add(reviewer)
     db.commit()
@@ -187,6 +188,8 @@ def update_reviewer(
         reviewer.applied_at = data.applied_at
     if data.application_status is not None:
         reviewer.application_status = data.application_status
+    if data.topics is not None:
+        reviewer.topics = ",".join(data.topics)
     db.commit()
     db.refresh(reviewer)
     return reviewer
@@ -1471,6 +1474,21 @@ def delete_experience_campaign(db: Session, campaign: models.ExperienceCampaign)
     db.commit()
 
 
+def save_experience_campaign_image(
+    db: Session, campaign: models.ExperienceCampaign, content: bytes, filename: str
+) -> schemas.ExperienceCampaignOut:
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError(f"지원하지 않는 이미지 형식입니다: {ext or '(확장자 없음)'}")
+    dest = os.path.join(UPLOADS_DIR, "campaigns", f"experience_campaign_{campaign.id}{ext}")
+    with open(dest, "wb") as f:
+        f.write(content)
+    campaign.image_path = f"/uploads/campaigns/experience_campaign_{campaign.id}{ext}"
+    db.commit()
+    db.refresh(campaign)
+    return _experience_campaign_to_out(db, campaign)
+
+
 def get_experience_applications(db: Session, campaign_id: int) -> list[schemas.ExperienceApplicationOut]:
     applications = (
         db.query(models.ExperienceApplication)
@@ -1567,6 +1585,7 @@ def get_portal_experience_campaigns(
                 recruit_end=c.recruit_end,
                 review_deadline=c.review_deadline,
                 already_applied=c.id in applied_campaign_ids,
+                image_path=c.image_path,
             )
         )
     return results

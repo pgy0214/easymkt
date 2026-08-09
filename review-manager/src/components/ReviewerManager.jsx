@@ -1,7 +1,7 @@
 import { Download, MessageSquare, Search, Send, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
-import { GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
+import { AGE_GROUP_OPTIONS, GENDER_LABEL, REGION_OPTIONS, REVIEWER_CATEGORY_LABEL, TOPIC_OPTIONS } from '../lib/format.js'
 import BulkAssignModal from './BulkAssignModal.jsx'
 import BulkMessageModal from './BulkMessageModal.jsx'
 import Button from './ui/Button.jsx'
@@ -40,6 +40,7 @@ export default function ReviewerManager() {
   const [genderFilter, setGenderFilter] = useState('')
   const [regionFilter, setRegionFilter] = useState('')
   const [ageGroupFilter, setAgeGroupFilter] = useState('')
+  const [topicFilter, setTopicFilter] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
@@ -149,15 +150,6 @@ export default function ReviewerManager() {
 
   const nonAdminReviewers = useMemo(() => reviewers.filter((r) => r.category !== 'admin'), [reviewers])
 
-  const regionOptions = useMemo(
-    () => [...new Set(reviewers.map((r) => r.region).filter(Boolean))].sort(),
-    [reviewers],
-  )
-  const ageGroupOptions = useMemo(
-    () => [...new Set(reviewers.map((r) => r.age_group).filter(Boolean))].sort(),
-    [reviewers],
-  )
-
   // 카테고리/성별/지역/연령대/검색까지 먼저 적용한 결과 — 매장 필터는 이 결과 위에 마지막으로
   // 얹는다("체험단+여성+20대"까지 고른 다음 매장을 고르면 그 조건의 리뷰어 중 작업 가능한
   // 사람만 남도록). 쿨다운 조회 대상도 이 목록으로 좁혀서 불필요한 API 호출을 줄인다.
@@ -172,12 +164,13 @@ export default function ReviewerManager() {
       if (genderFilter && r.gender !== genderFilter) return false
       if (regionFilter && r.region !== regionFilter) return false
       if (ageGroupFilter && r.age_group !== ageGroupFilter) return false
+      if (topicFilter && !r.topics?.split(',').includes(topicFilter)) return false
       if (query && !r.name.toLowerCase().includes(query) && !r.contact_info?.includes(query)) {
         return false
       }
       return true
     })
-  }, [reviewers, statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search])
+  }, [reviewers, statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, topicFilter, search])
 
   useEffect(() => {
     if (!selectedStore) {
@@ -223,7 +216,17 @@ export default function ReviewerManager() {
 
   useEffect(() => {
     setPage(1)
-  }, [statusFilter, categoryFilter, genderFilter, regionFilter, ageGroupFilter, search, storeFilter, pageSize])
+  }, [
+    statusFilter,
+    categoryFilter,
+    genderFilter,
+    regionFilter,
+    ageGroupFilter,
+    topicFilter,
+    search,
+    storeFilter,
+    pageSize,
+  ])
 
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize)
 
@@ -333,7 +336,7 @@ export default function ReviewerManager() {
           className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
         >
           <option value="">전체 지역</option>
-          {regionOptions.map((region) => (
+          {REGION_OPTIONS.map((region) => (
             <option key={region} value={region}>
               {region}
             </option>
@@ -345,14 +348,26 @@ export default function ReviewerManager() {
           className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
         >
           <option value="">전체 연령대</option>
-          {ageGroupOptions.map((age) => (
+          {AGE_GROUP_OPTIONS.map((age) => (
             <option key={age} value={age}>
               {age}
             </option>
           ))}
         </select>
+        <select
+          value={topicFilter}
+          onChange={(e) => setTopicFilter(e.target.value)}
+          className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
+        >
+          <option value="">전체 주제</option>
+          {TOPIC_OPTIONS.map((topic) => (
+            <option key={topic} value={topic}>
+              {topic}
+            </option>
+          ))}
+        </select>
         <span className="text-xs text-gray-400">
-          성별/지역/연령대는 체험단에만 적용됩니다
+          성별/지역/연령대/주제는 체험단에만 적용됩니다
         </span>
       </div>
 

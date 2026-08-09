@@ -175,6 +175,11 @@ export const experienceCampaignApi = {
   update: (id, data) =>
     request(`/experience-campaigns/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id) => request(`/experience-campaigns/${id}`, { method: 'DELETE' }),
+  uploadImage: (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest(`/experience-campaigns/${id}/image`, form)
+  },
   getApplications: (id) => request(`/experience-campaigns/${id}/applications`),
   updateApplicationStatus: (applicationId, status) =>
     request(`/experience-campaigns/applications/${applicationId}`, {

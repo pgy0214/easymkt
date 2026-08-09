@@ -1,7 +1,15 @@
 import { ExternalLink, LogOut, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { API_ORIGIN, portalApi } from '../lib/api.js'
-import { formatDateTime, formatKRW, PLATFORM_LABEL } from '../lib/format.js'
+import {
+  AGE_GROUP_OPTIONS,
+  BLOG_INDEX_OPTIONS,
+  formatDateTime,
+  formatKRW,
+  PLATFORM_LABEL,
+  REGION_OPTIONS,
+  TOPIC_OPTIONS,
+} from '../lib/format.js'
 import AccountForm from './AccountForm.jsx'
 import CopyButton from './CopyButton.jsx'
 import ImageCopyButton from './ImageCopyButton.jsx'
@@ -66,16 +74,6 @@ export default function Portal() {
   )
 }
 
-const AGE_GROUP_OPTIONS = ['20대', '30대', '40대', '그외']
-const TOPIC_OPTIONS = [
-  '맛집', '여행', '뷰티', '패션', '육아', '리빙/인테리어',
-  'IT/전자기기', '자동차', '반려동물', '건강/운동', '문화/공연', '제품후기', '기타',
-]
-const REGION_OPTIONS = [
-  '서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시', '대전광역시',
-  '울산광역시', '세종특별자치시', '경기도', '강원특별자치도', '충청북도', '충청남도',
-  '전북특별자치도', '전라남도', '경상북도', '경상남도', '제주특별자치도',
-]
 const PRIVACY_CONSENT_DETAIL = `수집 항목: 이름, 전화번호, (체험단 활동 시) 성별·지역·연령대·관심 주제
 수집 목적: 회원 식별, 리뷰단/체험단 작업 배정 및 진행 관리, 정산, 문의 응대
 보유 및 이용 기간: 회원 탈퇴 시까지 (관계 법령에 따라 보존이 필요한 경우 해당 기간 동안 별도 보관 후 파기)
@@ -988,14 +986,6 @@ function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
 
 const CAMPAIGN_DDAY_MS = 24 * 60 * 60 * 1000
 
-const BLOG_INDEX_OPTIONS = [
-  '전체',
-  '준최1', '준최2', '준최3', '준최4', '준최5', '준최6', '준최7',
-  '최적1', '최적2', '최적3',
-  '최적1+', '최적2+', '최적3+', '최적4+',
-  '공식블로그', '인플루언서',
-]
-
 function ExperienceProfileCard({ token, reviewer, onUpdated }) {
   const [blogUrl, setBlogUrl] = useState(reviewer.blog_url || '')
   const [blogIndex, setBlogIndex] = useState(reviewer.blog_index || '')
@@ -1166,34 +1156,49 @@ function ExperienceCampaignList({ token }) {
           const daysLeft = Math.ceil((new Date(c.recruit_end) - new Date()) / CAMPAIGN_DDAY_MS)
           const isFull = c.applicant_count >= c.capacity
           return (
-            <div key={c.id} className="rounded-card border border-gray-200 p-3">
-              <div className="flex items-center justify-between">
-                <span className="rounded-btn bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+            <div key={c.id} className="overflow-hidden rounded-card border border-gray-200 bg-white">
+              <div className="relative aspect-[4/3] w-full bg-gray-100">
+                {c.image_path ? (
+                  <img
+                    src={`${API_ORIGIN}${c.image_path}`}
+                    alt={c.store_name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-gray-300">
+                    이미지 없음
+                  </div>
+                )}
+                <span className="absolute left-2 top-2 rounded-btn bg-white/90 px-2 py-0.5 text-xs font-medium text-gray-700 shadow-sm">
                   {c.campaign_type}
                 </span>
                 <span
-                  className={`text-xs font-medium ${daysLeft <= 1 ? 'text-danger-text' : 'text-gray-400'}`}
+                  className={`absolute right-2 top-2 rounded-btn px-2 py-0.5 text-xs font-medium shadow-sm ${
+                    daysLeft <= 1 ? 'bg-danger-bg text-danger-text' : 'bg-white/90 text-gray-500'
+                  }`}
                 >
                   {daysLeft <= 0 ? '마감임박' : `${daysLeft}일 남음`}
                 </span>
               </div>
-              <div className="mt-1 font-medium text-gray-800">{c.store_name}</div>
-              {c.store_region && <div className="text-xs text-gray-500">{c.store_region}</div>}
-              <div className="mt-1 text-xs text-gray-500">
-                {c.content_type} · {c.product_name}
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-gray-500">
-                  신청 {c.applicant_count}명 / {c.capacity}명
-                </span>
-                <Button
-                  size="sm"
-                  variant={c.already_applied ? 'outline' : 'primary'}
-                  disabled={c.already_applied || (isFull && !c.already_applied) || applyingId === c.id}
-                  onClick={() => handleApply(c.id)}
-                >
-                  {c.already_applied ? '신청완료' : isFull ? '마감' : applyingId === c.id ? '신청 중...' : '신청하기'}
-                </Button>
+              <div className="p-3">
+                <div className="font-medium text-gray-800">{c.store_name}</div>
+                {c.store_region && <div className="text-xs text-gray-500">{c.store_region}</div>}
+                <div className="mt-1 text-xs text-gray-500">
+                  {c.content_type} · {c.product_name}
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-gray-500">
+                    신청 {c.applicant_count}명 / {c.capacity}명
+                  </span>
+                  <Button
+                    size="sm"
+                    variant={c.already_applied ? 'outline' : 'primary'}
+                    disabled={c.already_applied || (isFull && !c.already_applied) || applyingId === c.id}
+                    onClick={() => handleApply(c.id)}
+                  >
+                    {c.already_applied ? '신청완료' : isFull ? '마감' : applyingId === c.id ? '신청 중...' : '신청하기'}
+                  </Button>
+                </div>
               </div>
             </div>
           )

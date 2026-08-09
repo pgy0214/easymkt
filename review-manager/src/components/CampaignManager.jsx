@@ -1,6 +1,6 @@
 import { Plus, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { api, experienceCampaignApi } from '../lib/api.js'
+import { api, API_ORIGIN, experienceCampaignApi } from '../lib/api.js'
 import Badge from './ui/Badge.jsx'
 import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
@@ -55,6 +55,7 @@ export default function CampaignManager() {
   const [error, setError] = useState(null)
   const [registerOpen, setRegisterOpen] = useState(false)
   const [applicantsCampaign, setApplicantsCampaign] = useState(null)
+  const [campaignImage, setCampaignImage] = useState(null)
 
   async function refresh() {
     setLoading(true)
@@ -72,6 +73,7 @@ export default function CampaignManager() {
 
   function openRegister() {
     setForm({ ...EMPTY, store_id: stores[0]?.id ?? '' })
+    setCampaignImage(null)
     setError(null)
     setRegisterOpen(true)
   }
@@ -89,7 +91,7 @@ export default function CampaignManager() {
     setSubmitting(true)
     setError(null)
     try {
-      await experienceCampaignApi.create({
+      const created = await experienceCampaignApi.create({
         store_id: Number(form.store_id),
         campaign_type: form.campaign_type,
         content_type: form.content_type,
@@ -110,6 +112,9 @@ export default function CampaignManager() {
         review_deadline: form.review_deadline || null,
         is_recurring: form.is_recurring,
       })
+      if (campaignImage) {
+        await experienceCampaignApi.uploadImage(created.id, campaignImage)
+      }
       setRegisterOpen(false)
       await refresh()
     } catch (err) {
@@ -162,8 +167,19 @@ export default function CampaignManager() {
               {campaigns.map((c) => (
                 <tr key={c.id}>
                   <td className="px-3 py-2">
-                    <div className="font-medium text-gray-800">{c.store_name}</div>
-                    {c.store_region && <div className="text-xs text-gray-400">{c.store_region}</div>}
+                    <div className="flex items-center gap-2">
+                      {c.image_path && (
+                        <img
+                          src={`${API_ORIGIN}${c.image_path}`}
+                          alt=""
+                          className="h-8 w-8 shrink-0 rounded-btn object-cover"
+                        />
+                      )}
+                      <div>
+                        <div className="font-medium text-gray-800">{c.store_name}</div>
+                        {c.store_region && <div className="text-xs text-gray-400">{c.store_region}</div>}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <Badge variant="info">{c.campaign_type}</Badge>
@@ -219,6 +235,16 @@ export default function CampaignManager() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500">대표 이미지</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setCampaignImage(e.target.files[0] ?? null)}
+              className="block w-full text-xs text-gray-600 file:mr-2 file:rounded-btn file:border file:border-gray-300 file:bg-white file:px-2 file:py-1 file:text-xs file:text-gray-600"
+            />
           </div>
 
           <div>

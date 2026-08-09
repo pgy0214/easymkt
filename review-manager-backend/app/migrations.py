@@ -282,4 +282,9 @@ def run_migrations(engine) -> None:
             conn, "reviewers", "marketing_consent_at", "marketing_consent_at DATETIME"
         )
 
+        # experience_campaigns: image_path — 캠페인 카드 대표 이미지(선택)
+        _add_column_if_missing(
+            conn, "experience_campaigns", "image_path", "image_path TEXT"
+        )
+
         conn.commit()
