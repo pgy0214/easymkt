@@ -50,6 +50,9 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "reviewers", "applied_at", "applied_at DATETIME")
         _add_column_if_missing(conn, "reviewers", "application_status", "application_status TEXT")
 
+        # stores: region — 체험단 캠페인 카드에 보여줄 짧은 지역 라벨
+        _add_column_if_missing(conn, "stores", "region", "region TEXT")
+
         # review_accounts: ip_address — IP assigned per admin-owned account
         _add_column_if_missing(conn, "review_accounts", "ip_address", "ip_address TEXT")
         _add_column_if_missing(

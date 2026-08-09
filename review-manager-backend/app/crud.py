@@ -412,6 +412,7 @@ def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
         name=data.name,
         url=data.url,
         address=data.address,
+        region=data.region,
         representative_hours=data.representative_hours,
         representative_product=data.representative_product,
         cooldown_days=data.cooldown_days,
@@ -430,6 +431,8 @@ def update_store(db: Session, store: models.Store, data: schemas.StoreUpdate) ->
     # — see the comment there
     if data.url is not None:
         store.url = data.url
+    if data.region is not None:
+        store.region = data.region
     if data.representative_product is not None:
         store.representative_product = data.representative_product
     if data.cooldown_days is not None:
@@ -1331,3 +1334,177 @@ def import_card_rules(db: Session, rows: list[dict]) -> schemas.ReviewerImportRe
     return schemas.ReviewerImportResult(
         created=created, skipped_duplicate=skipped_duplicate, skipped_invalid=skipped_invalid
     )
+
+
+# --- Experience campaigns (체험단 캠페인) ---
+
+
+def _experience_campaign_to_out(db: Session, campaign: models.ExperienceCampaign) -> schemas.ExperienceCampaignOut:
+    out = schemas.ExperienceCampaignOut.model_validate(campaign)
+    out.store_name = campaign.store.name if campaign.store else None
+    out.store_region = campaign.store.region if campaign.store else None
+    out.applicant_count = (
+        db.query(models.ExperienceApplication)
+        .filter(models.ExperienceApplication.campaign_id == campaign.id)
+        .count()
+    )
+    return out
+
+
+def get_experience_campaigns(db: Session) -> list[schemas.ExperienceCampaignOut]:
+    campaigns = db.query(models.ExperienceCampaign).order_by(models.ExperienceCampaign.id.desc()).all()
+    return [_experience_campaign_to_out(db, c) for c in campaigns]
+
+
+def get_experience_campaign(db: Session, campaign_id: int) -> models.ExperienceCampaign | None:
+    return db.query(models.ExperienceCampaign).filter(models.ExperienceCampaign.id == campaign_id).first()
+
+
+def create_experience_campaign(db: Session, data: schemas.ExperienceCampaignCreate) -> schemas.ExperienceCampaignOut:
+    store = db.query(models.Store).filter(models.Store.id == data.store_id).first()
+    if not store:
+        raise ValueError("매장을 찾을 수 없습니다")
+    campaign = models.ExperienceCampaign(
+        store_id=data.store_id,
+        campaign_type=data.campaign_type,
+        content_type=data.content_type,
+        benefit_type=data.benefit_type,
+        product_name=data.product_name,
+        product_price=data.product_price,
+        capacity=data.capacity,
+        content_guide=data.content_guide,
+        reservation_required=data.reservation_required,
+        contact_method=data.contact_method,
+        contact_info=data.contact_info,
+        extra_info=data.extra_info,
+        recruit_start=data.recruit_start,
+        recruit_end=data.recruit_end,
+        review_deadline=data.review_deadline,
+        is_recurring=data.is_recurring,
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+    return _experience_campaign_to_out(db, campaign)
+
+
+def update_experience_campaign(
+    db: Session, campaign: models.ExperienceCampaign, data: schemas.ExperienceCampaignUpdate
+) -> schemas.ExperienceCampaignOut:
+    for field in (
+        "campaign_type", "content_type", "benefit_type", "product_name", "product_price",
+        "capacity", "content_guide", "reservation_required", "contact_method", "contact_info",
+        "extra_info", "recruit_start", "recruit_end", "review_deadline", "is_recurring",
+    ):
+        value = getattr(data, field)
+        if value is not None:
+            setattr(campaign, field, value)
+    db.commit()
+    db.refresh(campaign)
+    return _experience_campaign_to_out(db, campaign)
+
+
+def delete_experience_campaign(db: Session, campaign: models.ExperienceCampaign) -> None:
+    db.delete(campaign)
+    db.commit()
+
+
+def get_experience_applications(db: Session, campaign_id: int) -> list[schemas.ExperienceApplicationOut]:
+    applications = (
+        db.query(models.ExperienceApplication)
+        .filter(models.ExperienceApplication.campaign_id == campaign_id)
+        .order_by(models.ExperienceApplication.id.desc())
+        .all()
+    )
+    results = []
+    for app_row in applications:
+        out = schemas.ExperienceApplicationOut.model_validate(app_row)
+        reviewer = app_row.reviewer
+        if reviewer:
+            out.reviewer_name = reviewer.name
+            out.reviewer_contact_info = reviewer.contact_info
+            out.reviewer_blog_url = reviewer.blog_url
+            out.reviewer_blog_index = reviewer.blog_index
+        results.append(out)
+    return results
+
+
+def get_experience_application(db: Session, application_id: int) -> models.ExperienceApplication | None:
+    return (
+        db.query(models.ExperienceApplication)
+        .filter(models.ExperienceApplication.id == application_id)
+        .first()
+    )
+
+
+def create_experience_application(
+    db: Session, campaign_id: int, reviewer_id: int
+) -> models.ExperienceApplication:
+    existing = (
+        db.query(models.ExperienceApplication)
+        .filter(
+            models.ExperienceApplication.campaign_id == campaign_id,
+            models.ExperienceApplication.reviewer_id == reviewer_id,
+        )
+        .first()
+    )
+    if existing:
+        raise ValueError("이미 신청한 캠페인입니다")
+    application = models.ExperienceApplication(campaign_id=campaign_id, reviewer_id=reviewer_id)
+    db.add(application)
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+def update_experience_application_status(
+    db: Session, application: models.ExperienceApplication, status: str
+) -> models.ExperienceApplication:
+    application.status = status
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+def get_portal_experience_campaigns(
+    db: Session, reviewer_id: int
+) -> list[schemas.PortalExperienceCampaignOut]:
+    now = datetime.datetime.utcnow()
+    campaigns = (
+        db.query(models.ExperienceCampaign)
+        .filter(
+            models.ExperienceCampaign.recruit_start <= now,
+            models.ExperienceCampaign.recruit_end >= now,
+        )
+        .order_by(models.ExperienceCampaign.recruit_end)
+        .all()
+    )
+    applied_campaign_ids = {
+        row.campaign_id
+        for row in db.query(models.ExperienceApplication.campaign_id)
+        .filter(models.ExperienceApplication.reviewer_id == reviewer_id)
+        .all()
+    }
+    results = []
+    for c in campaigns:
+        applicant_count = (
+            db.query(models.ExperienceApplication)
+            .filter(models.ExperienceApplication.campaign_id == c.id)
+            .count()
+        )
+        results.append(
+            schemas.PortalExperienceCampaignOut(
+                id=c.id,
+                store_name=c.store.name if c.store else "",
+                store_region=c.store.region if c.store else None,
+                campaign_type=c.campaign_type,
+                content_type=c.content_type,
+                product_name=c.product_name,
+                capacity=c.capacity,
+                applicant_count=applicant_count,
+                recruit_end=c.recruit_end,
+                review_deadline=c.review_deadline,
+                already_applied=c.id in applied_campaign_ids,
+            )
+        )
+    return results

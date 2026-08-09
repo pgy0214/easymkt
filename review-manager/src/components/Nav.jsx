@@ -22,10 +22,18 @@ const GROUPS = [
       { id: 'tasks', label: '작업 현황' },
     ],
   },
+  {
+    id: 'experience',
+    label: '체험단',
+    icon: UserCheck,
+    children: [
+      { id: 'campaigns', label: '캠페인관리' },
+      { id: 'experience-pool', label: '체험단관리' },
+    ],
+  },
 ]
 
 const FLAT_TABS = [
-  { id: 'experience', label: '체험단', icon: UserCheck },
   { id: 'settlement', label: '정산 요약', icon: Wallet },
   { id: 'settings', label: '설정', icon: Settings2 },
 ]

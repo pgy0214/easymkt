@@ -157,6 +157,35 @@ def get_pool(
     return crud.get_open_pool_summary(db, platforms, reviewer)
 
 
+@router.get("/experience/campaigns", response_model=list[schemas.PortalExperienceCampaignOut])
+def get_portal_experience_campaigns(
+    reviewer: models.Reviewer = Depends(get_current_reviewer), db: Session = Depends(get_db)
+):
+    return crud.get_portal_experience_campaigns(db, reviewer.id)
+
+
+@router.post("/experience/campaigns/{campaign_id}/apply", response_model=schemas.PortalExperienceCampaignOut)
+def apply_to_experience_campaign(
+    campaign_id: int,
+    reviewer: models.Reviewer = Depends(get_current_reviewer),
+    db: Session = Depends(get_db),
+):
+    if not reviewer.is_active:
+        raise HTTPException(status_code=403, detail="관리자 승인 대기 중입니다. 승인 후 신청할 수 있어요")
+    campaign = crud.get_experience_campaign(db, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    try:
+        crud.create_experience_application(db, campaign_id, reviewer.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    campaigns = crud.get_portal_experience_campaigns(db, reviewer.id)
+    updated = next((c for c in campaigns if c.id == campaign_id), None)
+    if not updated:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    return updated
+
+
 @router.post("/accounts/check-availability", response_model=list[schemas.AccountAvailabilityOut])
 def check_availability(
     reviewer: models.Reviewer = Depends(get_current_reviewer), db: Session = Depends(get_db)

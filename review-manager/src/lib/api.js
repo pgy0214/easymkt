@@ -169,6 +169,20 @@ export const api = {
   },
 }
 
+export const experienceCampaignApi = {
+  list: () => request('/experience-campaigns'),
+  create: (data) => request('/experience-campaigns', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) =>
+    request(`/experience-campaigns/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id) => request(`/experience-campaigns/${id}`, { method: 'DELETE' }),
+  getApplications: (id) => request(`/experience-campaigns/${id}/applications`),
+  updateApplicationStatus: (applicationId, status) =>
+    request(`/experience-campaigns/applications/${applicationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+}
+
 export const portalApi = {
   requestOtp: (phone, name) =>
     request('/portal/otp/request', { method: 'POST', body: JSON.stringify({ phone, name }) }),
@@ -203,4 +217,8 @@ export const portalApi = {
       method: 'PATCH',
       body: JSON.stringify({ result_link: link }),
     }),
+
+  getExperienceCampaigns: (token) => authedRequest('/portal/experience/campaigns', token),
+  applyToExperienceCampaign: (token, campaignId) =>
+    authedRequest(`/portal/experience/campaigns/${campaignId}/apply`, token, { method: 'POST' }),
 }

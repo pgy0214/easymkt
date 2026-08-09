@@ -73,6 +73,7 @@ class Store(Base):
     name = Column(String, nullable=False)
     url = Column(String, nullable=False)
     address = Column(String, nullable=True)
+    region = Column(String, nullable=True)  # 체험단 캠페인 카드용 짧은 지역 라벨 (예: "서울 강남구")
     representative_hours = Column(String, nullable=True)  # "대표시간" — common hours across business days
     representative_product = Column(String, nullable=True)  # "대표상품" — menu/rooms/services depending on category
     business_registration_number = Column(String, nullable=True)  # 사업자번호, 영수증 생성용
@@ -227,3 +228,51 @@ class Settings(Base):
     kakao_blind_check_interval_minutes = Column(Integer, nullable=False, default=20)
     naver_default_claim_minutes = Column(Integer, nullable=False, default=1440)
     kakao_default_claim_minutes = Column(Integer, nullable=False, default=1440)
+
+
+class ExperienceCampaign(Base):
+    """체험단 캠페인 — 영수증 리뷰용 ReviewTarget과는 완전히 별도 파이프라인.
+    즉시-클레임이 아니라 지원(ExperienceApplication) 후 관리자가 승인하는 구조."""
+
+    __tablename__ = "experience_campaigns"
+
+    id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    campaign_type = Column(String, nullable=False)  # 방문형|배송형|기자단|구매평
+    content_type = Column(String, nullable=False)  # 블로그|인스타그램|유튜브|릴스|영상|틱톡|스토어
+    benefit_type = Column(String, nullable=False)  # 선착순 제공형|인원마감시 제공안함|인원마감후도 제공
+    product_name = Column(String, nullable=False)
+    product_price = Column(Integer, nullable=True)
+    capacity = Column(Integer, nullable=False)  # 모집 인원
+    content_guide = Column(String, nullable=True)
+    reservation_required = Column(Boolean, nullable=False, default=False)
+    contact_method = Column(String, nullable=True)
+    contact_info = Column(String, nullable=True)
+    extra_info = Column(String, nullable=True)
+    recruit_start = Column(DateTime, nullable=False)
+    recruit_end = Column(DateTime, nullable=False)
+    review_deadline = Column(Date, nullable=True)
+    is_recurring = Column(Boolean, nullable=False, default=False)  # 값만 저장, 자동 재등록 로직은 없음
+    created_at = Column(DateTime, default=utcnow)
+
+    store = relationship("Store")
+    applications = relationship(
+        "ExperienceApplication", back_populates="campaign", cascade="all, delete-orphan"
+    )
+
+
+class ExperienceApplication(Base):
+    """체험단원이 특정 캠페인에 신청한 기록 — 승인/거절은 관리자가 수동으로 처리."""
+
+    __tablename__ = "experience_applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer, ForeignKey("experience_campaigns.id"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("reviewers.id"), nullable=False)
+    status = Column(String, nullable=False, default="pending")  # pending|approved|rejected
+    applied_at = Column(DateTime, default=utcnow)
+    result_link = Column(String, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    campaign = relationship("ExperienceCampaign", back_populates="applications")
+    reviewer = relationship("Reviewer")

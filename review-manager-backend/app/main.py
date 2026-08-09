@@ -16,6 +16,7 @@ from app.routers import (
     accounts,
     admin,
     card_rules,
+    experience_campaigns,
     notify,
     portal,
     reviewers,
@@ -63,6 +64,7 @@ app.include_router(settings.router, dependencies=[Depends(admin.get_current_admi
 app.include_router(portal.router)
 app.include_router(notify.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(card_rules.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(experience_campaigns.router, dependencies=[Depends(admin.get_current_admin)])
 
 
 @app.get("/api/health")

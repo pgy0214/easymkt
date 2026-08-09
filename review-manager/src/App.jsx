@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AdminAccountManager from './components/AdminAccountManager.jsx'
 import AdminLogin from './components/AdminLogin.jsx'
+import CampaignManager from './components/CampaignManager.jsx'
 import ExperienceManager from './components/ExperienceManager.jsx'
 import Nav from './components/Nav.jsx'
 import ReceiptGenerator from './components/ReceiptGenerator.jsx'
@@ -52,7 +53,8 @@ export default function App() {
         {tab === 'targets' && <TargetForm />}
         {tab === 'tasks' && <TaskDashboard />}
         {tab === 'receipt' && <ReceiptGenerator />}
-        {tab === 'experience' && <ExperienceManager />}
+        {tab === 'campaigns' && <CampaignManager />}
+        {tab === 'experience-pool' && <ExperienceManager />}
         {tab === 'settlement' && <SettlementSummary />}
         {tab === 'settings' && <SettingsPanel />}
       </main>

@@ -150,6 +150,7 @@ class StoreCreate(BaseModel):
     name: str
     url: str
     address: Optional[str] = None
+    region: Optional[str] = None  # 체험단 캠페인 카드용 짧은 지역 라벨
     representative_hours: Optional[str] = None  # 대표시간
     representative_product: Optional[str] = None  # 대표상품
     cooldown_days: int = 90
@@ -164,6 +165,7 @@ class StoreUpdate(BaseModel):
     # place and are intentionally not editable after creation — fix a wrong
     # value by deleting the store and re-registering it with the right URL.
     url: Optional[str] = None
+    region: Optional[str] = None
     representative_product: Optional[str] = None
     cooldown_days: Optional[int] = None
     # not crawlable — admin enters these once, reused by every campaign at
@@ -181,6 +183,7 @@ class StoreOut(BaseModel):
     name: str
     url: str
     address: Optional[str] = None
+    region: Optional[str] = None
     representative_hours: Optional[str] = None
     representative_product: Optional[str] = None
     business_registration_number: Optional[str] = None
@@ -550,3 +553,110 @@ class AccountStoreHistoryItem(BaseModel):
 
 
 ReviewTargetDetailOut.model_rebuild()
+
+
+# --- Experience campaigns (체험단 캠페인) ---
+
+CampaignType = Literal["방문형", "배송형", "기자단", "구매평"]
+ContentType = Literal["블로그", "인스타그램", "유튜브", "릴스", "영상", "틱톡", "스토어"]
+BenefitType = Literal["선착순 제공형", "인원마감시 제공안함", "인원마감후도 제공"]
+
+
+class ExperienceCampaignCreate(BaseModel):
+    store_id: int
+    campaign_type: CampaignType
+    content_type: ContentType
+    benefit_type: BenefitType
+    product_name: str
+    product_price: Optional[int] = None
+    capacity: int
+    content_guide: Optional[str] = None
+    reservation_required: bool = False
+    contact_method: Optional[str] = None
+    contact_info: Optional[str] = None
+    extra_info: Optional[str] = None
+    recruit_start: datetime.datetime
+    recruit_end: datetime.datetime
+    review_deadline: Optional[datetime.date] = None
+    is_recurring: bool = False
+
+
+class ExperienceCampaignUpdate(BaseModel):
+    campaign_type: Optional[CampaignType] = None
+    content_type: Optional[ContentType] = None
+    benefit_type: Optional[BenefitType] = None
+    product_name: Optional[str] = None
+    product_price: Optional[int] = None
+    capacity: Optional[int] = None
+    content_guide: Optional[str] = None
+    reservation_required: Optional[bool] = None
+    contact_method: Optional[str] = None
+    contact_info: Optional[str] = None
+    extra_info: Optional[str] = None
+    recruit_start: Optional[datetime.datetime] = None
+    recruit_end: Optional[datetime.datetime] = None
+    review_deadline: Optional[datetime.date] = None
+    is_recurring: Optional[bool] = None
+
+
+class ExperienceCampaignOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    store_id: int
+    campaign_type: CampaignType
+    content_type: ContentType
+    benefit_type: BenefitType
+    product_name: str
+    product_price: Optional[int] = None
+    capacity: int
+    content_guide: Optional[str] = None
+    reservation_required: bool
+    contact_method: Optional[str] = None
+    contact_info: Optional[str] = None
+    extra_info: Optional[str] = None
+    recruit_start: datetime.datetime
+    recruit_end: datetime.datetime
+    review_deadline: Optional[datetime.date] = None
+    is_recurring: bool
+    created_at: datetime.datetime
+
+    # denormalized, filled in by crud
+    store_name: Optional[str] = None
+    store_region: Optional[str] = None
+    applicant_count: int = 0
+
+
+class ExperienceApplicationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    campaign_id: int
+    reviewer_id: int
+    status: str
+    applied_at: datetime.datetime
+    result_link: Optional[str] = None
+
+    # denormalized, filled in by crud
+    reviewer_name: Optional[str] = None
+    reviewer_contact_info: Optional[str] = None
+    reviewer_blog_url: Optional[str] = None
+    reviewer_blog_index: Optional[str] = None
+
+
+class ExperienceApplicationStatusIn(BaseModel):
+    status: Literal["approved", "rejected"]
+
+
+class PortalExperienceCampaignOut(BaseModel):
+    id: int
+    store_name: str
+    store_region: Optional[str] = None
+    campaign_type: CampaignType
+    content_type: ContentType
+    product_name: str
+    capacity: int
+    applicant_count: int
+    recruit_end: datetime.datetime
+    review_deadline: Optional[datetime.date] = None
+    already_applied: bool

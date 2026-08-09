@@ -6,15 +6,26 @@ import AccountForm from './AccountForm.jsx'
 import CopyButton from './CopyButton.jsx'
 import ImageCopyButton from './ImageCopyButton.jsx'
 import ImageDownloadButton from './ImageDownloadButton.jsx'
+import Button from './ui/Button.jsx'
+import Card from './ui/Card.jsx'
+import Input from './ui/Input.jsx'
+import Modal from './ui/Modal.jsx'
 import WorkRulesModal from './WorkRulesModal.jsx'
 
 const WORK_RULES_KEY = 'workRulesAcknowledged_v1'
 
 const TOKEN_KEY = 'portal_token'
+const MODE_KEY = 'portal_mode'
 
 export default function Portal() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [checkingDevAutoLogin, setCheckingDevAutoLogin] = useState(!token)
+  const [mode, setMode] = useState(() => localStorage.getItem(MODE_KEY) || 'reviewer')
+
+  function handleModeChange(next) {
+    localStorage.setItem(MODE_KEY, next)
+    setMode(next)
+  }
 
   useEffect(() => {
     if (token) return
@@ -35,12 +46,20 @@ export default function Portal() {
   }
 
   if (!token) {
-    return <LoginFlow onLoggedIn={(t) => { localStorage.setItem(TOKEN_KEY, t); setToken(t) }} />
+    return (
+      <LoginFlow
+        mode={mode}
+        onModeChange={handleModeChange}
+        onLoggedIn={(t) => { localStorage.setItem(TOKEN_KEY, t); setToken(t) }}
+      />
+    )
   }
 
   return (
     <PortalHome
       token={token}
+      mode={mode}
+      onModeChange={handleModeChange}
       onLogout={() => {
         localStorage.removeItem(TOKEN_KEY)
         setToken(null)
@@ -49,7 +68,7 @@ export default function Portal() {
   )
 }
 
-function LoginFlow({ onLoggedIn }) {
+function LoginFlow({ mode, onModeChange, onLoggedIn }) {
   const [step, setStep] = useState('phone') // 'phone' | 'code'
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
@@ -134,82 +153,90 @@ function LoginFlow({ onLoggedIn }) {
 
   if (checkingKakaoRedirect) {
     return (
-      <div className="mx-auto mt-16 max-w-sm rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+      <div className="mx-auto mt-16 max-w-sm rounded-card border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
         카카오 로그인 확인 중...
       </div>
     )
   }
 
   return (
-    <div className="mx-auto mt-16 max-w-sm rounded-lg border border-slate-200 bg-white p-6">
-      <h1 className="mb-4 text-lg font-semibold text-slate-900">리뷰어 로그인</h1>
+    <div className="mx-auto mt-16 max-w-sm rounded-card border border-gray-200 bg-white p-6">
+      <img src="/logo.svg" alt="" className="mx-auto mb-3 h-12 w-12" />
+      <h1 className="mb-4 text-center text-lg font-semibold text-gray-900">
+        이지리뷰 <span className="font-normal text-gray-400">로그인</span>
+      </h1>
+
+      <div className="mb-4 flex gap-1 rounded-btn bg-gray-100 p-1">
+        <button
+          type="button"
+          onClick={() => onModeChange('reviewer')}
+          className={`flex-1 rounded-btn py-1.5 text-sm font-medium transition-colors ${
+            mode === 'reviewer' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
+          }`}
+        >
+          리뷰어로 로그인
+        </button>
+        <button
+          type="button"
+          onClick={() => onModeChange('experience')}
+          className={`flex-1 rounded-btn py-1.5 text-sm font-medium transition-colors ${
+            mode === 'experience' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
+          }`}
+        >
+          체험단으로 로그인
+        </button>
+      </div>
+      <p className="mb-4 text-center text-xs text-gray-400">계정은 동일하게 사용할 수 있어요</p>
 
       {kakaoAccessToken && (
-        <p className="mb-3 text-sm text-blue-700">
+        <p className="mb-3 text-sm text-brand-700">
           카카오 로그인 확인됨 — 이 계정에 연결할 전화번호로 인증번호를 받아주세요.
         </p>
       )}
 
       {step === 'phone' && (
         <form onSubmit={handleRequestOtp} className="space-y-3">
-          <div>
-            <label className="block text-xs text-slate-500">전화번호</label>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="010-1234-5678"
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-            />
-          </div>
+          <Input
+            label="전화번호"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="010-1234-5678"
+          />
           {needName && (
-            <div>
-              <label className="block text-xs text-slate-500">이름 (처음이시면 입력해주세요)</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-              />
-            </div>
+            <Input
+              label="이름 (처음이시면 입력해주세요)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           )}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-          >
+          <Button type="submit" variant="primary" disabled={submitting} className="w-full">
             인증번호 받기
-          </button>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          </Button>
+          {error && <p className="text-sm text-danger-text">{error}</p>}
         </form>
       )}
 
       {step === 'code' && (
         <form onSubmit={handleVerify} className="space-y-3">
-          {message && <p className="text-sm text-green-700">{message}</p>}
-          <div>
-            <label className="block text-xs text-slate-500">인증번호 (6자리)</label>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-          >
+          {message && <p className="text-sm text-success-text">{message}</p>}
+          <Input
+            label="인증번호 (6자리)"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+          <Button type="submit" variant="primary" disabled={submitting} className="w-full">
             확인
-          </button>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          </Button>
+          {error && <p className="text-sm text-danger-text">{error}</p>}
         </form>
       )}
 
       {!kakaoAccessToken && kakaoConfig?.configured && (
-        <div className="mt-4 border-t border-slate-100 pt-4">
+        <div className="mt-4 border-t border-gray-100 pt-4">
           <button
             type="button"
             onClick={handleKakaoLogin}
-            className="w-full rounded bg-[#FEE500] px-4 py-1.5 text-sm font-medium text-[#191600] hover:brightness-95"
+            className="w-full rounded-btn bg-[#FEE500] px-4 py-1.5 text-sm font-medium text-[#191600] hover:brightness-95"
           >
             카카오로 로그인
           </button>
@@ -219,7 +246,7 @@ function LoginFlow({ onLoggedIn }) {
   )
 }
 
-function PortalHome({ token, onLogout }) {
+function PortalHome({ token, mode, onModeChange, onLogout }) {
   const [reviewer, setReviewer] = useState(null)
   const [pool, setPool] = useState([])
   const [myTasks, setMyTasks] = useState([])
@@ -307,45 +334,70 @@ function PortalHome({ token, onLogout }) {
     }
   }
 
-  if (loading) return <p className="p-6 text-sm text-slate-400">불러오는 중...</p>
-  if (error) return <p className="p-6 text-sm text-red-600">{error}</p>
+  if (loading) return <p className="p-6 text-sm text-gray-400">불러오는 중...</p>
+  if (error) return <p className="p-6 text-sm text-danger-text">{error}</p>
   if (!reviewer) return null
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-900">{reviewer.name}님, 안녕하세요</h1>
-          <p className="text-sm text-slate-500">{reviewer.contact_info}</p>
+        <div className="flex items-center gap-2">
+          <img src="/logo.svg" alt="" className="h-8 w-8 shrink-0" />
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">{reviewer.name}님, 안녕하세요</h1>
+            <p className="text-sm text-gray-500">{reviewer.contact_info}</p>
+          </div>
         </div>
-        <button onClick={onLogout} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
-          <LogOut size={14} />
-          로그아웃
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-btn bg-gray-100 p-0.5">
+            <button
+              type="button"
+              onClick={() => onModeChange('reviewer')}
+              className={`rounded-btn px-2 py-1 text-xs font-medium transition-colors ${
+                mode === 'reviewer' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              리뷰어
+            </button>
+            <button
+              type="button"
+              onClick={() => onModeChange('experience')}
+              className={`rounded-btn px-2 py-1 text-xs font-medium transition-colors ${
+                mode === 'experience' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              체험단
+            </button>
+          </div>
+          <button onClick={onLogout} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
+            <LogOut size={14} />
+            로그아웃
+          </button>
+        </div>
       </div>
 
       {!reviewer.is_active && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <div className="rounded-card border border-amber-200 bg-warning-bg px-3 py-2 text-sm text-warning-text">
           관리자 승인 대기 중입니다. 계정 정보는 미리 등록해두실 수 있지만, 승인 후에 작업을
           가져갈 수 있어요.
         </div>
       )}
 
-      <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="font-medium text-slate-800">내 계정</h2>
+      <Card padding="md" className="space-y-2">
+        <h2 className="font-medium text-gray-800">내 계정</h2>
         {reviewer.accounts.length === 0 && (
-          <p className="text-sm text-slate-400">등록된 계정이 없습니다. 아래에서 추가해주세요.</p>
+          <p className="text-sm text-gray-400">등록된 계정이 없습니다. 아래에서 추가해주세요.</p>
         )}
         {reviewer.accounts.map((account) => (
           <div
             key={account.id}
-            className="flex items-center justify-between rounded border border-slate-100 bg-slate-50 px-3 py-1.5 text-sm"
+            className="flex items-center justify-between rounded-btn border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm"
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-500">
+              <span className="text-xs font-medium text-gray-500">
                 {PLATFORM_LABEL[account.platform]}
               </span>
-              <span className="font-medium text-slate-700">{account.label}</span>
+              <span className="font-medium text-gray-700">{account.label}</span>
             </div>
             <div className="flex items-center gap-2">
               {account.profile_url && (
@@ -353,103 +405,196 @@ function PortalHome({ token, onLogout }) {
                   href={account.profile_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-0.5 text-xs text-blue-600 hover:underline"
+                  className="inline-flex items-center gap-0.5 text-xs text-brand-600 hover:underline"
                 >
                   마이플레이스
                   <ExternalLink size={11} />
                 </a>
               )}
-              <button onClick={() => handleDeleteAccount(account.id)} className="text-slate-400 hover:text-red-600">
+              <button onClick={() => handleDeleteAccount(account.id)} className="text-gray-400 hover:text-danger-text">
                 <Trash2 size={14} />
               </button>
             </div>
           </div>
         ))}
         <AccountForm onCreate={handleAddAccount} />
-      </section>
+      </Card>
 
-      <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-medium text-slate-800">가능한 작업</h2>
-          <button
-            type="button"
-            onClick={handleCheckAvailability}
-            disabled={checkingAvailability}
-            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-          >
-            {checkingAvailability ? '확인 중...' : '가능한 계정 확인하기'}
-          </button>
-        </div>
-        {checkingAvailability && (
-          <p className="text-xs text-slate-400">
-            내 계정 마이플레이스를 직접 확인하고 있어요. 계정당 몇 초씩 걸릴 수 있어요...
-          </p>
-        )}
-        {availability && (
-          <div className="space-y-1 rounded border border-slate-100 bg-slate-50 p-2 text-xs">
-            {availability.length === 0 && (
-              <p className="text-slate-400">마이플레이스 URL이 등록된 네이버 계정이 없습니다.</p>
-            )}
-            {availability.map((a) => (
-              <p key={a.account_id} className="text-slate-600">
-                {a.label}:{' '}
-                {a.error ? (
-                  <span className="text-red-600">확인 실패 ({a.error})</span>
-                ) : a.available_date ? (
-                  <span className="text-green-600">{a.available_date} 작성 가능</span>
-                ) : (
-                  <span className="text-amber-600">최근 7일 모두 사용해서 작성 가능한 날짜 없음</span>
-                )}
+      {mode === 'experience' ? (
+        <ExperienceCampaignList token={token} />
+      ) : (
+        <>
+          <Card padding="md" className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-gray-800">가능한 작업</h2>
+              <button
+                type="button"
+                onClick={handleCheckAvailability}
+                disabled={checkingAvailability}
+                className="rounded-btn border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {checkingAvailability ? '확인 중...' : '가능한 계정 확인하기'}
+              </button>
+            </div>
+            {checkingAvailability && (
+              <p className="text-xs text-gray-400">
+                내 계정 마이플레이스를 직접 확인하고 있어요. 계정당 몇 초씩 걸릴 수 있어요...
               </p>
+            )}
+            {availability && (
+              <div className="space-y-1 rounded-btn border border-gray-100 bg-gray-50 p-2 text-xs">
+                {availability.length === 0 && (
+                  <p className="text-gray-400">마이플레이스 URL이 등록된 네이버 계정이 없습니다.</p>
+                )}
+                {availability.map((a) => (
+                  <p key={a.account_id} className="text-gray-600">
+                    {a.label}:{' '}
+                    {a.error ? (
+                      <span className="text-danger-text">확인 실패 ({a.error})</span>
+                    ) : a.available_date ? (
+                      <span className="text-success-text">{a.available_date} 작성 가능</span>
+                    ) : (
+                      <span className="text-warning-text">최근 7일 모두 사용해서 작성 가능한 날짜 없음</span>
+                    )}
+                  </p>
+                ))}
+              </div>
+            )}
+            {pool.length === 0 && <p className="text-sm text-gray-400">지금 가져갈 수 있는 작업이 없습니다.</p>}
+            {pool.map((group) => (
+              <PoolTaskRow
+                key={group.review_target_id}
+                group={group}
+                myAccounts={reviewer.accounts.filter((a) => a.platform === group.platform)}
+                onClaim={handleClaim}
+                disabled={checkingAvailability}
+              />
             ))}
-          </div>
-        )}
-        {pool.length === 0 && <p className="text-sm text-slate-400">지금 가져갈 수 있는 작업이 없습니다.</p>}
-        {pool.map((group) => (
-          <PoolTaskRow
-            key={group.review_target_id}
-            group={group}
-            myAccounts={reviewer.accounts.filter((a) => a.platform === group.platform)}
-            onClaim={handleClaim}
-            disabled={checkingAvailability}
-          />
-        ))}
-      </section>
+          </Card>
 
-      <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-medium text-slate-800">내 작업</h2>
-          <button
-            type="button"
-            onClick={() => setShowRules(true)}
-            className={`rounded border px-2 py-1 text-xs font-medium ${
-              rulesAcknowledged
-                ? 'border-slate-300 text-slate-600 hover:bg-slate-50'
-                : 'border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100'
-            }`}
-          >
-            {rulesAcknowledged ? '작업수칙 다시보기' : '작업수칙확인하기'}
-          </button>
-        </div>
-        {!rulesAcknowledged && (
-          <p className="text-xs text-amber-600">먼저 작업수칙을 확인해야 작업을 진행할 수 있어요.</p>
-        )}
-        {myTasks.length === 0 && <p className="text-sm text-slate-400">진행 중인 작업이 없습니다.</p>}
-        {myTasks.map((task) => (
-          <MyTaskRow
-            key={task.id}
-            task={task}
-            token={token}
-            onSubmitResult={handleSubmitResult}
-            locked={!rulesAcknowledged}
-          />
-        ))}
-      </section>
+          <Card padding="md" className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-gray-800">내 작업</h2>
+              <button
+                type="button"
+                onClick={() => setShowRules(true)}
+                className={`rounded-btn border px-2 py-1 text-xs font-medium ${
+                  rulesAcknowledged
+                    ? 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                    : 'border-amber-400 bg-warning-bg text-warning-text hover:bg-amber-100'
+                }`}
+              >
+                {rulesAcknowledged ? '작업수칙 다시보기' : '작업수칙확인하기'}
+              </button>
+            </div>
+            {!rulesAcknowledged && (
+              <p className="text-xs text-warning-text">먼저 작업수칙을 확인해야 작업을 진행할 수 있어요.</p>
+            )}
+            {myTasks.length === 0 && <p className="text-sm text-gray-400">진행 중인 작업이 없습니다.</p>}
+            {myTasks.map((task) => (
+              <MyTaskRow
+                key={task.id}
+                task={task}
+                token={token}
+                onSubmitResult={handleSubmitResult}
+                locked={!rulesAcknowledged}
+              />
+            ))}
+          </Card>
 
-      {showRules && (
-        <WorkRulesModal onClose={() => setShowRules(false)} onAcknowledge={handleAcknowledgeRules} />
+          {showRules && (
+            <WorkRulesModal onClose={() => setShowRules(false)} onAcknowledge={handleAcknowledgeRules} />
+          )}
+        </>
       )}
     </div>
+  )
+}
+
+const CAMPAIGN_DDAY_MS = 24 * 60 * 60 * 1000
+
+function ExperienceCampaignList({ token }) {
+  const [campaigns, setCampaigns] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [applyingId, setApplyingId] = useState(null)
+
+  async function refresh() {
+    setLoading(true)
+    try {
+      setCampaigns(await portalApi.getExperienceCampaigns(token))
+      setError(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleApply(campaignId) {
+    setApplyingId(campaignId)
+    try {
+      const updated = await portalApi.applyToExperienceCampaign(token, campaignId)
+      setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? updated : c)))
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setApplyingId(null)
+    }
+  }
+
+  return (
+    <Card padding="md" className="space-y-2">
+      <h2 className="font-medium text-gray-800">체험단 캠페인</h2>
+      {loading && <p className="text-sm text-gray-400">불러오는 중...</p>}
+      {error && <p className="text-sm text-danger-text">{error}</p>}
+      {!loading && campaigns.length === 0 && (
+        <p className="text-sm text-gray-400">지금 신청할 수 있는 캠페인이 없습니다.</p>
+      )}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {campaigns.map((c) => {
+          const daysLeft = Math.ceil((new Date(c.recruit_end) - new Date()) / CAMPAIGN_DDAY_MS)
+          const isFull = c.applicant_count >= c.capacity
+          return (
+            <div key={c.id} className="rounded-card border border-gray-200 p-3">
+              <div className="flex items-center justify-between">
+                <span className="rounded-btn bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                  {c.campaign_type}
+                </span>
+                <span
+                  className={`text-xs font-medium ${daysLeft <= 1 ? 'text-danger-text' : 'text-gray-400'}`}
+                >
+                  {daysLeft <= 0 ? '마감임박' : `${daysLeft}일 남음`}
+                </span>
+              </div>
+              <div className="mt-1 font-medium text-gray-800">{c.store_name}</div>
+              {c.store_region && <div className="text-xs text-gray-500">{c.store_region}</div>}
+              <div className="mt-1 text-xs text-gray-500">
+                {c.content_type} · {c.product_name}
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  신청 {c.applicant_count}명 / {c.capacity}명
+                </span>
+                <Button
+                  size="sm"
+                  variant={c.already_applied ? 'outline' : 'primary'}
+                  disabled={c.already_applied || (isFull && !c.already_applied) || applyingId === c.id}
+                  onClick={() => handleApply(c.id)}
+                >
+                  {c.already_applied ? '신청완료' : isFull ? '마감' : applyingId === c.id ? '신청 중...' : '신청하기'}
+                </Button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </Card>
   )
 }
 
@@ -459,15 +604,15 @@ function PoolTaskRow({ group, myAccounts, onClaim, disabled }) {
   const [accountId, setAccountId] = useState(eligibleAccounts[0]?.id ?? '')
 
   return (
-    <div className="flex items-center justify-between rounded border border-slate-100 px-3 py-2 text-sm">
+    <div className="flex items-center justify-between rounded-btn border border-gray-100 px-3 py-2 text-sm">
       <div>
-        <div className="font-medium text-slate-700">{group.store_name}</div>
-        <div className="text-xs text-slate-500">
+        <div className="font-medium text-gray-700">{group.store_name}</div>
+        <div className="text-xs text-gray-500">
           {PLATFORM_LABEL[group.platform]} · 건당 {formatKRW(group.unit_price)} · 오늘{' '}
           {group.remaining_today}/{group.total_today} 남음
         </div>
         {eligibleAccounts.length === 0 && (
-          <div className="text-xs text-amber-600">
+          <div className="text-xs text-warning-text">
             보유 계정이 모두 이 매장의 재작업 가능 기간이 지나지 않았어요
           </div>
         )}
@@ -478,7 +623,7 @@ function PoolTaskRow({ group, myAccounts, onClaim, disabled }) {
             <select
               value={accountId}
               onChange={(e) => setAccountId(Number(e.target.value))}
-              className="rounded border border-slate-300 px-1.5 py-1 text-xs"
+              className="rounded-btn border border-gray-300 px-1.5 py-1 text-xs"
             >
               {eligibleAccounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -487,13 +632,14 @@ function PoolTaskRow({ group, myAccounts, onClaim, disabled }) {
               ))}
             </select>
           )}
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => onClaim(group.sample_task_id, accountId)}
             disabled={!accountId || disabled}
-            className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
           >
             작업신청
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -506,24 +652,24 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
   const canSubmit = task.status === 'ready' || (task.platform === 'kakao' && task.status === 'claimed')
 
   return (
-    <div className="rounded border border-slate-100 px-3 py-2 text-sm">
+    <div className="rounded-btn border border-gray-100 px-3 py-2 text-sm">
       <div className="flex items-center justify-between">
-        <div className="font-medium text-slate-700">{task.store_name}</div>
+        <div className="font-medium text-gray-700">{task.store_name}</div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">{PLATFORM_LABEL[task.platform]}</span>
+          <span className="text-xs text-gray-500">{PLATFORM_LABEL[task.platform]}</span>
           <button
             type="button"
             onClick={() => setShowBrief(true)}
             disabled={locked}
             title={locked ? '먼저 작업수칙을 확인해주세요' : undefined}
-            className="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-btn border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             리뷰 자료 보기
           </button>
         </div>
       </div>
       {(task.account_label || task.account_profile_url) && (
-        <div className="mt-0.5 text-xs text-slate-500">
+        <div className="mt-0.5 text-xs text-gray-500">
           작업 계정: {task.account_label || '-'}
           {task.account_profile_url && (
             <>
@@ -532,7 +678,7 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
                 href={task.account_profile_url}
                 target="_blank"
                 rel="noreferrer"
-                className="text-blue-600 hover:underline"
+                className="text-brand-600 hover:underline"
               >
                 플레이스 주소 열기
               </a>
@@ -541,11 +687,11 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
         </div>
       )}
       {task.claim_deadline && task.status !== 'completed' && (
-        <div className="text-xs text-slate-500">기한: {formatDateTime(task.claim_deadline)}</div>
+        <div className="text-xs text-gray-500">기한: {formatDateTime(task.claim_deadline)}</div>
       )}
       {showBrief && <TaskBriefModal token={token} taskId={task.id} onClose={() => setShowBrief(false)} />}
       {task.status === 'completed' ? (
-        <a href={task.result_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">
+        <a href={task.result_link} target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline">
           제출한 결과 보기
         </a>
       ) : canSubmit ? (
@@ -555,19 +701,21 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
             onChange={(e) => setLink(e.target.value)}
             placeholder="결과 링크"
             disabled={locked}
-            className="w-40 rounded border border-slate-300 px-1.5 py-0.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-40 rounded-btn border border-gray-300 px-1.5 py-0.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
           />
-          <button
+          <Button
+            size="sm"
+            variant="secondary"
+            className="px-2 py-0.5 disabled:cursor-not-allowed"
             onClick={() => link.trim() && onSubmitResult(task.id, link.trim())}
             disabled={locked}
             title={locked ? '먼저 작업수칙을 확인해주세요' : undefined}
-            className="rounded bg-slate-800 px-2 py-0.5 text-xs text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             제출
-          </button>
+          </Button>
         </div>
       ) : (
-        <div className="mt-1 text-xs text-slate-400">
+        <div className="mt-1 text-xs text-gray-400">
           {task.platform === 'naver' ? '날짜 확인 중이에요, 잠시만 기다려주세요' : '진행 중'}
         </div>
       )}
@@ -595,105 +743,97 @@ function TaskBriefModal({ token, taskId, onClose }) {
     !brief.receipt_image_path
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-medium text-slate-800">리뷰 자료</h3>
-          <button onClick={onClose} className="text-sm text-slate-400 hover:text-slate-700">
-            닫기
-          </button>
-        </div>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {!brief && !error && <p className="text-sm text-slate-400">불러오는 중...</p>}
-
-        {brief && (
-          <div className="space-y-3 text-sm">
-            {hasNothing && (
-              <p className="text-slate-400">아직 등록된 원고 자료가 없습니다.</p>
-            )}
-
-            {brief.assigned_review_text && (
-              <div>
-                <div className="flex items-center justify-between">
-                  <p className="text-base font-bold text-slate-800">원고</p>
-                  <CopyButton value={brief.assigned_review_text} label="원고" size="lg" />
-                </div>
-                <p className="mt-1 whitespace-pre-wrap text-slate-700">{brief.assigned_review_text}</p>
-              </div>
-            )}
-
-            {brief.reference_photo_path && (
-              <div>
-                <p className="text-xs font-medium text-slate-500">참고 이미지</p>
-                <img
-                  src={`${API_ORIGIN}${brief.reference_photo_path}`}
-                  alt="참고 이미지"
-                  className="mt-1 max-h-64 rounded border border-slate-200"
-                />
-              </div>
-            )}
-
-            {brief.assigned_photo_paths?.length > 0 && (
-              <div>
-                <p className="text-base font-bold text-slate-800">
-                  첨부사진 ({brief.assigned_photo_paths.length}장)
-                </p>
-                <div className="mt-2 space-y-3">
-                  {brief.assigned_photo_paths.map((path, i) => (
-                    <div key={path} className="space-y-2">
-                      <img
-                        src={`${API_ORIGIN}${path}`}
-                        alt="배정된 사진"
-                        className="w-full rounded border border-slate-200"
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        <ImageCopyButton src={`${API_ORIGIN}${path}`} label="사진" size="lg" />
-                        <ImageDownloadButton
-                          src={`${API_ORIGIN}${path}`}
-                          filename={`사진_${i + 1}.jpg`}
-                          label="사진"
-                          size="lg"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {brief.receipt_image_path ? (
-              <div>
-                <p className="text-base font-bold text-slate-800">영수증이미지</p>
-                <img
-                  src={`${API_ORIGIN}${brief.receipt_image_path}`}
-                  alt="영수증 이미지"
-                  className="mt-1 w-full max-h-96 rounded border border-slate-200"
-                />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <ImageCopyButton src={`${API_ORIGIN}${brief.receipt_image_path}`} label="영수증" size="lg" />
-                  <ImageDownloadButton
-                    src={`${API_ORIGIN}${brief.receipt_image_path}`}
-                    filename="영수증.jpg"
-                    label="영수증"
-                    size="lg"
-                  />
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400">
-                영수증 이미지는 네이버 날짜 확인이 끝나면 자동으로 생성됩니다.
-              </p>
-            )}
-          </div>
-        )}
+    <Modal open onClose={onClose} size="md">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium text-gray-800">리뷰 자료</h3>
+        <button onClick={onClose} className="text-sm text-gray-400 hover:text-gray-700">
+          닫기
+        </button>
       </div>
-    </div>
+
+      {error && <p className="text-sm text-danger-text">{error}</p>}
+      {!brief && !error && <p className="text-sm text-gray-400">불러오는 중...</p>}
+
+      {brief && (
+        <div className="space-y-3 text-sm">
+          {hasNothing && (
+            <p className="text-gray-400">아직 등록된 원고 자료가 없습니다.</p>
+          )}
+
+          {brief.assigned_review_text && (
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-base font-bold text-gray-800">원고</p>
+                <CopyButton value={brief.assigned_review_text} label="원고" size="lg" />
+              </div>
+              <p className="mt-1 whitespace-pre-wrap text-gray-700">{brief.assigned_review_text}</p>
+            </div>
+          )}
+
+          {brief.reference_photo_path && (
+            <div>
+              <p className="text-xs font-medium text-gray-500">참고 이미지</p>
+              <img
+                src={`${API_ORIGIN}${brief.reference_photo_path}`}
+                alt="참고 이미지"
+                className="mt-1 max-h-64 rounded border border-gray-200"
+              />
+            </div>
+          )}
+
+          {brief.assigned_photo_paths?.length > 0 && (
+            <div>
+              <p className="text-base font-bold text-gray-800">
+                첨부사진 ({brief.assigned_photo_paths.length}장)
+              </p>
+              <div className="mt-2 space-y-3">
+                {brief.assigned_photo_paths.map((path, i) => (
+                  <div key={path} className="space-y-2">
+                    <img
+                      src={`${API_ORIGIN}${path}`}
+                      alt="배정된 사진"
+                      className="w-full rounded border border-gray-200"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <ImageCopyButton src={`${API_ORIGIN}${path}`} label="사진" size="lg" />
+                      <ImageDownloadButton
+                        src={`${API_ORIGIN}${path}`}
+                        filename={`사진_${i + 1}.jpg`}
+                        label="사진"
+                        size="lg"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {brief.receipt_image_path ? (
+            <div>
+              <p className="text-base font-bold text-gray-800">영수증이미지</p>
+              <img
+                src={`${API_ORIGIN}${brief.receipt_image_path}`}
+                alt="영수증 이미지"
+                className="mt-1 w-full max-h-96 rounded border border-gray-200"
+              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                <ImageCopyButton src={`${API_ORIGIN}${brief.receipt_image_path}`} label="영수증" size="lg" />
+                <ImageDownloadButton
+                  src={`${API_ORIGIN}${brief.receipt_image_path}`}
+                  filename="영수증.jpg"
+                  label="영수증"
+                  size="lg"
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">
+              영수증 이미지는 네이버 날짜 확인이 끝나면 자동으로 생성됩니다.
+            </p>
+          )}
+        </div>
+      )}
+    </Modal>
   )
 }
