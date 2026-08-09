@@ -211,6 +211,8 @@ def update_my_profile(
     수정한다. 아이디/비밀번호는 여기서 다루지 않음(비밀번호는 분실 시 재발급 플로우로만)."""
     if data.name is not None:
         reviewer.name = data.name
+    if data.contact_info is not None:
+        reviewer.contact_info = data.contact_info
     if data.gender is not None:
         reviewer.gender = data.gender
     if data.region is not None:
@@ -219,6 +221,10 @@ def update_my_profile(
         reviewer.age_group = data.age_group
     if data.topics is not None:
         reviewer.topics = ",".join(data.topics)
+    if data.privacy_consent is not None:
+        reviewer.privacy_consent_at = (
+            datetime.datetime.utcnow() if data.privacy_consent else None
+        )
     if data.marketing_consent is not None:
         reviewer.marketing_consent_at = (
             datetime.datetime.utcnow() if data.marketing_consent else None

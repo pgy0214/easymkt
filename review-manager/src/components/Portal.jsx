@@ -76,6 +76,40 @@ const REGION_OPTIONS = [
   '울산광역시', '세종특별자치시', '경기도', '강원특별자치도', '충청북도', '충청남도',
   '전북특별자치도', '전라남도', '경상북도', '경상남도', '제주특별자치도',
 ]
+const PRIVACY_CONSENT_DETAIL = `수집 항목: 이름, 전화번호, (체험단 활동 시) 성별·지역·연령대·관심 주제
+수집 목적: 회원 식별, 리뷰단/체험단 작업 배정 및 진행 관리, 정산, 문의 응대
+보유 및 이용 기간: 회원 탈퇴 시까지 (관계 법령에 따라 보존이 필요한 경우 해당 기간 동안 별도 보관 후 파기)
+동의를 거부할 권리가 있으며, 동의하지 않을 경우 회원가입 및 서비스 이용이 제한됩니다.`
+const MARKETING_CONSENT_DETAIL = `전송자: 이지리뷰
+전송 내용: 신규 캠페인·이벤트·공지 등 광고성 정보
+전송 방법: 휴대폰 문자메시지(SMS)
+동의하지 않아도 서비스 이용에는 제한이 없으며, 동의 후에도 이 화면에서 언제든지 수신 동의를 철회할 수 있습니다.`
+
+function ConsentCheckbox({ label, checked, onChange, detail }) {
+  const [showDetail, setShowDetail] = useState(false)
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-1.5 text-xs text-gray-600">
+          <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+          {label}
+        </label>
+        <button
+          type="button"
+          onClick={() => setShowDetail((v) => !v)}
+          className="text-xs text-gray-400 underline hover:text-gray-600"
+        >
+          {showDetail ? '접기' : '내용보기'}
+        </button>
+      </div>
+      {showDetail && (
+        <p className="whitespace-pre-line rounded-btn border border-gray-200 bg-gray-50 p-2 text-xs text-gray-500">
+          {detail}
+        </p>
+      )}
+    </div>
+  )
+}
 
 function LoginFlow({ onLoggedIn }) {
   const [step, setStep] = useState('login') // 'login' | 'phone' | 'code' | 'complete-signup' | 'temp-password'
@@ -810,10 +844,12 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
 
 function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
   const [name, setName] = useState(reviewer.name || '')
+  const [contactInfo, setContactInfo] = useState(reviewer.contact_info || '')
   const [gender, setGender] = useState(reviewer.gender || '')
   const [region, setRegion] = useState(reviewer.region || '')
   const [ageGroup, setAgeGroup] = useState(reviewer.age_group || '')
   const [topics, setTopics] = useState(reviewer.topics ? reviewer.topics.split(',') : [])
+  const [privacyConsent, setPrivacyConsent] = useState(!!reviewer.privacy_consent)
   const [marketingConsent, setMarketingConsent] = useState(!!reviewer.marketing_consent)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -824,15 +860,21 @@ function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
 
   async function handleSave(e) {
     e.preventDefault()
+    if (!privacyConsent) {
+      setError('개인정보 수집·이용에 동의해야 서비스를 계속 이용할 수 있어요.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
       await portalApi.updateProfile(token, {
         name: name.trim(),
+        contact_info: contactInfo.trim() || undefined,
         gender: gender || null,
         region: region || null,
         age_group: ageGroup || null,
         topics,
+        privacy_consent: privacyConsent,
         marketing_consent: marketingConsent,
       })
       await onUpdated()
@@ -854,6 +896,12 @@ function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
       </div>
       <form onSubmit={handleSave} className="mt-3 space-y-3">
         <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input
+          label="연락처"
+          value={contactInfo}
+          onChange={(e) => setContactInfo(e.target.value)}
+          placeholder="010-1234-5678"
+        />
         <div className="flex gap-2">
           <div className="flex-1">
             <label className="block text-xs text-gray-500">성별</label>
@@ -917,14 +965,18 @@ function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
             ))}
           </div>
         </div>
-        <label className="flex items-center gap-1.5 text-xs text-gray-600">
-          <input
-            type="checkbox"
-            checked={marketingConsent}
-            onChange={(e) => setMarketingConsent(e.target.checked)}
-          />
-          문자 등 마케팅 정보 수신에 동의합니다 (선택)
-        </label>
+        <ConsentCheckbox
+          label="개인정보 수집·이용에 동의합니다 (필수)"
+          checked={privacyConsent}
+          onChange={setPrivacyConsent}
+          detail={PRIVACY_CONSENT_DETAIL}
+        />
+        <ConsentCheckbox
+          label="문자 등 마케팅 정보 수신에 동의합니다 (선택)"
+          checked={marketingConsent}
+          onChange={setMarketingConsent}
+          detail={MARKETING_CONSENT_DETAIL}
+        />
         {error && <p className="text-sm text-danger-text">{error}</p>}
         <Button type="submit" variant="primary" disabled={saving} className="w-full">
           저장

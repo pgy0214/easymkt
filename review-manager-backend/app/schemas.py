@@ -142,7 +142,9 @@ class ReviewerOut(BaseModel):
     created_at: datetime.datetime
     accounts: list[ReviewAccountOut] = []
 
-    # crud.reviewer_to_out이 marketing_consent_at 존재 여부로 채워줌
+    # crud.reviewer_to_out이 각각 privacy_consent_at/marketing_consent_at 존재
+    # 여부로 채워줌
+    privacy_consent: bool = False
     marketing_consent: bool = False
 
     # 다른 리뷰어와 블로그 주소가 겹치는지 — crud.reviewer_to_out이 계산해서 채워줌
@@ -522,10 +524,12 @@ class PortalProfileUpdateIn(BaseModel):
     바뀌므로 여기서는 다루지 않는다."""
 
     name: Optional[str] = None
+    contact_info: Optional[str] = None
     gender: Optional[Gender] = None
     region: Optional[str] = None
     age_group: Optional[str] = None
     topics: Optional[list[str]] = None
+    privacy_consent: Optional[bool] = None
     marketing_consent: Optional[bool] = None
 
 

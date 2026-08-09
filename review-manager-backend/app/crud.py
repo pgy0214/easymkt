@@ -206,6 +206,7 @@ def reviewer_to_out(
     out = schemas.ReviewerOut.model_validate(reviewer)
     out.accounts = [account_to_out(a) for a in reviewer.accounts]
     out.blog_duplicate = bool(duplicate_blog_ids) and reviewer.id in duplicate_blog_ids
+    out.privacy_consent = bool(reviewer.privacy_consent_at)
     out.marketing_consent = bool(reviewer.marketing_consent_at)
     return out
 
