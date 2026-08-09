@@ -197,6 +197,11 @@ export const portalApi = {
     }),
   resetPassword: (token) =>
     authedRequest('/portal/me/reset-password', token, { method: 'POST' }),
+  updateProfile: (token, data) =>
+    authedRequest('/portal/me/profile', token, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 
   devAutoLogin: () => request('/portal/dev-autologin'),
 

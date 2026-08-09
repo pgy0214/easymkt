@@ -276,4 +276,10 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "reviewers", "username", "username TEXT")
         _add_column_if_missing(conn, "reviewers", "topics", "topics TEXT")
 
+        # reviewers: marketing_consent_at — 포털 셀프 회원가입 시 문자 등 마케팅
+        # 정보 수신 동의 시각(선택, privacy_consent_at과 별도)
+        _add_column_if_missing(
+            conn, "reviewers", "marketing_consent_at", "marketing_consent_at DATETIME"
+        )
+
         conn.commit()

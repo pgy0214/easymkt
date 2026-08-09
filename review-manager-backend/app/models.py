@@ -41,6 +41,7 @@ class Reviewer(Base):
     otp_expires_at = Column(DateTime, nullable=True)
     kakao_id = Column(String, nullable=True)  # 카카오 로그인 연동 시 저장, 전화번호 OTP 인증 후에만 연결
     privacy_consent_at = Column(DateTime, nullable=True)  # 포털 셀프 회원가입 시 개인정보 수집·이용 동의 시각
+    marketing_consent_at = Column(DateTime, nullable=True)  # 포털 셀프 회원가입 시 마케팅(문자 등) 수신 동의 시각 — 선택
     username = Column(String, nullable=True)  # 포털 로그인 아이디 — 회원가입 시 직접 지정, 소문자로 정규화해서 저장
     password_hash = Column(String, nullable=True)  # 포털 로그인용 — 아이디+비밀번호로 로그인, 분실 시 OTP로 임시 비밀번호 재발급
     topics = Column(String, nullable=True)  # 체험단 전용, 관심 주제(콤마 구분 — 맛집,여행,뷰티 등)

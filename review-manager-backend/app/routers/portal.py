@@ -170,6 +170,7 @@ def complete_signup(
     reviewer.password_hash = auth.hash_password(data.password)
     reviewer.name = data.name
     reviewer.privacy_consent_at = datetime.datetime.utcnow()
+    reviewer.marketing_consent_at = datetime.datetime.utcnow() if data.marketing_consent else None
     if data.gender is not None:
         reviewer.gender = data.gender
     if data.region is not None:
@@ -198,6 +199,34 @@ def reset_my_password(
     reviewer.password_hash = auth.hash_password(temp_password)
     db.commit()
     return schemas.PortalResetPasswordOut(username=reviewer.username, temp_password=temp_password)
+
+
+@router.patch("/me/profile", response_model=schemas.ReviewerOut)
+def update_my_profile(
+    data: schemas.PortalProfileUpdateIn,
+    reviewer: models.Reviewer = Depends(get_current_reviewer),
+    db: Session = Depends(get_db),
+):
+    """가입 완료 이후 이름/체험단 정보(성별·지역·연령대·주제)·마케팅 수신동의를
+    수정한다. 아이디/비밀번호는 여기서 다루지 않음(비밀번호는 분실 시 재발급 플로우로만)."""
+    if data.name is not None:
+        reviewer.name = data.name
+    if data.gender is not None:
+        reviewer.gender = data.gender
+    if data.region is not None:
+        reviewer.region = data.region
+    if data.age_group is not None:
+        reviewer.age_group = data.age_group
+    if data.topics is not None:
+        reviewer.topics = ",".join(data.topics)
+    if data.marketing_consent is not None:
+        reviewer.marketing_consent_at = (
+            datetime.datetime.utcnow() if data.marketing_consent else None
+        )
+    db.commit()
+    db.refresh(reviewer)
+    duplicate_ids = crud.get_duplicate_blog_reviewer_ids(db)
+    return crud.reviewer_to_out(reviewer, duplicate_ids)
 
 
 @router.patch("/me/blog-url", response_model=schemas.ReviewerOut)

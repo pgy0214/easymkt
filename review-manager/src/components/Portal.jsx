@@ -71,6 +71,11 @@ const TOPIC_OPTIONS = [
   '맛집', '여행', '뷰티', '패션', '육아', '리빙/인테리어',
   'IT/전자기기', '자동차', '반려동물', '건강/운동', '문화/공연', '제품후기', '기타',
 ]
+const REGION_OPTIONS = [
+  '서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시', '대전광역시',
+  '울산광역시', '세종특별자치시', '경기도', '강원특별자치도', '충청북도', '충청남도',
+  '전북특별자치도', '전라남도', '경상북도', '경상남도', '제주특별자치도',
+]
 
 function LoginFlow({ onLoggedIn }) {
   const [step, setStep] = useState('login') // 'login' | 'phone' | 'code' | 'complete-signup' | 'temp-password'
@@ -92,6 +97,7 @@ function LoginFlow({ onLoggedIn }) {
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('')
   const [signupName, setSignupName] = useState('')
   const [signupConsent, setSignupConsent] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [showExperienceFields, setShowExperienceFields] = useState(false)
   const [gender, setGender] = useState('')
   const [region, setRegion] = useState('')
@@ -225,8 +231,9 @@ function LoginFlow({ onLoggedIn }) {
         password: signupPassword,
         name: signupName.trim(),
         privacy_consent: signupConsent,
+        marketing_consent: marketingConsent,
         gender: gender || undefined,
-        region: region.trim() || undefined,
+        region: region || undefined,
         age_group: ageGroup || undefined,
         topics: topics.length > 0 ? topics : undefined,
       })
@@ -404,7 +411,21 @@ function LoginFlow({ onLoggedIn }) {
                   </select>
                 </div>
               </div>
-              <Input label="지역" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="예: 서울 강남구" />
+              <div>
+                <label className="block text-xs text-gray-500">지역</label>
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                >
+                  <option value="">선택 안 함</option>
+                  {REGION_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-xs text-gray-500">주제 (복수 선택 가능)</label>
                 <div className="mt-1 flex flex-wrap gap-1">
@@ -441,6 +462,14 @@ function LoginFlow({ onLoggedIn }) {
               onChange={(e) => setSignupConsent(e.target.checked)}
             />
             위 개인정보 수집·이용에 동의합니다 (필수)
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-gray-600">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+            />
+            문자 등 마케팅 정보 수신에 동의합니다 (선택)
           </label>
 
           <Button type="submit" variant="primary" disabled={submitting} className="w-full">
@@ -506,6 +535,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
     () => localStorage.getItem(WORK_RULES_KEY) === 'true',
   )
   const [showRules, setShowRules] = useState(false)
+  const [showProfileEdit, setShowProfileEdit] = useState(false)
 
   function handleAcknowledgeRules() {
     localStorage.setItem(WORK_RULES_KEY, 'true')
@@ -617,12 +647,28 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
               체험단
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowProfileEdit(true)}
+            className="text-sm text-gray-500 hover:text-gray-800"
+          >
+            내 정보 수정
+          </button>
           <button onClick={onLogout} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
             <LogOut size={14} />
             로그아웃
           </button>
         </div>
       </div>
+
+      {showProfileEdit && (
+        <ProfileEditModal
+          token={token}
+          reviewer={reviewer}
+          onClose={() => setShowProfileEdit(false)}
+          onUpdated={refresh}
+        />
+      )}
 
       {!reviewer.is_active && (
         <div className="rounded-card border border-amber-200 bg-warning-bg px-3 py-2 text-sm text-warning-text">
@@ -762,6 +808,132 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   )
 }
 
+function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
+  const [name, setName] = useState(reviewer.name || '')
+  const [gender, setGender] = useState(reviewer.gender || '')
+  const [region, setRegion] = useState(reviewer.region || '')
+  const [ageGroup, setAgeGroup] = useState(reviewer.age_group || '')
+  const [topics, setTopics] = useState(reviewer.topics ? reviewer.topics.split(',') : [])
+  const [marketingConsent, setMarketingConsent] = useState(!!reviewer.marketing_consent)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  function toggleTopic(topic) {
+    setTopics((prev) => (prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]))
+  }
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+    try {
+      await portalApi.updateProfile(token, {
+        name: name.trim(),
+        gender: gender || null,
+        region: region || null,
+        age_group: ageGroup || null,
+        topics,
+        marketing_consent: marketingConsent,
+      })
+      await onUpdated()
+      onClose()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} size="md">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium text-gray-800">내 정보 수정</h3>
+        <button onClick={onClose} className="text-sm text-gray-400 hover:text-gray-700">
+          닫기
+        </button>
+      </div>
+      <form onSubmit={handleSave} className="mt-3 space-y-3">
+        <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label className="block text-xs text-gray-500">성별</label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+            >
+              <option value="">선택 안 함</option>
+              <option value="male">남성</option>
+              <option value="female">여성</option>
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-gray-500">연령대</label>
+            <select
+              value={ageGroup}
+              onChange={(e) => setAgeGroup(e.target.value)}
+              className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+            >
+              <option value="">선택 안 함</option>
+              {AGE_GROUP_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500">지역</label>
+          <select
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+          >
+            <option value="">선택 안 함</option>
+            {REGION_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500">주제 (복수 선택 가능)</label>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {TOPIC_OPTIONS.map((topic) => (
+              <button
+                key={topic}
+                type="button"
+                onClick={() => toggleTopic(topic)}
+                className={`rounded-btn border px-2 py-0.5 text-xs font-medium ${
+                  topics.includes(topic)
+                    ? 'border-brand-400 bg-brand-50 text-brand-700'
+                    : 'border-gray-300 text-gray-600'
+                }`}
+              >
+                {topic}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="flex items-center gap-1.5 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            checked={marketingConsent}
+            onChange={(e) => setMarketingConsent(e.target.checked)}
+          />
+          문자 등 마케팅 정보 수신에 동의합니다 (선택)
+        </label>
+        {error && <p className="text-sm text-danger-text">{error}</p>}
+        <Button type="submit" variant="primary" disabled={saving} className="w-full">
+          저장
+        </Button>
+      </form>
+    </Modal>
+  )
+}
+
 const CAMPAIGN_DDAY_MS = 24 * 60 * 60 * 1000
 
 const BLOG_INDEX_OPTIONS = [
@@ -869,6 +1041,27 @@ function ExperienceProfileCard({ token, reviewer, onUpdated }) {
         </div>
       </form>
       {saved && <p className="text-xs text-success-text">저장했어요.</p>}
+      {reviewer.blog_url && (
+        <div className="flex items-center justify-between rounded-btn border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-medium text-gray-700">{reviewer.blog_url}</span>
+            {reviewer.blog_index && (
+              <span className="shrink-0 rounded-btn bg-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600">
+                {reviewer.blog_index}
+              </span>
+            )}
+          </div>
+          <a
+            href={reviewer.blog_url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs text-brand-600 hover:underline"
+          >
+            바로가기
+            <ExternalLink size={11} />
+          </a>
+        </div>
+      )}
     </Card>
   )
 }
