@@ -1,7 +1,15 @@
-import { Plus, Users, X } from 'lucide-react'
+import { ExternalLink, Phone, Plus, Search, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api, API_ORIGIN, experienceCampaignApi } from '../lib/api.js'
-import { AGE_GROUP_OPTIONS, BLOG_INDEX_OPTIONS, REGION_OPTIONS } from '../lib/format.js'
+import {
+  AGE_GROUP_OPTIONS,
+  BLOG_INDEX_OPTIONS,
+  formatUtcToLocalDate,
+  GENDER_LABEL,
+  localDateToUtcNaiveIso,
+  REGION_OPTIONS,
+} from '../lib/format.js'
+import BulkMessageModal from './BulkMessageModal.jsx'
 import Badge from './ui/Badge.jsx'
 import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
@@ -19,25 +27,6 @@ const DEFAULT_GUIDELINE = [
   ' -  네이버지도를 반드시 추가해주세요',
   ' -  상품의 차별성 및 특징, 지리적위치 특이점, 판매상품 강조 해주세요.',
 ].join('\n')
-
-// <input type="date">가 주는 값(예: "2026-08-09")은 타임존 정보가 없는 "내 지역
-// 날짜"다 — 그대로 서버로 보내면 백엔드가 UTC로 오해해서(예: 한국은 UTC+9) 모집기간
-// 필터(recruit_start <= now <= recruit_end)가 어긋난다. 하루의 시작/끝 시각을 붙여
-// 브라우저 로컬시각으로 해석한 뒤 UTC로 변환해서 보낸다(서버의 utcnow()와 동일한 표기).
-function localDateToUtcNaiveIso(dateStr, endOfDay = false) {
-  if (!dateStr) return null
-  const time = endOfDay ? 'T23:59:59' : 'T00:00:00'
-  return new Date(`${dateStr}${time}`).toISOString().slice(0, 19)
-}
-
-// 반대로 서버가 돌려준 값(타임존 표기 없는 UTC 문자열)을 화면에 보여줄 땐 'Z'를 붙여
-// UTC로 해석시킨 뒤 로컬 날짜로 변환한다.
-function formatUtcToLocalDate(value) {
-  if (!value) return ''
-  const date = new Date(value.includes('Z') ? value : `${value}Z`)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
 
 const EMPTY = {
   store_id: '',
@@ -73,6 +62,7 @@ export default function CampaignManager() {
   const [error, setError] = useState(null)
   const [registerOpen, setRegisterOpen] = useState(false)
   const [applicantsCampaign, setApplicantsCampaign] = useState(null)
+  const [scoutCampaign, setScoutCampaign] = useState(null)
   const [campaignImage, setCampaignImage] = useState(null)
 
   async function refresh() {
@@ -155,6 +145,15 @@ export default function CampaignManager() {
     }
   }
 
+  async function handleApproval(id, status) {
+    try {
+      await experienceCampaignApi.updateApproval(id, status)
+      await refresh()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -182,6 +181,7 @@ export default function CampaignManager() {
                 <th className="px-3 py-2">신청/정원</th>
                 <th className="px-3 py-2">모집기간</th>
                 <th className="px-3 py-2">제출마감일</th>
+                <th className="px-3 py-2">상태</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -216,6 +216,20 @@ export default function CampaignManager() {
                   </td>
                   <td className="px-3 py-2 text-gray-500">{c.review_deadline || '-'}</td>
                   <td className="px-3 py-2">
+                    {c.approval_status === 'pending' && (
+                      <div className="flex items-center gap-1">
+                        <Badge variant="warning">광고주 등록 · 승인대기</Badge>
+                        <Button size="sm" variant="ghost" tone="emerald" onClick={() => handleApproval(c.id, 'approved')}>
+                          승인
+                        </Button>
+                        <Button size="sm" variant="danger" onClick={() => handleApproval(c.id, 'rejected')}>
+                          거절
+                        </Button>
+                      </div>
+                    )}
+                    {c.approval_status === 'rejected' && <Badge variant="danger">거절됨</Badge>}
+                  </td>
+                  <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setApplicantsCampaign(c)}
@@ -223,6 +237,13 @@ export default function CampaignManager() {
                       >
                         <Users size={12} />
                         지원자 ({c.applicant_count})
+                      </button>
+                      <button
+                        onClick={() => setScoutCampaign(c)}
+                        className="flex items-center gap-1 rounded-btn border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                      >
+                        <Search size={12} />
+                        모집희망 찾아보기
                       </button>
                       <button
                         onClick={() => handleDelete(c.id)}
@@ -544,6 +565,13 @@ export default function CampaignManager() {
           onChanged={refresh}
         />
       )}
+      {scoutCampaign && (
+        <ExperienceScoutModal
+          campaign={scoutCampaign}
+          onClose={() => setScoutCampaign(null)}
+          onChanged={refresh}
+        />
+      )}
     </div>
   )
 }
@@ -554,6 +582,7 @@ const APPLICATION_STATUS_VARIANT = { pending: 'warning', approved: 'success', re
 function ExperienceApplicantsModal({ campaign, onClose, onChanged }) {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [messagingApplication, setMessagingApplication] = useState(null)
 
   async function refresh() {
     setLoading(true)
@@ -596,42 +625,175 @@ function ExperienceApplicantsModal({ campaign, onClose, onChanged }) {
       )}
 
       <div className="space-y-2">
-        {applications.map((a) => (
-          <div
-            key={a.id}
-            className="flex items-center justify-between gap-2 rounded-card border border-gray-200 p-3"
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-800">{a.reviewer_name}</span>
-                <Badge variant={APPLICATION_STATUS_VARIANT[a.status]}>
-                  {APPLICATION_STATUS_LABEL[a.status]}
-                </Badge>
+        {applications.map((a) => {
+          const approved = a.status === 'approved'
+          return (
+            <div
+              key={a.id}
+              className="flex items-center justify-between gap-2 rounded-card border border-gray-200 p-3"
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  {approved && <span className="font-medium text-gray-800">{a.reviewer_name}</span>}
+                  <Badge variant={APPLICATION_STATUS_VARIANT[a.status]}>
+                    {APPLICATION_STATUS_LABEL[a.status]}
+                  </Badge>
+                </div>
+                {approved && (
+                  <p className="text-xs text-gray-500">
+                    {[GENDER_LABEL[a.reviewer_gender] || a.reviewer_gender, a.reviewer_age_group, a.reviewer_region]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+                {a.reviewer_blog_url && (
+                  <a
+                    href={a.reviewer_blog_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-brand-600 hover:underline"
+                  >
+                    {a.reviewer_blog_url}
+                  </a>
+                )}
+                {a.reviewer_blog_index && (
+                  <p className="text-xs text-gray-500">지수 {a.reviewer_blog_index}</p>
+                )}
               </div>
-              <p className="text-xs text-gray-500">{a.reviewer_contact_info}</p>
-              {a.reviewer_blog_url && (
-                <a
-                  href={a.reviewer_blog_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-brand-600 hover:underline"
-                >
-                  {a.reviewer_blog_url}
-                </a>
-              )}
-            </div>
-            {a.status === 'pending' && (
               <div className="flex shrink-0 items-center gap-2">
-                <Button size="sm" variant="ghost" tone="emerald" onClick={() => handleStatusChange(a.id, 'approved')}>
-                  승인
-                </Button>
-                <Button size="sm" variant="danger" onClick={() => handleStatusChange(a.id, 'rejected')}>
-                  거절
-                </Button>
+                {a.status === 'pending' && (
+                  <>
+                    <Button size="sm" variant="ghost" tone="emerald" onClick={() => handleStatusChange(a.id, 'approved')}>
+                      승인
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={() => handleStatusChange(a.id, 'rejected')}>
+                      거절
+                    </Button>
+                  </>
+                )}
+                {approved && (
+                  <Button size="sm" variant="outline" onClick={() => setMessagingApplication(a)}>
+                    <Phone size={12} className="mr-1 inline" />
+                    연락하기
+                  </Button>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          )
+        })}
+      </div>
+
+      {messagingApplication && (
+        <BulkMessageModal
+          reviewers={[
+            {
+              id: messagingApplication.reviewer_id,
+              name: messagingApplication.reviewer_name,
+              contact_info: messagingApplication.reviewer_contact_info,
+            },
+          ]}
+          onClose={() => setMessagingApplication(null)}
+        />
+      )}
+    </Modal>
+  )
+}
+
+function ExperienceScoutModal({ campaign, onClose, onChanged }) {
+  const [candidates, setCandidates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    experienceCampaignApi
+      .getCandidates(campaign.id)
+      .then(setCandidates)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign.id])
+
+  function toggle(id) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
+  }
+
+  async function handleScout() {
+    if (selectedIds.length === 0) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await experienceCampaignApi.scout(campaign.id, selectedIds)
+      await onChanged()
+      onClose()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} size="lg">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-800">
+          {campaign.store_name} — 모집희망 찾아보기
+        </h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-brand-600">
+          <X size={18} />
+        </button>
+      </div>
+
+      {error && <p className="text-sm text-danger-text">{error}</p>}
+      {loading && <p className="text-sm text-gray-400">불러오는 중...</p>}
+      {!loading && candidates.length === 0 && (
+        <p className="text-sm text-gray-400">블로그 정보를 등록한 후보가 없습니다</p>
+      )}
+
+      {!loading && candidates.length > 0 && (
+        <div className="max-h-96 overflow-y-auto rounded-card border border-gray-200">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-xs text-gray-500">
+              <tr>
+                <th className="w-10 px-3 py-2"></th>
+                <th className="px-3 py-2 text-left">블로그주소</th>
+                <th className="px-3 py-2 text-left">연령대</th>
+                <th className="px-3 py-2 text-left">지역</th>
+                <th className="px-3 py-2 text-left">지수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {candidates.map((c) => (
+                <tr
+                  key={c.reviewer_id}
+                  className="cursor-pointer border-t border-gray-100 hover:bg-gray-50"
+                  onClick={() => toggle(c.reviewer_id)}
+                >
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(c.reviewer_id)}
+                      onChange={() => toggle(c.reviewer_id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-brand-600">{c.blog_url}</td>
+                  <td className="px-3 py-2 text-gray-600">{c.age_group || '-'}</td>
+                  <td className="px-3 py-2 text-gray-600">{c.region || '-'}</td>
+                  <td className="px-3 py-2 text-gray-600">{c.blog_index || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <span className="text-xs text-gray-500">{selectedIds.length}명 선택됨</span>
+        <Button disabled={selectedIds.length === 0 || submitting} onClick={handleScout}>
+          {submitting ? '신청 중...' : '섭외신청하기'}
+        </Button>
       </div>
     </Modal>
   )

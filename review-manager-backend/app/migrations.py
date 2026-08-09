@@ -291,5 +291,13 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "experience_campaigns", "target_age_group", "target_age_group TEXT")
         _add_column_if_missing(conn, "experience_campaigns", "target_region", "target_region TEXT")
         _add_column_if_missing(conn, "experience_campaigns", "target_blog_index", "target_blog_index TEXT")
+        _add_column_if_missing(conn, "stores", "owner_reviewer_id", "owner_reviewer_id INTEGER")
+        _add_column_if_missing(conn, "experience_campaigns", "created_by_reviewer_id", "created_by_reviewer_id INTEGER")
+        _add_column_if_missing(
+            conn,
+            "experience_campaigns",
+            "approval_status",
+            "approval_status TEXT NOT NULL DEFAULT 'approved'",
+        )
 
         conn.commit()

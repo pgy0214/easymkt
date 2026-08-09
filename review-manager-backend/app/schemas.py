@@ -4,7 +4,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict
 
 Platform = Literal["naver", "kakao"]
-ReviewerCategory = Literal["admin", "reviewer", "experience", "press"]
+ReviewerCategory = Literal["admin", "reviewer", "experience", "press", "advertiser"]
 Gender = Literal["male", "female"]
 TimeSlot = Literal["morning", "afternoon", "night"]
 ApplicationStatus = Literal["pending", "approved", "rejected"]
@@ -519,6 +519,8 @@ class PortalCompleteSignupIn(BaseModel):
     region: Optional[str] = None
     age_group: Optional[str] = None
     topics: Optional[list[str]] = None
+    # 광고주 포털에서 회원가입한 경우 "advertiser"로 전달됨
+    category: Optional[Literal["advertiser"]] = None
 
 
 class PortalProfileUpdateIn(BaseModel):
@@ -701,12 +703,17 @@ class ExperienceCampaignOut(BaseModel):
     target_age_group: Optional[str] = None
     target_region: Optional[str] = None
     target_blog_index: Optional[str] = None
+    approval_status: str = "approved"  # approved|pending|rejected — 광고주 등록분만 관리자 승인 필요
     created_at: datetime.datetime
 
     # denormalized, filled in by crud
     store_name: Optional[str] = None
     store_region: Optional[str] = None
     applicant_count: int = 0
+
+
+class ExperienceCampaignApprovalIn(BaseModel):
+    status: Literal["approved", "rejected"]
 
 
 class ExperienceApplicationOut(BaseModel):
@@ -719,15 +726,31 @@ class ExperienceApplicationOut(BaseModel):
     applied_at: datetime.datetime
     result_link: Optional[str] = None
 
-    # denormalized, filled in by crud
+    # denormalized, filled in by crud — 이름/연락처/성별/연령대/지역은 승인 전에는
+    # 프론트에서 숨기고 블로그주소/지수만 보여준다(개인정보 보호, 승인 후 공개)
     reviewer_name: Optional[str] = None
     reviewer_contact_info: Optional[str] = None
     reviewer_blog_url: Optional[str] = None
     reviewer_blog_index: Optional[str] = None
+    reviewer_gender: Optional[str] = None
+    reviewer_age_group: Optional[str] = None
+    reviewer_region: Optional[str] = None
 
 
 class ExperienceApplicationStatusIn(BaseModel):
     status: Literal["approved", "rejected"]
+
+
+class ExperienceScoutCandidateOut(BaseModel):
+    reviewer_id: int
+    blog_url: str
+    blog_index: Optional[str] = None
+    age_group: Optional[str] = None
+    region: Optional[str] = None
+
+
+class ExperienceScoutIn(BaseModel):
+    reviewer_ids: list[int]
 
 
 class PortalExperienceCampaignOut(BaseModel):

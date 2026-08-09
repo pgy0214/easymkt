@@ -86,6 +86,7 @@ class Store(Base):
     representative_name = Column(String, nullable=True)  # 대표자명, 영수증 생성용
     phone = Column(String, nullable=True)  # 연락처, 영수증 생성용
     cooldown_days = Column(Integer, nullable=False, default=90)  # 계정당 재작업 가능 주기
+    owner_reviewer_id = Column(Integer, ForeignKey("reviewers.id"), nullable=True)  # 광고주 포털에서 등록한 경우 소유자
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -267,6 +268,8 @@ class ExperienceCampaign(Base):
     target_age_group = Column(String, nullable=True)
     target_region = Column(String, nullable=True)
     target_blog_index = Column(String, nullable=True)
+    created_by_reviewer_id = Column(Integer, ForeignKey("reviewers.id"), nullable=True)  # 광고주가 등록한 경우
+    approval_status = Column(String, nullable=False, default="approved")  # approved|pending|rejected — 광고주 등록분만 관리자 승인 필요
     created_at = Column(DateTime, default=utcnow)
 
     store = relationship("Store")

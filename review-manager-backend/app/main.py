@@ -15,6 +15,7 @@ from app.migrations import run_migrations
 from app.routers import (
     accounts,
     admin,
+    advertiser,
     card_rules,
     experience_campaigns,
     notify,
@@ -65,6 +66,7 @@ app.include_router(portal.router)
 app.include_router(notify.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(card_rules.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(experience_campaigns.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(advertiser.router)
 
 
 @app.get("/api/health")

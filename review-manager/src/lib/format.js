@@ -17,6 +17,25 @@ export function formatDateTime(value) {
   return date.toLocaleString('ko-KR')
 }
 
+// <input type="date">가 주는 값(예: "2026-08-09")은 타임존 정보가 없는 "내 지역
+// 날짜"다 — 그대로 서버로 보내면 백엔드가 UTC로 오해해서(예: 한국은 UTC+9) 모집기간
+// 필터(recruit_start <= now <= recruit_end)가 어긋난다. 하루의 시작/끝 시각을 붙여
+// 브라우저 로컬시각으로 해석한 뒤 UTC로 변환해서 보낸다(서버의 utcnow()와 동일한 표기).
+export function localDateToUtcNaiveIso(dateStr, endOfDay = false) {
+  if (!dateStr) return null
+  const time = endOfDay ? 'T23:59:59' : 'T00:00:00'
+  return new Date(`${dateStr}${time}`).toISOString().slice(0, 19)
+}
+
+// 반대로 서버가 돌려준 값(타임존 표기 없는 UTC 문자열)을 화면에 보여줄 땐 'Z'를 붙여
+// UTC로 해석시킨 뒤 로컬 날짜로 변환한다.
+export function formatUtcToLocalDate(value) {
+  if (!value) return ''
+  const date = new Date(value.includes('Z') ? value : `${value}Z`)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 export const PLATFORM_LABEL = {
   naver: '네이버영수증',
   kakao: '카카오맵',

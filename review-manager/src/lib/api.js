@@ -180,6 +180,17 @@ export const experienceCampaignApi = {
     form.append('file', file)
     return uploadRequest(`/experience-campaigns/${id}/image`, form)
   },
+  getCandidates: (id) => request(`/experience-campaigns/${id}/candidates`),
+  scout: (id, reviewerIds) =>
+    request(`/experience-campaigns/${id}/scout`, {
+      method: 'POST',
+      body: JSON.stringify({ reviewer_ids: reviewerIds }),
+    }),
+  updateApproval: (id, status) =>
+    request(`/experience-campaigns/${id}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
   getApplications: (id) => request(`/experience-campaigns/${id}/applications`),
   updateApplicationStatus: (applicationId, status) =>
     request(`/experience-campaigns/applications/${applicationId}`, {
@@ -245,4 +256,16 @@ export const portalApi = {
   getExperienceCampaigns: (token) => authedRequest('/portal/experience/campaigns', token),
   applyToExperienceCampaign: (token, campaignId) =>
     authedRequest(`/portal/experience/campaigns/${campaignId}/apply`, token, { method: 'POST' }),
+}
+
+export const advertiserApi = {
+  me: (token) => authedRequest('/advertiser/me', token),
+  getStores: (token) => authedRequest('/advertiser/stores', token),
+  createStore: (token, data) =>
+    authedRequest('/advertiser/stores', token, { method: 'POST', body: JSON.stringify(data) }),
+  getCampaigns: (token) => authedRequest('/advertiser/campaigns', token),
+  createCampaign: (token, data) =>
+    authedRequest('/advertiser/campaigns', token, { method: 'POST', body: JSON.stringify(data) }),
+  deleteCampaign: (token, id) =>
+    authedRequest(`/advertiser/campaigns/${id}`, token, { method: 'DELETE' }),
 }

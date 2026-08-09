@@ -179,6 +179,8 @@ def complete_signup(
         reviewer.age_group = data.age_group
     if data.topics is not None:
         reviewer.topics = ",".join(data.topics)
+    if data.category == "advertiser":
+        reviewer.category = "advertiser"
     db.commit()
     db.refresh(reviewer)
     token = auth.issue_token(reviewer.id)

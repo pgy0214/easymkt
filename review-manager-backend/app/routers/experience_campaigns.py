@@ -44,6 +44,17 @@ async def upload_experience_campaign_image(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.patch("/{campaign_id}/approval", response_model=schemas.ExperienceCampaignOut)
+def update_experience_campaign_approval(
+    campaign_id: int, data: schemas.ExperienceCampaignApprovalIn, db: Session = Depends(get_db)
+):
+    """광고주가 등록한 캠페인을 관리자가 승인/거절 — 승인돼야 리뷰어 포털에 노출된다."""
+    campaign = crud.get_experience_campaign(db, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    return crud.update_experience_campaign_approval(db, campaign, data.status)
+
+
 @router.delete("/{campaign_id}")
 def delete_experience_campaign(campaign_id: int, db: Session = Depends(get_db)):
     campaign = crud.get_experience_campaign(db, campaign_id)
@@ -69,11 +80,33 @@ def update_experience_application_status(
     if not application:
         raise HTTPException(status_code=404, detail="신청 내역을 찾을 수 없습니다")
     updated = crud.update_experience_application_status(db, application, data.status)
-    out = schemas.ExperienceApplicationOut.model_validate(updated)
-    reviewer = updated.reviewer
-    if reviewer:
-        out.reviewer_name = reviewer.name
-        out.reviewer_contact_info = reviewer.contact_info
-        out.reviewer_blog_url = reviewer.blog_url
-        out.reviewer_blog_index = reviewer.blog_index
-    return out
+    return crud.experience_application_to_out(updated)
+
+
+@router.get("/{campaign_id}/candidates", response_model=list[schemas.ExperienceScoutCandidateOut])
+def list_experience_candidates(campaign_id: int, db: Session = Depends(get_db)):
+    """이 캠페인에 아직 신청하지 않은, 블로그 정보를 등록한 체험단 후보 목록 —
+    "모집희망 찾아보기"에서 관리자가 직접 섭외 대상을 고를 때 쓴다."""
+    campaign = crud.get_experience_campaign(db, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    return crud.get_experience_candidates(db, campaign_id)
+
+
+@router.post("/{campaign_id}/scout", response_model=list[schemas.ExperienceApplicationOut])
+def scout_experience_candidates(
+    campaign_id: int, data: schemas.ExperienceScoutIn, db: Session = Depends(get_db)
+):
+    """선택한 후보들을 이 캠페인의 지원자로 등록한다(관리자가 대신 신청 — 이후
+    지원자 목록에서 동일하게 승인/거절 처리)."""
+    campaign = crud.get_experience_campaign(db, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    results = []
+    for reviewer_id in data.reviewer_ids:
+        try:
+            application = crud.create_experience_application(db, campaign_id, reviewer_id)
+        except ValueError:
+            continue
+        results.append(crud.experience_application_to_out(application))
+    return results

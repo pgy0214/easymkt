@@ -467,7 +467,9 @@ def get_store(db: Session, store_id: int) -> models.Store | None:
     return db.query(models.Store).filter(models.Store.id == store_id).first()
 
 
-def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
+def create_store(
+    db: Session, data: schemas.StoreCreate, owner_reviewer_id: int | None = None
+) -> models.Store:
     store = models.Store(
         platform=data.platform,
         name=data.name,
@@ -480,11 +482,21 @@ def create_store(db: Session, data: schemas.StoreCreate) -> models.Store:
         business_registration_number=data.business_registration_number,
         representative_name=data.representative_name,
         phone=data.phone,
+        owner_reviewer_id=owner_reviewer_id,
     )
     db.add(store)
     db.commit()
     db.refresh(store)
     return store
+
+
+def get_stores_by_owner(db: Session, owner_reviewer_id: int) -> list[models.Store]:
+    return (
+        db.query(models.Store)
+        .filter(models.Store.owner_reviewer_id == owner_reviewer_id)
+        .order_by(models.Store.name)
+        .all()
+    )
 
 
 def update_store(db: Session, store: models.Store, data: schemas.StoreUpdate) -> models.Store:
@@ -1421,7 +1433,12 @@ def get_experience_campaign(db: Session, campaign_id: int) -> models.ExperienceC
     return db.query(models.ExperienceCampaign).filter(models.ExperienceCampaign.id == campaign_id).first()
 
 
-def create_experience_campaign(db: Session, data: schemas.ExperienceCampaignCreate) -> schemas.ExperienceCampaignOut:
+def create_experience_campaign(
+    db: Session,
+    data: schemas.ExperienceCampaignCreate,
+    created_by_reviewer_id: int | None = None,
+    approval_status: str = "approved",
+) -> schemas.ExperienceCampaignOut:
     store = db.query(models.Store).filter(models.Store.id == data.store_id).first()
     if not store:
         raise ValueError("매장을 찾을 수 없습니다")
@@ -1448,8 +1465,30 @@ def create_experience_campaign(db: Session, data: schemas.ExperienceCampaignCrea
         target_age_group=data.target_age_group,
         target_region=data.target_region,
         target_blog_index=data.target_blog_index,
+        created_by_reviewer_id=created_by_reviewer_id,
+        approval_status=approval_status,
     )
     db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+    return _experience_campaign_to_out(db, campaign)
+
+
+def get_experience_campaigns_by_owner(db: Session, owner_reviewer_id: int) -> list[schemas.ExperienceCampaignOut]:
+    campaigns = (
+        db.query(models.ExperienceCampaign)
+        .join(models.Store, models.ExperienceCampaign.store_id == models.Store.id)
+        .filter(models.Store.owner_reviewer_id == owner_reviewer_id)
+        .order_by(models.ExperienceCampaign.id.desc())
+        .all()
+    )
+    return [_experience_campaign_to_out(db, c) for c in campaigns]
+
+
+def update_experience_campaign_approval(
+    db: Session, campaign: models.ExperienceCampaign, status: str
+) -> schemas.ExperienceCampaignOut:
+    campaign.approval_status = status
     db.commit()
     db.refresh(campaign)
     return _experience_campaign_to_out(db, campaign)
@@ -1493,6 +1532,20 @@ def save_experience_campaign_image(
     return _experience_campaign_to_out(db, campaign)
 
 
+def experience_application_to_out(app_row: models.ExperienceApplication) -> schemas.ExperienceApplicationOut:
+    out = schemas.ExperienceApplicationOut.model_validate(app_row)
+    reviewer = app_row.reviewer
+    if reviewer:
+        out.reviewer_name = reviewer.name
+        out.reviewer_contact_info = reviewer.contact_info
+        out.reviewer_blog_url = reviewer.blog_url
+        out.reviewer_blog_index = reviewer.blog_index
+        out.reviewer_gender = reviewer.gender
+        out.reviewer_age_group = reviewer.age_group
+        out.reviewer_region = reviewer.region
+    return out
+
+
 def get_experience_applications(db: Session, campaign_id: int) -> list[schemas.ExperienceApplicationOut]:
     applications = (
         db.query(models.ExperienceApplication)
@@ -1500,17 +1553,34 @@ def get_experience_applications(db: Session, campaign_id: int) -> list[schemas.E
         .order_by(models.ExperienceApplication.id.desc())
         .all()
     )
-    results = []
-    for app_row in applications:
-        out = schemas.ExperienceApplicationOut.model_validate(app_row)
-        reviewer = app_row.reviewer
-        if reviewer:
-            out.reviewer_name = reviewer.name
-            out.reviewer_contact_info = reviewer.contact_info
-            out.reviewer_blog_url = reviewer.blog_url
-            out.reviewer_blog_index = reviewer.blog_index
-        results.append(out)
-    return results
+    return [experience_application_to_out(a) for a in applications]
+
+
+def get_experience_candidates(db: Session, campaign_id: int) -> list[schemas.ExperienceScoutCandidateOut]:
+    """블로그 정보를 등록했고 이 캠페인에 아직 신청하지 않은 체험단 후보 —
+    "모집희망 찾아보기"에서 관리자가 직접 섭외할 대상을 고를 때 쓴다."""
+    already_applied_ids = {
+        row.reviewer_id
+        for row in db.query(models.ExperienceApplication.reviewer_id)
+        .filter(models.ExperienceApplication.campaign_id == campaign_id)
+        .all()
+    }
+    candidates = (
+        db.query(models.Reviewer)
+        .filter(models.Reviewer.blog_url.isnot(None), models.Reviewer.blog_url != "")
+        .all()
+    )
+    return [
+        schemas.ExperienceScoutCandidateOut(
+            reviewer_id=r.id,
+            blog_url=r.blog_url,
+            blog_index=r.blog_index,
+            age_group=r.age_group,
+            region=r.region,
+        )
+        for r in candidates
+        if r.id not in already_applied_ids
+    ]
 
 
 def get_experience_application(db: Session, application_id: int) -> models.ExperienceApplication | None:
@@ -1559,6 +1629,7 @@ def get_portal_experience_campaigns(
         .filter(
             models.ExperienceCampaign.recruit_start <= now,
             models.ExperienceCampaign.recruit_end >= now,
+            models.ExperienceCampaign.approval_status == "approved",
         )
         .order_by(models.ExperienceCampaign.recruit_end)
         .all()
