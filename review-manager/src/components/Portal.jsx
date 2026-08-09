@@ -596,7 +596,8 @@ function ExperienceProfileCard({ token, reviewer, onUpdated }) {
           <div className="rounded-btn border border-amber-200 bg-warning-bg p-2.5 text-xs text-warning-text">
             <p className="mb-1 font-medium">이미 등록된 블로그 주소와 같아요.</p>
             <p className="mb-2">
-              본인 확인을 위해 이메일을 남겨주시면 관리자가 확인 후 연결해드릴게요.
+              본인이 맞으시면 관리자에게 문의해주세요. 확인을 위해 이메일을 남겨주시면
+              같이 전달할게요.
             </p>
             <Input
               type="email"
