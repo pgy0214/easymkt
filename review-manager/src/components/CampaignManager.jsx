@@ -19,22 +19,23 @@ const DEFAULT_GUIDELINE = [
   ' -  상품의 차별성 및 특징, 지리적위치 특이점, 판매상품 강조 해주세요.',
 ].join('\n')
 
-// <input type="datetime-local">가 주는 값은 타임존 정보가 없는 "내 지역 시각"
-// 문자열이다 — 그대로 서버로 보내면 백엔드가 UTC로 오해해서(예: 한국은 UTC+9)
-// 모집기간 필터(recruit_start <= now <= recruit_end)가 9시간 어긋난다. new Date()로
+// <input type="date">가 주는 값(예: "2026-08-09")은 타임존 정보가 없는 "내 지역
+// 날짜"다 — 그대로 서버로 보내면 백엔드가 UTC로 오해해서(예: 한국은 UTC+9) 모집기간
+// 필터(recruit_start <= now <= recruit_end)가 어긋난다. 하루의 시작/끝 시각을 붙여
 // 브라우저 로컬시각으로 해석한 뒤 UTC로 변환해서 보낸다(서버의 utcnow()와 동일한 표기).
-function toUtcNaiveIso(localValue) {
-  if (!localValue) return null
-  return new Date(localValue).toISOString().slice(0, 19)
+function localDateToUtcNaiveIso(dateStr, endOfDay = false) {
+  if (!dateStr) return null
+  const time = endOfDay ? 'T23:59:59' : 'T00:00:00'
+  return new Date(`${dateStr}${time}`).toISOString().slice(0, 19)
 }
 
 // 반대로 서버가 돌려준 값(타임존 표기 없는 UTC 문자열)을 화면에 보여줄 땐 'Z'를 붙여
-// UTC로 해석시킨 뒤 로컬시각으로 변환한다.
-function formatUtcToLocal(value) {
+// UTC로 해석시킨 뒤 로컬 날짜로 변환한다.
+function formatUtcToLocalDate(value) {
   if (!value) return ''
   const date = new Date(value.includes('Z') ? value : `${value}Z`)
   const pad = (n) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 const EMPTY = {
@@ -98,7 +99,7 @@ export default function CampaignManager() {
       return
     }
     if (!form.recruit_start || !form.recruit_end) {
-      setError('모집 게시일시(시작~종료)를 입력해주세요.')
+      setError('모집 기간(시작~종료)을 입력해주세요.')
       return
     }
     setSubmitting(true)
@@ -120,8 +121,8 @@ export default function CampaignManager() {
         contact_method: form.contact_method || null,
         contact_info: form.contact_info.trim() || null,
         extra_info: form.extra_info.trim() || null,
-        recruit_start: toUtcNaiveIso(form.recruit_start),
-        recruit_end: toUtcNaiveIso(form.recruit_end),
+        recruit_start: localDateToUtcNaiveIso(form.recruit_start),
+        recruit_end: localDateToUtcNaiveIso(form.recruit_end, true),
         review_deadline: form.review_deadline || null,
         is_recurring: form.is_recurring,
       })
@@ -173,6 +174,7 @@ export default function CampaignManager() {
                 <th className="px-3 py-2">상품</th>
                 <th className="px-3 py-2">신청/정원</th>
                 <th className="px-3 py-2">모집기간</th>
+                <th className="px-3 py-2">제출마감일</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -203,8 +205,9 @@ export default function CampaignManager() {
                     {c.applicant_count} / {c.capacity}명
                   </td>
                   <td className="px-3 py-2 text-gray-500">
-                    {formatUtcToLocal(c.recruit_start)} ~ {formatUtcToLocal(c.recruit_end)}
+                    {formatUtcToLocalDate(c.recruit_start)} ~ {formatUtcToLocalDate(c.recruit_end)}
                   </td>
+                  <td className="px-3 py-2 text-gray-500">{c.review_deadline || '-'}</td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <button
@@ -428,23 +431,23 @@ export default function CampaignManager() {
           <div className="space-y-2 border-t border-gray-100 pt-3">
             <p className="text-xs font-medium text-gray-500">캠페인 일정</p>
             <div>
-              <label className="block text-xs text-gray-500">모집 게시일시</label>
+              <label className="block text-xs text-gray-500">모집 기간</label>
               <div className="mt-1 flex items-center gap-2">
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={form.recruit_start}
                   onChange={(e) => setForm({ ...form, recruit_start: e.target.value })}
                 />
                 <span className="text-xs text-gray-400">~</span>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={form.recruit_end}
                   onChange={(e) => setForm({ ...form, recruit_end: e.target.value })}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500">리뷰 마감일</label>
+              <label className="block text-xs text-gray-500">제출마감일</label>
               <Input
                 type="date"
                 value={form.review_deadline}

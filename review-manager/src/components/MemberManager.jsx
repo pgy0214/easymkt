@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
-import { formatDateTime, GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
+import { formatDateTime, GENDER_LABEL } from '../lib/format.js'
 import Badge from './ui/Badge.jsx'
 import Input from './ui/Input.jsx'
 import Pagination from './Pagination.jsx'
 
-const CATEGORY_COLOR = {
-  admin: 'purple',
-  reviewer: 'gray',
-  experience: 'pink',
-  press: 'sky',
+// 회원관리 화면에서 다루는 회원 종류는 관리자/광고주/리뷰어 세 가지뿐이다(광고주는
+// 아직 자체 페이지가 없어 데이터는 없지만 범례로만 안내). 관리자가 엑셀로
+// 미리 올려둔 category 값(체험단/기자단 등)은 여기서는 전부 "리뷰어"로 보여준다 —
+// 그 구분은 "계정 > 리뷰어 관리" 쪽 CRM 분류이지 회원 종류가 아니기 때문.
+const MEMBER_TYPES = [
+  { value: 'admin', label: '관리자', color: 'purple' },
+  { value: 'advertiser', label: '광고주', color: 'yellow' },
+  { value: 'reviewer', label: '리뷰어', color: 'gray' },
+]
+
+function memberType(category) {
+  return MEMBER_TYPES.find((t) => t.value === category) ?? MEMBER_TYPES[2]
 }
 
 export default function MemberManager() {
@@ -17,7 +24,6 @@ export default function MemberManager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
 
@@ -35,7 +41,6 @@ export default function MemberManager() {
     const q = search.trim()
     return reviewers
       .filter((r) => !!r.username)
-      .filter((r) => !categoryFilter || r.category === categoryFilter)
       .filter(
         (r) =>
           !q ||
@@ -43,9 +48,9 @@ export default function MemberManager() {
           r.username.includes(q) ||
           (r.contact_info || '').includes(q),
       )
-  }, [reviewers, search, categoryFilter])
+  }, [reviewers, search])
 
-  useEffect(() => setPage(1), [search, categoryFilter])
+  useEffect(() => setPage(1), [search])
 
   const paged = members.slice((page - 1) * pageSize, page * pageSize)
 
@@ -66,18 +71,14 @@ export default function MemberManager() {
           placeholder="아이디/이름/연락처 검색"
           className="max-w-xs"
         />
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
-        >
-          <option value="">전체 카테고리</option>
-          {Object.entries(REVIEWER_CATEGORY_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-400">회원 종류</span>
+          {MEMBER_TYPES.map((t) => (
+            <Badge key={t.value} color={t.color}>
+              {t.label}
+            </Badge>
           ))}
-        </select>
+        </div>
         <p className="ml-auto shrink-0 text-xs text-gray-400">전체 {members.length}명</p>
       </div>
 
@@ -102,10 +103,11 @@ export default function MemberManager() {
                 const accountCount = r.accounts?.length ?? 0
                 const hasReviewerActivity = accountCount > 0
                 const hasExperienceActivity = !!(r.blog_url || r.region || r.age_group || r.topics)
+                const type = memberType(r.category)
                 return (
                   <tr key={r.id}>
                     <td className="px-3 py-2 align-top">
-                      <Badge color={CATEGORY_COLOR[r.category]}>{REVIEWER_CATEGORY_LABEL[r.category]}</Badge>
+                      <Badge color={type.color}>{type.label}</Badge>
                     </td>
                     <td className="px-3 py-2 align-top">
                       <div className="flex items-center gap-1.5">
