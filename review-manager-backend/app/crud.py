@@ -1373,7 +1373,10 @@ def create_experience_campaign(db: Session, data: schemas.ExperienceCampaignCrea
         product_price=data.product_price,
         capacity=data.capacity,
         content_guide=data.content_guide,
+        main_keyword=data.main_keyword,
+        sub_keyword=data.sub_keyword,
         reservation_required=data.reservation_required,
+        contact_name=data.contact_name,
         contact_method=data.contact_method,
         contact_info=data.contact_info,
         extra_info=data.extra_info,
@@ -1393,7 +1396,8 @@ def update_experience_campaign(
 ) -> schemas.ExperienceCampaignOut:
     for field in (
         "campaign_type", "content_type", "benefit_type", "product_name", "product_price",
-        "capacity", "content_guide", "reservation_required", "contact_method", "contact_info",
+        "capacity", "content_guide", "main_keyword", "sub_keyword", "reservation_required",
+        "contact_name", "contact_method", "contact_info",
         "extra_info", "recruit_start", "recruit_end", "review_deadline", "is_recurring",
     ):
         value = getattr(data, field)

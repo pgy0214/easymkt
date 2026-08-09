@@ -245,8 +245,11 @@ class ExperienceCampaign(Base):
     product_price = Column(Integer, nullable=True)
     capacity = Column(Integer, nullable=False)  # 모집 인원
     content_guide = Column(String, nullable=True)
+    main_keyword = Column(String, nullable=True)
+    sub_keyword = Column(String, nullable=True)
     reservation_required = Column(Boolean, nullable=False, default=False)
-    contact_method = Column(String, nullable=True)
+    contact_name = Column(String, nullable=True)
+    contact_method = Column(String, nullable=True)  # 문자|전화
     contact_info = Column(String, nullable=True)
     extra_info = Column(String, nullable=True)
     recruit_start = Column(DateTime, nullable=False)

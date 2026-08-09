@@ -48,8 +48,6 @@ export default function Portal() {
   if (!token) {
     return (
       <LoginFlow
-        mode={mode}
-        onModeChange={handleModeChange}
         onLoggedIn={(t) => { localStorage.setItem(TOKEN_KEY, t); setToken(t) }}
       />
     )
@@ -68,7 +66,7 @@ export default function Portal() {
   )
 }
 
-function LoginFlow({ mode, onModeChange, onLoggedIn }) {
+function LoginFlow({ onLoggedIn }) {
   const [step, setStep] = useState('phone') // 'phone' | 'code'
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
@@ -165,28 +163,6 @@ function LoginFlow({ mode, onModeChange, onLoggedIn }) {
       <h1 className="mb-4 text-center text-lg font-semibold text-gray-900">
         이지리뷰 <span className="font-normal text-gray-400">로그인</span>
       </h1>
-
-      <div className="mb-4 flex gap-1 rounded-btn bg-gray-100 p-1">
-        <button
-          type="button"
-          onClick={() => onModeChange('reviewer')}
-          className={`flex-1 rounded-btn py-1.5 text-sm font-medium transition-colors ${
-            mode === 'reviewer' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
-          }`}
-        >
-          리뷰어로 로그인
-        </button>
-        <button
-          type="button"
-          onClick={() => onModeChange('experience')}
-          className={`flex-1 rounded-btn py-1.5 text-sm font-medium transition-colors ${
-            mode === 'experience' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
-          }`}
-        >
-          체험단으로 로그인
-        </button>
-      </div>
-      <p className="mb-4 text-center text-xs text-gray-400">계정은 동일하게 사용할 수 있어요</p>
 
       {kakaoAccessToken && (
         <p className="mb-3 text-sm text-brand-700">
@@ -357,7 +333,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
                 mode === 'reviewer' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
               }`}
             >
-              리뷰어
+              리뷰단
             </button>
             <button
               type="button"
@@ -383,47 +359,50 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
         </div>
       )}
 
-      <Card padding="md" className="space-y-2">
-        <h2 className="font-medium text-gray-800">내 계정</h2>
-        {reviewer.accounts.length === 0 && (
-          <p className="text-sm text-gray-400">등록된 계정이 없습니다. 아래에서 추가해주세요.</p>
-        )}
-        {reviewer.accounts.map((account) => (
-          <div
-            key={account.id}
-            className="flex items-center justify-between rounded-btn border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-500">
-                {PLATFORM_LABEL[account.platform]}
-              </span>
-              <span className="font-medium text-gray-700">{account.label}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {account.profile_url && (
-                <a
-                  href={account.profile_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-0.5 text-xs text-brand-600 hover:underline"
-                >
-                  마이플레이스
-                  <ExternalLink size={11} />
-                </a>
-              )}
-              <button onClick={() => handleDeleteAccount(account.id)} className="text-gray-400 hover:text-danger-text">
-                <Trash2 size={14} />
-              </button>
-            </div>
-          </div>
-        ))}
-        <AccountForm onCreate={handleAddAccount} />
-      </Card>
-
       {mode === 'experience' ? (
-        <ExperienceCampaignList token={token} />
+        <>
+          <ExperienceProfileCard token={token} reviewer={reviewer} onUpdated={refresh} />
+          <ExperienceCampaignList token={token} />
+        </>
       ) : (
         <>
+          <Card padding="md" className="space-y-2">
+            <h2 className="font-medium text-gray-800">내 계정</h2>
+            {reviewer.accounts.length === 0 && (
+              <p className="text-sm text-gray-400">등록된 계정이 없습니다. 아래에서 추가해주세요.</p>
+            )}
+            {reviewer.accounts.map((account) => (
+              <div
+                key={account.id}
+                className="flex items-center justify-between rounded-btn border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500">
+                    {PLATFORM_LABEL[account.platform]}
+                  </span>
+                  <span className="font-medium text-gray-700">{account.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {account.profile_url && (
+                    <a
+                      href={account.profile_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-0.5 text-xs text-brand-600 hover:underline"
+                    >
+                      마이플레이스
+                      <ExternalLink size={11} />
+                    </a>
+                  )}
+                  <button onClick={() => handleDeleteAccount(account.id)} className="text-gray-400 hover:text-danger-text">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <AccountForm onCreate={handleAddAccount} />
+          </Card>
+
           <Card padding="md" className="space-y-2">
             <div className="flex items-center justify-between">
               <h2 className="font-medium text-gray-800">가능한 작업</h2>
@@ -512,6 +491,57 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
 }
 
 const CAMPAIGN_DDAY_MS = 24 * 60 * 60 * 1000
+
+function ExperienceProfileCard({ token, reviewer, onUpdated }) {
+  const [blogUrl, setBlogUrl] = useState(reviewer.blog_url || '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setSaving(true)
+    setSaved(false)
+    try {
+      await portalApi.updateMyBlogUrl(token, blogUrl.trim())
+      await onUpdated()
+      setSaved(true)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card padding="md" className="space-y-2">
+      <h2 className="font-medium text-gray-800">내 계정</h2>
+      <form onSubmit={handleSave} className="flex items-end gap-2">
+        <div className="flex-1">
+          <label className="block text-xs text-gray-500">블로그 주소</label>
+          <Input
+            value={blogUrl}
+            onChange={(e) => setBlogUrl(e.target.value)}
+            placeholder="https://blog.naver.com/..."
+            className="w-full"
+          />
+        </div>
+        <a
+          href="https://blogdex.space/lookup"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-0.5 whitespace-nowrap rounded-btn border border-gray-300 px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+        >
+          블덱스 바로가기
+          <ExternalLink size={12} />
+        </a>
+        <Button type="submit" variant="primary" size="sm" disabled={saving}>
+          저장
+        </Button>
+      </form>
+      {saved && <p className="text-xs text-success-text">저장했어요.</p>}
+    </Card>
+  )
+}
 
 function ExperienceCampaignList({ token }) {
   const [campaigns, setCampaigns] = useState([])

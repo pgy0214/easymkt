@@ -254,4 +254,9 @@ def run_migrations(engine) -> None:
         # ('morning'|'afternoon'|'night'). 미설정 계정은 영수증 생성을 보류한다.
         _add_column_if_missing(conn, "review_accounts", "time_slot", "time_slot TEXT")
 
+        # experience_campaigns: 메인/서브 키워드 + 방문정보 담당자명
+        _add_column_if_missing(conn, "experience_campaigns", "main_keyword", "main_keyword TEXT")
+        _add_column_if_missing(conn, "experience_campaigns", "sub_keyword", "sub_keyword TEXT")
+        _add_column_if_missing(conn, "experience_campaigns", "contact_name", "contact_name TEXT")
+
         conn.commit()

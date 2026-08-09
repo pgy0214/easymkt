@@ -524,6 +524,10 @@ class PortalClaimIn(BaseModel):
     account_id: int
 
 
+class PortalBlogUrlIn(BaseModel):
+    blog_url: str
+
+
 class TaskBriefOut(BaseModel):
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
@@ -557,22 +561,26 @@ ReviewTargetDetailOut.model_rebuild()
 
 # --- Experience campaigns (체험단 캠페인) ---
 
-CampaignType = Literal["방문형", "배송형", "기자단", "구매평"]
-ContentType = Literal["블로그", "인스타그램", "유튜브", "릴스", "영상", "틱톡", "스토어"]
-BenefitType = Literal["선착순 제공형", "인원마감시 제공안함", "인원마감후도 제공"]
+CampaignType = Literal["방문형", "배송형"]
+ContentType = Literal["블로그", "인스타그램", "유튜브", "틱톡"]
+BenefitType = Literal["선착순 제공"]
+ContactMethod = Literal["문자", "전화"]
 
 
 class ExperienceCampaignCreate(BaseModel):
     store_id: int
     campaign_type: CampaignType
     content_type: ContentType
-    benefit_type: BenefitType
+    benefit_type: BenefitType = "선착순 제공"
     product_name: str
     product_price: Optional[int] = None
     capacity: int
     content_guide: Optional[str] = None
+    main_keyword: Optional[str] = None
+    sub_keyword: Optional[str] = None
     reservation_required: bool = False
-    contact_method: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_method: Optional[ContactMethod] = None
     contact_info: Optional[str] = None
     extra_info: Optional[str] = None
     recruit_start: datetime.datetime
@@ -589,8 +597,11 @@ class ExperienceCampaignUpdate(BaseModel):
     product_price: Optional[int] = None
     capacity: Optional[int] = None
     content_guide: Optional[str] = None
+    main_keyword: Optional[str] = None
+    sub_keyword: Optional[str] = None
     reservation_required: Optional[bool] = None
-    contact_method: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_method: Optional[ContactMethod] = None
     contact_info: Optional[str] = None
     extra_info: Optional[str] = None
     recruit_start: Optional[datetime.datetime] = None
@@ -611,7 +622,10 @@ class ExperienceCampaignOut(BaseModel):
     product_price: Optional[int] = None
     capacity: int
     content_guide: Optional[str] = None
+    main_keyword: Optional[str] = None
+    sub_keyword: Optional[str] = None
     reservation_required: bool
+    contact_name: Optional[str] = None
     contact_method: Optional[str] = None
     contact_info: Optional[str] = None
     extra_info: Optional[str] = None

@@ -6,9 +6,18 @@ import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
 import Modal from './ui/Modal.jsx'
 
-const CAMPAIGN_TYPES = ['방문형', '배송형', '기자단', '구매평']
-const CONTENT_TYPES = ['블로그', '인스타그램', '유튜브', '릴스', '영상', '틱톡', '스토어']
-const BENEFIT_TYPES = ['선착순 제공형', '인원마감시 제공안함', '인원마감후도 제공']
+const CAMPAIGN_TYPES = ['방문형', '배송형']
+const CONTENT_TYPES = ['블로그', '인스타그램', '유튜브', '틱톡']
+const CONTACT_METHODS = ['문자', '전화']
+
+const DEFAULT_GUIDELINE = [
+  '* 촬영 및 내용 가이드라인',
+  '',
+  ' -  매장 외관 및 내부 인테리어 사진 등을 포함해 사진 20장, 동영상 1개 이상 촬영해주세요',
+  ' -  ㅇㅇ맛을 강조해주세요, ㅇㅇㅇ 컨텐츠를 강조해주세요',
+  ' -  네이버지도를 반드시 추가해주세요',
+  ' -  상품의 차별성 및 특징, 지리적위치 특이점, 판매상품 강조 해주세요.',
+].join('\n')
 
 function toDatetimeLocal(value) {
   if (!value) return ''
@@ -19,13 +28,16 @@ const EMPTY = {
   store_id: '',
   campaign_type: '방문형',
   content_type: '블로그',
-  benefit_type: '선착순 제공형',
+  benefit_type: '선착순 제공',
   product_name: '',
   product_price: '',
   capacity: 5,
-  content_guide: '',
+  content_guide: DEFAULT_GUIDELINE,
+  main_keyword: '',
+  sub_keyword: '',
   reservation_required: false,
-  contact_method: '',
+  contact_name: '',
+  contact_method: '문자',
   contact_info: '',
   extra_info: '',
   recruit_start: '',
@@ -81,13 +93,16 @@ export default function CampaignManager() {
         store_id: Number(form.store_id),
         campaign_type: form.campaign_type,
         content_type: form.content_type,
-        benefit_type: form.benefit_type,
+        benefit_type: '선착순 제공',
         product_name: form.product_name.trim(),
         product_price: form.product_price === '' ? null : Number(form.product_price),
         capacity: Number(form.capacity),
         content_guide: form.content_guide.trim() || null,
+        main_keyword: form.main_keyword.trim() || null,
+        sub_keyword: form.sub_keyword.trim() || null,
         reservation_required: form.reservation_required,
-        contact_method: form.contact_method.trim() || null,
+        contact_name: form.contact_name.trim() || null,
+        contact_method: form.contact_method || null,
         contact_info: form.contact_info.trim() || null,
         extra_info: form.extra_info.trim() || null,
         recruit_start: form.recruit_start,
@@ -246,26 +261,9 @@ export default function CampaignManager() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs text-gray-500">혜택 제공 방식</label>
-            <div className="mt-1 space-y-1">
-              {BENEFIT_TYPES.map((t) => (
-                <label key={t} className="flex items-center gap-1.5 text-xs text-gray-600">
-                  <input
-                    type="radio"
-                    name="benefit_type"
-                    checked={form.benefit_type === t}
-                    onChange={() => setForm({ ...form, benefit_type: t })}
-                  />
-                  {t}
-                </label>
-              ))}
-            </div>
-          </div>
-
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs text-gray-500">캠페인 상품</label>
+              <label className="block text-xs text-gray-500">체험상품</label>
               <Input
                 value={form.product_name}
                 onChange={(e) => setForm({ ...form, product_name: e.target.value })}
@@ -295,13 +293,31 @@ export default function CampaignManager() {
             </div>
           </div>
 
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500">메인키워드</label>
+              <Input
+                value={form.main_keyword}
+                onChange={(e) => setForm({ ...form, main_keyword: e.target.value })}
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500">서브키워드</label>
+              <Input
+                value={form.sub_keyword}
+                onChange={(e) => setForm({ ...form, sub_keyword: e.target.value })}
+                className="w-full"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-xs text-gray-500">콘텐츠 가이드</label>
+            <label className="block text-xs text-gray-500">가이드라인</label>
             <textarea
               value={form.content_guide}
               onChange={(e) => setForm({ ...form, content_guide: e.target.value })}
-              rows={4}
-              placeholder="방문 후 작성해야 할 콘텐츠 가이드를 입력하세요."
+              rows={6}
               className="w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
             />
           </div>
@@ -330,13 +346,26 @@ export default function CampaignManager() {
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="block text-xs text-gray-500">연락 방법</label>
+                <label className="block text-xs text-gray-500">담당자명</label>
                 <Input
-                  value={form.contact_method}
-                  onChange={(e) => setForm({ ...form, contact_method: e.target.value })}
-                  placeholder="예: 전화번호"
+                  value={form.contact_name}
+                  onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
                   className="w-full"
                 />
+              </div>
+              <div className="w-28">
+                <label className="block text-xs text-gray-500">연락 방법</label>
+                <select
+                  value={form.contact_method}
+                  onChange={(e) => setForm({ ...form, contact_method: e.target.value })}
+                  className="w-full rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
+                >
+                  {CONTACT_METHODS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex-1">
                 <label className="block text-xs text-gray-500">연락처</label>

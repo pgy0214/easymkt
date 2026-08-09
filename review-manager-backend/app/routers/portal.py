@@ -120,6 +120,18 @@ def get_me(reviewer: models.Reviewer = Depends(get_current_reviewer)):
     return crud.reviewer_to_out(reviewer)
 
 
+@router.patch("/me/blog-url", response_model=schemas.ReviewerOut)
+def update_my_blog_url(
+    data: schemas.PortalBlogUrlIn,
+    reviewer: models.Reviewer = Depends(get_current_reviewer),
+    db: Session = Depends(get_db),
+):
+    reviewer.blog_url = data.blog_url
+    db.commit()
+    db.refresh(reviewer)
+    return crud.reviewer_to_out(reviewer)
+
+
 @router.post("/accounts", response_model=schemas.ReviewAccountOut)
 def add_my_account(
     data: schemas.ReviewAccountCreate,
