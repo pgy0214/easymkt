@@ -19,9 +19,22 @@ const DEFAULT_GUIDELINE = [
   ' -  상품의 차별성 및 특징, 지리적위치 특이점, 판매상품 강조 해주세요.',
 ].join('\n')
 
-function toDatetimeLocal(value) {
+// <input type="datetime-local">가 주는 값은 타임존 정보가 없는 "내 지역 시각"
+// 문자열이다 — 그대로 서버로 보내면 백엔드가 UTC로 오해해서(예: 한국은 UTC+9)
+// 모집기간 필터(recruit_start <= now <= recruit_end)가 9시간 어긋난다. new Date()로
+// 브라우저 로컬시각으로 해석한 뒤 UTC로 변환해서 보낸다(서버의 utcnow()와 동일한 표기).
+function toUtcNaiveIso(localValue) {
+  if (!localValue) return null
+  return new Date(localValue).toISOString().slice(0, 19)
+}
+
+// 반대로 서버가 돌려준 값(타임존 표기 없는 UTC 문자열)을 화면에 보여줄 땐 'Z'를 붙여
+// UTC로 해석시킨 뒤 로컬시각으로 변환한다.
+function formatUtcToLocal(value) {
   if (!value) return ''
-  return value.slice(0, 16)
+  const date = new Date(value.includes('Z') ? value : `${value}Z`)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 const EMPTY = {
@@ -107,8 +120,8 @@ export default function CampaignManager() {
         contact_method: form.contact_method || null,
         contact_info: form.contact_info.trim() || null,
         extra_info: form.extra_info.trim() || null,
-        recruit_start: form.recruit_start,
-        recruit_end: form.recruit_end,
+        recruit_start: toUtcNaiveIso(form.recruit_start),
+        recruit_end: toUtcNaiveIso(form.recruit_end),
         review_deadline: form.review_deadline || null,
         is_recurring: form.is_recurring,
       })
@@ -190,8 +203,7 @@ export default function CampaignManager() {
                     {c.applicant_count} / {c.capacity}명
                   </td>
                   <td className="px-3 py-2 text-gray-500">
-                    {toDatetimeLocal(c.recruit_start).replace('T', ' ')} ~{' '}
-                    {toDatetimeLocal(c.recruit_end).replace('T', ' ')}
+                    {formatUtcToLocal(c.recruit_start)} ~ {formatUtcToLocal(c.recruit_end)}
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">

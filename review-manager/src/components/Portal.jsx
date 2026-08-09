@@ -1153,7 +1153,10 @@ function ExperienceCampaignList({ token }) {
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {campaigns.map((c) => {
-          const daysLeft = Math.ceil((new Date(c.recruit_end) - new Date()) / CAMPAIGN_DDAY_MS)
+          // recruit_end는 타임존 표기 없는 UTC 문자열이라 'Z'를 붙여야 로컬시각과
+          // 올바르게 비교된다(CampaignManager.jsx의 toUtcNaiveIso/formatUtcToLocal과 동일한 이유)
+          const recruitEndUtc = c.recruit_end.includes('Z') ? c.recruit_end : `${c.recruit_end}Z`
+          const daysLeft = Math.ceil((new Date(recruitEndUtc) - new Date()) / CAMPAIGN_DDAY_MS)
           const isFull = c.applicant_count >= c.capacity
           return (
             <div key={c.id} className="overflow-hidden rounded-card border border-gray-200 bg-white">

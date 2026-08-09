@@ -17,6 +17,7 @@ export default function MemberManager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
 
@@ -34,6 +35,7 @@ export default function MemberManager() {
     const q = search.trim()
     return reviewers
       .filter((r) => !!r.username)
+      .filter((r) => !categoryFilter || r.category === categoryFilter)
       .filter(
         (r) =>
           !q ||
@@ -41,9 +43,9 @@ export default function MemberManager() {
           r.username.includes(q) ||
           (r.contact_info || '').includes(q),
       )
-  }, [reviewers, search])
+  }, [reviewers, search, categoryFilter])
 
-  useEffect(() => setPage(1), [search])
+  useEffect(() => setPage(1), [search, categoryFilter])
 
   const paged = members.slice((page - 1) * pageSize, page * pageSize)
 
@@ -57,14 +59,26 @@ export default function MemberManager() {
         <p className="text-xs text-gray-400">아이디/비밀번호로 직접 회원가입을 완료한 회원의 가입 정보입니다</p>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="아이디/이름/연락처 검색"
           className="max-w-xs"
         />
-        <p className="shrink-0 text-xs text-gray-400">전체 {members.length}명</p>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
+        >
+          <option value="">전체 카테고리</option>
+          {Object.entries(REVIEWER_CATEGORY_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <p className="ml-auto shrink-0 text-xs text-gray-400">전체 {members.length}명</p>
       </div>
 
       {paged.length === 0 && <p className="text-sm text-gray-400">가입한 회원이 없습니다.</p>}
@@ -77,6 +91,7 @@ export default function MemberManager() {
                 <th className="px-3 py-2">카테고리</th>
                 <th className="px-3 py-2">이름</th>
                 <th className="px-3 py-2">연락처</th>
+                <th className="px-3 py-2">지역</th>
                 <th className="px-3 py-2">활동</th>
                 <th className="px-3 py-2">동의</th>
                 <th className="px-3 py-2">등록일</th>
@@ -102,6 +117,7 @@ export default function MemberManager() {
                       </div>
                     </td>
                     <td className="px-3 py-2 align-top text-gray-600">{r.contact_info || '-'}</td>
+                    <td className="px-3 py-2 align-top text-gray-600">{r.region || '-'}</td>
                     <td className="px-3 py-2 align-top">
                       <div className="flex flex-wrap gap-1">
                         {hasReviewerActivity && <Badge variant="info">리뷰단 {accountCount}개</Badge>}
