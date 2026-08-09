@@ -7,7 +7,6 @@ const GROUPS = [
     label: '계정',
     icon: Users,
     children: [
-      { id: 'reviewers', label: '리뷰어 관리' },
       { id: 'admin-accounts', label: '관리자 계정' },
     ],
   },
@@ -31,12 +30,18 @@ const GROUPS = [
       { id: 'experience-pool', label: '체험단관리' },
     ],
   },
+  {
+    id: 'settings-group',
+    label: '설정',
+    icon: Settings2,
+    children: [
+      { id: 'settings', label: '일반설정' },
+      { id: 'reviewers', label: '회원관리' },
+    ],
+  },
 ]
 
-const FLAT_TABS = [
-  { id: 'settlement', label: '정산 요약', icon: Wallet },
-  { id: 'settings', label: '설정', icon: Settings2 },
-]
+const FLAT_TABS = [{ id: 'settlement', label: '정산 요약', icon: Wallet }]
 
 export default function Nav({ active, onChange }) {
   const [openGroup, setOpenGroup] = useState(null)
