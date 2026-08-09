@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -44,28 +45,14 @@ def get_current_reviewer(
 
 @router.post("/otp/request")
 def request_otp(data: schemas.OtpRequestIn, db: Session = Depends(get_db)):
+    """전화번호 인증만 담당 — 신규/기존 여부와 상관없이 코드만 보낸다. 아이디/
+    비밀번호/이름 등은 인증 완료 후 별도 단계(complete-signup)에서 받는다."""
     reviewer = crud.get_reviewer_by_contact(db, data.phone)
-    # password_hash가 없으면 아직 포털에 정식으로 회원가입한 적이 없는 상태 —
-    # 관리자가 엑셀로 미리 올려둔 레코드가 있더라도(이름 등이 이미 채워져 있어도)
-    # 그 정보를 그대로 신뢰하지 않고, 본인이 이름을 직접 입력해야 가입이 진행된다.
-    needs_signup = reviewer is None or reviewer.password_hash is None
-    if needs_signup:
-        if not data.name:
-            raise HTTPException(
-                status_code=404, detail="회원가입이 필요합니다 — 이름을 함께 입력하면 진행됩니다"
-            )
-        if not data.privacy_consent:
-            raise HTTPException(status_code=400, detail="개인정보 수집·이용에 동의해주세요")
-        if reviewer:
-            reviewer.name = data.name
-            reviewer.contact_info = data.phone
-        else:
-            reviewer = crud.create_reviewer(
-                db,
-                schemas.ReviewerCreate(name=data.name, contact_info=data.phone, is_active=False),
-            )
-        reviewer.privacy_consent_at = datetime.datetime.utcnow()
-        db.commit()
+    if not reviewer:
+        reviewer = crud.create_reviewer(
+            db,
+            schemas.ReviewerCreate(name=data.phone, contact_info=data.phone, is_active=False),
+        )
 
     code = crud.issue_otp(db, reviewer)
     try:
@@ -85,27 +72,24 @@ def verify_otp(data: schemas.OtpVerifyIn, db: Session = Depends(get_db)):
     if not reviewer or not crud.verify_otp(db, reviewer, data.code):
         raise HTTPException(status_code=400, detail="인증번호가 올바르지 않거나 만료되었습니다")
     token = auth.issue_token(reviewer.id)
-    return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer))
+    needs_signup = not reviewer.username or not reviewer.password_hash
+    return schemas.OtpVerifyOut(
+        token=token, reviewer=crud.reviewer_to_out(reviewer), needs_signup=needs_signup
+    )
 
 
 @router.post("/login", response_model=schemas.OtpVerifyOut)
 def login(data: schemas.PortalLoginIn, db: Session = Depends(get_db)):
-    """최초 가입 이후의 일반 로그인 — 전화번호+비밀번호. 비밀번호가 아직 없는
-    계정(엑셀로 미리 올려둔 리뷰어 등)은 인증번호 로그인으로 안내한다."""
-    reviewer = crud.get_reviewer_by_contact(db, data.phone)
-    if not reviewer:
+    """가입 완료 이후의 일반 로그인 — 아이디+비밀번호."""
+    reviewer = crud.get_reviewer_by_username(db, data.username)
+    if not reviewer or not reviewer.password_hash:
         raise HTTPException(
-            status_code=404, detail="등록된 번호가 아닙니다 — 인증번호로 먼저 가입해주세요"
-        )
-    if not reviewer.password_hash:
-        raise HTTPException(
-            status_code=400,
-            detail="비밀번호가 아직 설정되지 않았습니다 — 인증번호로 로그인 후 설정해주세요",
+            status_code=404, detail="등록되지 않은 아이디입니다 — 인증번호로 먼저 가입해주세요"
         )
     if not auth.verify_password(data.password, reviewer.password_hash):
         raise HTTPException(status_code=400, detail="비밀번호가 올바르지 않습니다")
     token = auth.issue_token(reviewer.id)
-    return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer))
+    return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer), needs_signup=False)
 
 
 @router.get("/kakao/config", response_model=schemas.KakaoConfigOut)
@@ -145,7 +129,10 @@ def kakao_confirm(data: schemas.KakaoConfirmIn, db: Session = Depends(get_db)):
     reviewer.kakao_id = profile["kakao_id"]
     db.commit()
     token = auth.issue_token(reviewer.id)
-    return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer))
+    needs_signup = not reviewer.username or not reviewer.password_hash
+    return schemas.OtpVerifyOut(
+        token=token, reviewer=crud.reviewer_to_out(reviewer), needs_signup=needs_signup
+    )
 
 
 @router.get("/me", response_model=schemas.ReviewerOut)
@@ -156,20 +143,61 @@ def get_me(
     return crud.reviewer_to_out(reviewer, duplicate_ids)
 
 
-@router.patch("/me/password", response_model=schemas.ReviewerOut)
-def set_my_password(
-    data: schemas.PortalSetPasswordIn,
+@router.patch("/me/complete-signup", response_model=schemas.OtpVerifyOut)
+def complete_signup(
+    data: schemas.PortalCompleteSignupIn,
     reviewer: models.Reviewer = Depends(get_current_reviewer),
     db: Session = Depends(get_db),
 ):
-    """인증번호로 로그인한 상태에서만 호출됨 — 최초 가입 직후, 또는 비밀번호를
-    잊어 인증번호로 다시 들어온 경우 둘 다 여기서 새 비밀번호를 설정한다."""
+    """인증번호로 전화번호 확인이 끝난 상태에서 호출 — 아이디/비밀번호/이름을
+    직접 입력받아 회원가입을 완료한다. 관리자가 엑셀로 미리 올려둔 정보가
+    있어도 여기서 입력한 값으로 덮어쓴다(본인 확인 없이 기존 정보를 그대로
+    물려받지 않도록)."""
+    if not data.privacy_consent:
+        raise HTTPException(status_code=400, detail="개인정보 수집·이용에 동의해주세요")
+    username = data.username.strip().lower()
+    if not re.fullmatch(r"[a-z0-9_]{4,20}", username):
+        raise HTTPException(
+            status_code=400, detail="아이디는 영문 소문자/숫자/밑줄 4~20자로 입력해주세요"
+        )
     if len(data.password) < 4:
         raise HTTPException(status_code=400, detail="비밀번호는 4자 이상이어야 합니다")
+    existing = crud.get_reviewer_by_username(db, username)
+    if existing and existing.id != reviewer.id:
+        raise HTTPException(status_code=400, detail="이미 사용 중인 아이디입니다")
+
+    reviewer.username = username
     reviewer.password_hash = auth.hash_password(data.password)
+    reviewer.name = data.name
+    reviewer.privacy_consent_at = datetime.datetime.utcnow()
+    if data.gender is not None:
+        reviewer.gender = data.gender
+    if data.region is not None:
+        reviewer.region = data.region
+    if data.age_group is not None:
+        reviewer.age_group = data.age_group
+    if data.topics is not None:
+        reviewer.topics = ",".join(data.topics)
     db.commit()
     db.refresh(reviewer)
-    return crud.reviewer_to_out(reviewer)
+    token = auth.issue_token(reviewer.id)
+    return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer), needs_signup=False)
+
+
+@router.post("/me/reset-password", response_model=schemas.PortalResetPasswordOut)
+def reset_my_password(
+    reviewer: models.Reviewer = Depends(get_current_reviewer),
+    db: Session = Depends(get_db),
+):
+    """인증번호로 전화번호 확인이 끝난, 이미 가입 완료된 계정 — 비밀번호를
+    잊어서 새로 발급받는 상황. 서버가 임시 비밀번호를 만들어 바로 저장하고
+    돌려준다 — 사용자는 이 비밀번호로 로그인 화면에서 다시 로그인해야 한다."""
+    if not reviewer.username:
+        raise HTTPException(status_code=400, detail="아직 회원가입이 완료되지 않은 계정입니다")
+    temp_password = crud.generate_temp_password()
+    reviewer.password_hash = auth.hash_password(temp_password)
+    db.commit()
+    return schemas.PortalResetPasswordOut(username=reviewer.username, temp_password=temp_password)
 
 
 @router.patch("/me/blog-url", response_model=schemas.ReviewerOut)

@@ -268,8 +268,12 @@ def run_migrations(engine) -> None:
         # (실제 이메일 발송/인증은 하지 않음, 입력값 그대로 저장)
         _add_column_if_missing(conn, "reviewers", "email", "email TEXT")
 
-        # reviewers: password_hash — 포털 로그인용(전화번호+비밀번호). 최초 가입과
-        # 비밀번호 재설정은 여전히 OTP로 하고, 이후 로그인만 이걸로 바뀐다.
+        # reviewers: password_hash — 포털 로그인용(아이디+비밀번호). 회원가입/비밀번호
+        # 분실 시 임시 비밀번호 발급은 OTP로 하고, 평소 로그인은 아이디+비밀번호로 한다.
         _add_column_if_missing(conn, "reviewers", "password_hash", "password_hash TEXT")
+
+        # reviewers: username — 포털 로그인 아이디, topics — 체험단 관심 주제(콤마 구분)
+        _add_column_if_missing(conn, "reviewers", "username", "username TEXT")
+        _add_column_if_missing(conn, "reviewers", "topics", "topics TEXT")
 
         conn.commit()

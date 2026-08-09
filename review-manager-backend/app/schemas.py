@@ -137,6 +137,8 @@ class ReviewerOut(BaseModel):
     birth_date: Optional[datetime.date] = None
     applied_at: Optional[datetime.datetime] = None
     application_status: Optional[ApplicationStatus] = None
+    username: Optional[str] = None
+    topics: Optional[str] = None
     created_at: datetime.datetime
     accounts: list[ReviewAccountOut] = []
 
@@ -483,8 +485,6 @@ class NotifyResultItem(BaseModel):
 
 class OtpRequestIn(BaseModel):
     phone: str
-    name: Optional[str] = None  # used to create a new reviewer if phone isn't found yet
-    privacy_consent: bool = False  # 신규 가입일 때만 필수 — 개인정보 수집·이용 동의
 
 
 class OtpVerifyIn(BaseModel):
@@ -495,6 +495,27 @@ class OtpVerifyIn(BaseModel):
 class OtpVerifyOut(BaseModel):
     token: str
     reviewer: ReviewerOut
+    # true면 아직 아이디/비밀번호를 만든 적이 없는 계정 — 프론트가 회원가입 완료
+    # 화면으로 보내야 한다. false면 이미 가입된 계정이 인증번호로 들어온 것 —
+    # 비밀번호를 잊어서 임시 비밀번호를 받으러 온 상황이다.
+    needs_signup: bool
+
+
+class PortalCompleteSignupIn(BaseModel):
+    username: str
+    password: str
+    name: str
+    privacy_consent: bool
+    # 체험단 활동을 한다면(선택) 채워지는 정보
+    gender: Optional[Gender] = None
+    region: Optional[str] = None
+    age_group: Optional[str] = None
+    topics: Optional[list[str]] = None
+
+
+class PortalResetPasswordOut(BaseModel):
+    username: str
+    temp_password: str
 
 
 class PortalDevAutoLoginOut(BaseModel):
@@ -528,11 +549,7 @@ class KakaoConfirmIn(BaseModel):
 
 
 class PortalLoginIn(BaseModel):
-    phone: str
-    password: str
-
-
-class PortalSetPasswordIn(BaseModel):
+    username: str
     password: str
 
 

@@ -52,6 +52,14 @@ def get_reviewer_by_kakao_id(db: Session, kakao_id: str) -> models.Reviewer | No
     return db.query(models.Reviewer).filter(models.Reviewer.kakao_id == kakao_id).first()
 
 
+def get_reviewer_by_username(db: Session, username: str) -> models.Reviewer | None:
+    return (
+        db.query(models.Reviewer)
+        .filter(models.Reviewer.username == username.strip().lower())
+        .first()
+    )
+
+
 def get_receipt_times_for_account_on_date(
     db: Session, account_id: int, date, exclude_task_id: int | None = None
 ) -> list:
@@ -86,6 +94,13 @@ def verify_otp(db: Session, reviewer: models.Reviewer, code: str) -> bool:
     reviewer.otp_expires_at = None
     db.commit()
     return True
+
+
+_TEMP_PASSWORD_ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"  # 헷갈리는 0/O/1/l/I 제외
+
+
+def generate_temp_password(length: int = 8) -> str:
+    return "".join(secrets.choice(_TEMP_PASSWORD_ALPHABET) for _ in range(length))
 
 
 def _normalize_phone(raw: str | None) -> str | None:

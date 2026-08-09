@@ -184,20 +184,19 @@ export const experienceCampaignApi = {
 }
 
 export const portalApi = {
-  requestOtp: (phone, name, privacyConsent) =>
-    request('/portal/otp/request', {
-      method: 'POST',
-      body: JSON.stringify({ phone, name, privacy_consent: privacyConsent }),
-    }),
+  requestOtp: (phone) =>
+    request('/portal/otp/request', { method: 'POST', body: JSON.stringify({ phone }) }),
   verifyOtp: (phone, code) =>
     request('/portal/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) }),
-  login: (phone, password) =>
-    request('/portal/login', { method: 'POST', body: JSON.stringify({ phone, password }) }),
-  setMyPassword: (token, password) =>
-    authedRequest('/portal/me/password', token, {
+  login: (username, password) =>
+    request('/portal/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  completeSignup: (token, data) =>
+    authedRequest('/portal/me/complete-signup', token, {
       method: 'PATCH',
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(data),
     }),
+  resetPassword: (token) =>
+    authedRequest('/portal/me/reset-password', token, { method: 'POST' }),
 
   devAutoLogin: () => request('/portal/dev-autologin'),
 

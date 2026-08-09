@@ -66,16 +66,18 @@ export default function Portal() {
   )
 }
 
+const AGE_GROUP_OPTIONS = ['20대', '30대', '40대', '그외']
+const TOPIC_OPTIONS = [
+  '맛집', '여행', '뷰티', '패션', '육아', '리빙/인테리어',
+  'IT/전자기기', '자동차', '반려동물', '건강/운동', '문화/공연', '제품후기', '기타',
+]
+
 function LoginFlow({ onLoggedIn }) {
-  const [step, setStep] = useState('login') // 'login' | 'phone' | 'code' | 'set-password'
+  const [step, setStep] = useState('login') // 'login' | 'phone' | 'code' | 'complete-signup' | 'temp-password'
   const [phone, setPhone] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [needName, setNeedName] = useState(false)
-  const [consent, setConsent] = useState(false)
   const [code, setCode] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
   const [pendingToken, setPendingToken] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -83,6 +85,21 @@ function LoginFlow({ onLoggedIn }) {
   const [kakaoConfig, setKakaoConfig] = useState(null)
   const [kakaoAccessToken, setKakaoAccessToken] = useState(null) // set once linked=false로 확인 단계에 들어가면
   const [checkingKakaoRedirect, setCheckingKakaoRedirect] = useState(false)
+
+  // 회원가입 완료 단계 입력값
+  const [signupUsername, setSignupUsername] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('')
+  const [signupName, setSignupName] = useState('')
+  const [signupConsent, setSignupConsent] = useState(false)
+  const [showExperienceFields, setShowExperienceFields] = useState(false)
+  const [gender, setGender] = useState('')
+  const [region, setRegion] = useState('')
+  const [ageGroup, setAgeGroup] = useState('')
+  const [topics, setTopics] = useState([])
+
+  // 임시 비밀번호 발급 결과
+  const [tempPasswordResult, setTempPasswordResult] = useState(null)
 
   useEffect(() => {
     portalApi.kakaoConfig().then(setKakaoConfig).catch(() => setKakaoConfig({ configured: false }))
@@ -99,8 +116,7 @@ function LoginFlow({ onLoggedIn }) {
           return
         }
         setKakaoAccessToken(result.kakao_access_token)
-        if (result.suggested_name) setName(result.suggested_name)
-        setNeedName(true)
+        if (result.suggested_name) setSignupName(result.suggested_name)
         setStep('phone')
       })
       .catch((err) => setError(err.message))
@@ -119,18 +135,10 @@ function LoginFlow({ onLoggedIn }) {
     setSubmitting(true)
     setError(null)
     try {
-      const result = await portalApi.login(phone.trim(), password)
+      const result = await portalApi.login(username.trim(), password)
       onLoggedIn(result.token)
     } catch (err) {
-      if (err.message.includes('등록된 번호가 아닙니다')) {
-        setStep('phone')
-        setError('등록되지 않은 번호예요. 인증번호로 회원가입을 진행해주세요.')
-      } else if (err.message.includes('비밀번호가 아직 설정되지 않았습니다')) {
-        setStep('phone')
-        setError('비밀번호가 아직 없어요. 인증번호로 로그인한 후 설정해주세요.')
-      } else {
-        setError(err.message)
-      }
+      setError(err.message)
     } finally {
       setSubmitting(false)
     }
@@ -138,23 +146,14 @@ function LoginFlow({ onLoggedIn }) {
 
   async function handleRequestOtp(e) {
     e.preventDefault()
-    if (needName && !consent) {
-      setError('개인정보 수집·이용에 동의해야 가입할 수 있어요.')
-      return
-    }
     setSubmitting(true)
     setError(null)
     try {
-      await portalApi.requestOtp(phone.trim(), needName ? name.trim() : undefined, needName ? consent : undefined)
+      await portalApi.requestOtp(phone.trim())
       setMessage('인증번호를 보냈습니다. 문자로 받은 6자리 번호를 입력해주세요.')
       setStep('code')
     } catch (err) {
-      if (err.message.includes('회원가입이 필요합니다')) {
-        setNeedName(true)
-        setError('이름을 입력하고 다시 눌러주세요.')
-      } else {
-        setError(err.message)
-      }
+      setError(err.message)
     } finally {
       setSubmitting(false)
     }
@@ -170,15 +169,29 @@ function LoginFlow({ onLoggedIn }) {
           phone: phone.trim(),
           code: code.trim(),
           kakao_access_token: kakaoAccessToken,
-          name: name.trim() || undefined,
+          name: signupName.trim() || undefined,
         })
-        onLoggedIn(result.token)
+        if (result.needs_signup) {
+          setPendingToken(result.token)
+          setStep('complete-signup')
+        } else {
+          onLoggedIn(result.token)
+        }
         return
       }
       const result = await portalApi.verifyOtp(phone.trim(), code.trim())
-      setPendingToken(result.token)
-      setError(null)
-      setStep('set-password')
+      if (result.needs_signup) {
+        setPendingToken(result.token)
+        setSignupName((result.reviewer.name && result.reviewer.name !== phone.trim()) ? result.reviewer.name : '')
+        setError(null)
+        setStep('complete-signup')
+      } else {
+        // 이미 가입된 계정 — 비밀번호를 잊어서 온 경우: 임시 비밀번호를 바로 발급
+        const reset = await portalApi.resetPassword(result.token)
+        setTempPasswordResult(reset)
+        setError(null)
+        setStep('temp-password')
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -186,26 +199,51 @@ function LoginFlow({ onLoggedIn }) {
     }
   }
 
-  async function handleSetPassword(e) {
+  function toggleTopic(topic) {
+    setTopics((prev) => (prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]))
+  }
+
+  async function handleCompleteSignup(e) {
     e.preventDefault()
-    if (newPassword.length < 4) {
+    if (!signupConsent) {
+      setError('개인정보 수집·이용에 동의해야 가입할 수 있어요.')
+      return
+    }
+    if (signupPassword.length < 4) {
       setError('비밀번호는 4자 이상이어야 해요.')
       return
     }
-    if (newPassword !== newPasswordConfirm) {
+    if (signupPassword !== signupPasswordConfirm) {
       setError('비밀번호가 서로 달라요.')
       return
     }
     setSubmitting(true)
     setError(null)
     try {
-      await portalApi.setMyPassword(pendingToken, newPassword)
-      onLoggedIn(pendingToken)
+      const result = await portalApi.completeSignup(pendingToken, {
+        username: signupUsername.trim(),
+        password: signupPassword,
+        name: signupName.trim(),
+        privacy_consent: signupConsent,
+        gender: gender || undefined,
+        region: region.trim() || undefined,
+        age_group: ageGroup || undefined,
+        topics: topics.length > 0 ? topics : undefined,
+      })
+      onLoggedIn(result.token)
     } catch (err) {
       setError(err.message)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function backToLogin(prefillUsername) {
+    setStep('login')
+    setError(null)
+    setMessage(null)
+    setPassword('')
+    if (prefillUsername) setUsername(prefillUsername)
   }
 
   if (checkingKakaoRedirect) {
@@ -216,14 +254,19 @@ function LoginFlow({ onLoggedIn }) {
     )
   }
 
-  const title =
-    step === 'login' ? '로그인' : step === 'set-password' ? '비밀번호 설정' : needName ? '회원가입' : '로그인'
+  const TITLE_BY_STEP = {
+    login: '로그인',
+    phone: '본인확인',
+    code: '본인확인',
+    'complete-signup': '회원가입',
+    'temp-password': '임시 비밀번호 발급',
+  }
 
   return (
     <div className="mx-auto mt-16 max-w-sm rounded-card border border-gray-200 bg-white p-6">
       <img src="/logo.svg" alt="" className="mx-auto mb-3 h-12 w-12" />
       <h1 className="mb-4 text-center text-lg font-semibold text-gray-900">
-        이지리뷰 <span className="font-normal text-gray-400">{title}</span>
+        이지리뷰 <span className="font-normal text-gray-400">{TITLE_BY_STEP[step]}</span>
       </h1>
 
       {kakaoAccessToken && (
@@ -235,10 +278,9 @@ function LoginFlow({ onLoggedIn }) {
       {step === 'login' && (
         <form onSubmit={handleLogin} className="space-y-3">
           <Input
-            label="전화번호"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="010-1234-5678"
+            label="아이디"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
           <Input
             label="비밀번호"
@@ -259,7 +301,7 @@ function LoginFlow({ onLoggedIn }) {
             }}
             className="w-full text-center text-xs text-gray-400 underline hover:text-gray-600"
           >
-            처음이신가요? 비밀번호를 잊으셨나요? 인증번호로 로그인
+            처음이신가요? 비밀번호를 잊으셨나요? 전화번호로 확인
           </button>
         </form>
       )}
@@ -268,15 +310,10 @@ function LoginFlow({ onLoggedIn }) {
         <form onSubmit={handleRequestOtp} className="space-y-3">
           <button
             type="button"
-            onClick={() => {
-              setStep('login')
-              setError(null)
-              setMessage(null)
-              setNeedName(false)
-            }}
+            onClick={() => backToLogin()}
             className="text-xs text-gray-400 hover:text-gray-600"
           >
-            ← 비밀번호로 로그인
+            ← 로그인 화면으로
           </button>
           <Input
             label="전화번호"
@@ -284,28 +321,8 @@ function LoginFlow({ onLoggedIn }) {
             onChange={(e) => setPhone(e.target.value)}
             placeholder="010-1234-5678"
           />
-          {needName && (
-            <>
-              <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} />
-              <div className="rounded-btn border border-gray-200 bg-gray-50 p-2.5 text-xs text-gray-500">
-                <p className="mb-1 font-medium text-gray-600">개인정보 수집·이용 동의</p>
-                <p>
-                  수집 항목: 이름, 전화번호 · 이용 목적: 리뷰단/체험단 작업 배정 및 연락 ·
-                  보유 기간: 회원 탈퇴 시까지
-                </p>
-              </div>
-              <label className="flex items-center gap-1.5 text-xs text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                />
-                위 개인정보 수집·이용에 동의합니다 (필수)
-              </label>
-            </>
-          )}
           <Button type="submit" variant="primary" disabled={submitting} className="w-full">
-            {needName ? '회원가입하고 인증번호 받기' : '인증번호 받기'}
+            인증번호 받기
           </Button>
           {error && <p className="text-sm text-danger-text">{error}</p>}
         </form>
@@ -326,28 +343,140 @@ function LoginFlow({ onLoggedIn }) {
         </form>
       )}
 
-      {step === 'set-password' && (
-        <form onSubmit={handleSetPassword} className="space-y-3">
-          <p className="text-sm text-gray-500">
-            앞으로 전화번호와 이 비밀번호로 로그인할 수 있어요.
-          </p>
+      {step === 'complete-signup' && (
+        <form onSubmit={handleCompleteSignup} className="space-y-3">
           <Input
-            label="새 비밀번호"
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            label="아이디"
+            value={signupUsername}
+            onChange={(e) => setSignupUsername(e.target.value)}
+            placeholder="영문 소문자/숫자 4~20자"
           />
           <Input
-            label="새 비밀번호 확인"
+            label="비밀번호"
             type="password"
-            value={newPasswordConfirm}
-            onChange={(e) => setNewPasswordConfirm(e.target.value)}
+            value={signupPassword}
+            onChange={(e) => setSignupPassword(e.target.value)}
           />
+          <Input
+            label="비밀번호 확인"
+            type="password"
+            value={signupPasswordConfirm}
+            onChange={(e) => setSignupPasswordConfirm(e.target.value)}
+          />
+          <Input label="이름" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
+
+          <button
+            type="button"
+            onClick={() => setShowExperienceFields((v) => !v)}
+            className="w-full rounded-btn border border-gray-200 px-3 py-1.5 text-left text-xs text-gray-500 hover:bg-gray-50"
+          >
+            {showExperienceFields ? '▾' : '▸'} 체험단 활동을 하신다면 추가로 입력해주세요 (선택)
+          </button>
+
+          {showExperienceFields && (
+            <div className="space-y-2 rounded-btn border border-gray-200 p-2.5">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500">성별</label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                  >
+                    <option value="">선택 안 함</option>
+                    <option value="male">남성</option>
+                    <option value="female">여성</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500">연령대</label>
+                  <select
+                    value={ageGroup}
+                    onChange={(e) => setAgeGroup(e.target.value)}
+                    className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                  >
+                    <option value="">선택 안 함</option>
+                    {AGE_GROUP_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <Input label="지역" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="예: 서울 강남구" />
+              <div>
+                <label className="block text-xs text-gray-500">주제 (복수 선택 가능)</label>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {TOPIC_OPTIONS.map((topic) => (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => toggleTopic(topic)}
+                      className={`rounded-btn border px-2 py-0.5 text-xs font-medium ${
+                        topics.includes(topic)
+                          ? 'border-brand-400 bg-brand-50 text-brand-700'
+                          : 'border-gray-300 text-gray-600'
+                      }`}
+                    >
+                      {topic}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-btn border border-gray-200 bg-gray-50 p-2.5 text-xs text-gray-500">
+            <p className="mb-1 font-medium text-gray-600">개인정보 수집·이용 동의</p>
+            <p>
+              수집 항목: 이름, 전화번호 · 이용 목적: 리뷰단/체험단 작업 배정 및 연락 ·
+              보유 기간: 회원 탈퇴 시까지
+            </p>
+          </div>
+          <label className="flex items-center gap-1.5 text-xs text-gray-600">
+            <input
+              type="checkbox"
+              checked={signupConsent}
+              onChange={(e) => setSignupConsent(e.target.checked)}
+            />
+            위 개인정보 수집·이용에 동의합니다 (필수)
+          </label>
+
           <Button type="submit" variant="primary" disabled={submitting} className="w-full">
-            완료
+            가입 완료
           </Button>
           {error && <p className="text-sm text-danger-text">{error}</p>}
         </form>
+      )}
+
+      {step === 'temp-password' && tempPasswordResult && (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            임시 비밀번호가 발급되었습니다. 아래 정보로 로그인한 뒤 비밀번호를 기억해두세요.
+          </p>
+          <div className="space-y-1 rounded-btn border border-gray-200 bg-gray-50 p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">아이디</span>
+              <span className="font-medium text-gray-800">{tempPasswordResult.username}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">임시 비밀번호</span>
+              <span className="flex items-center gap-1 font-medium text-gray-800">
+                {tempPasswordResult.temp_password}
+                <CopyButton value={tempPasswordResult.temp_password} label="임시 비밀번호" />
+              </span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            className="w-full"
+            onClick={() => backToLogin(tempPasswordResult.username)}
+          >
+            로그인 화면으로
+          </Button>
+        </div>
       )}
 
       {!kakaoAccessToken && kakaoConfig?.configured && (step === 'login' || step === 'phone') && (
