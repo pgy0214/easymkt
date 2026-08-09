@@ -45,17 +45,25 @@ def get_current_reviewer(
 @router.post("/otp/request")
 def request_otp(data: schemas.OtpRequestIn, db: Session = Depends(get_db)):
     reviewer = crud.get_reviewer_by_contact(db, data.phone)
-    if not reviewer:
+    # password_hash가 없으면 아직 포털에 정식으로 회원가입한 적이 없는 상태 —
+    # 관리자가 엑셀로 미리 올려둔 레코드가 있더라도(이름 등이 이미 채워져 있어도)
+    # 그 정보를 그대로 신뢰하지 않고, 본인이 이름을 직접 입력해야 가입이 진행된다.
+    needs_signup = reviewer is None or reviewer.password_hash is None
+    if needs_signup:
         if not data.name:
             raise HTTPException(
-                status_code=404, detail="등록된 번호가 아닙니다 — 이름을 함께 입력하면 새로 등록됩니다"
+                status_code=404, detail="회원가입이 필요합니다 — 이름을 함께 입력하면 진행됩니다"
             )
         if not data.privacy_consent:
             raise HTTPException(status_code=400, detail="개인정보 수집·이용에 동의해주세요")
-        reviewer = crud.create_reviewer(
-            db,
-            schemas.ReviewerCreate(name=data.name, contact_info=data.phone, is_active=False),
-        )
+        if reviewer:
+            reviewer.name = data.name
+            reviewer.contact_info = data.phone
+        else:
+            reviewer = crud.create_reviewer(
+                db,
+                schemas.ReviewerCreate(name=data.name, contact_info=data.phone, is_active=False),
+            )
         reviewer.privacy_consent_at = datetime.datetime.utcnow()
         db.commit()
 

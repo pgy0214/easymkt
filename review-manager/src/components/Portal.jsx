@@ -149,9 +149,9 @@ function LoginFlow({ onLoggedIn }) {
       setMessage('인증번호를 보냈습니다. 문자로 받은 6자리 번호를 입력해주세요.')
       setStep('code')
     } catch (err) {
-      if (err.message.includes('등록된 번호가 아닙니다')) {
+      if (err.message.includes('회원가입이 필요합니다')) {
         setNeedName(true)
-        setError('처음 오셨네요! 회원가입을 진행해주세요.')
+        setError('이름을 입력하고 다시 눌러주세요.')
       } else {
         setError(err.message)
       }
