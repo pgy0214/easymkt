@@ -264,4 +264,8 @@ def run_migrations(engine) -> None:
         # (오프라인에서 이미 동의를 받은 것으로 간주 — 실제 앱 가입은 아니었으므로).
         _add_column_if_missing(conn, "reviewers", "privacy_consent_at", "privacy_consent_at DATETIME")
 
+        # reviewers: email — 체험단 블로그 주소 중복의심 시 관리자가 참고할 연락처
+        # (실제 이메일 발송/인증은 하지 않음, 입력값 그대로 저장)
+        _add_column_if_missing(conn, "reviewers", "email", "email TEXT")
+
         conn.commit()

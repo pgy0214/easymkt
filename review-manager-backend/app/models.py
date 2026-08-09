@@ -31,6 +31,7 @@ class Reviewer(Base):
     region = Column(String, nullable=True)  # 체험단 전용
     blog_url = Column(String, nullable=True)  # 체험단 전용
     blog_index = Column(String, nullable=True)  # 체험단 전용, 블로그 지수(등급/점수 등 자유 표기)
+    email = Column(String, nullable=True)  # 체험단 전용, 블로그 주소 중복의심 시 관리자 확인용 참고정보(인증 안 함)
     age_group = Column(String, nullable=True)  # 체험단 전용
     gender = Column(String, nullable=True)  # male|female
     birth_date = Column(Date, nullable=True)

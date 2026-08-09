@@ -121,8 +121,11 @@ def kakao_confirm(data: schemas.KakaoConfirmIn, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=schemas.ReviewerOut)
-def get_me(reviewer: models.Reviewer = Depends(get_current_reviewer)):
-    return crud.reviewer_to_out(reviewer)
+def get_me(
+    reviewer: models.Reviewer = Depends(get_current_reviewer), db: Session = Depends(get_db)
+):
+    duplicate_ids = crud.get_duplicate_blog_reviewer_ids(db)
+    return crud.reviewer_to_out(reviewer, duplicate_ids)
 
 
 @router.patch("/me/blog-url", response_model=schemas.ReviewerOut)
@@ -133,9 +136,12 @@ def update_my_blog_url(
 ):
     reviewer.blog_url = data.blog_url
     reviewer.blog_index = data.blog_index
+    if data.email is not None:
+        reviewer.email = data.email
     db.commit()
     db.refresh(reviewer)
-    return crud.reviewer_to_out(reviewer)
+    duplicate_ids = crud.get_duplicate_blog_reviewer_ids(db)
+    return crud.reviewer_to_out(reviewer, duplicate_ids)
 
 
 @router.post("/accounts", response_model=schemas.ReviewAccountOut)

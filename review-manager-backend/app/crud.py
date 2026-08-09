@@ -177,14 +177,38 @@ def update_reviewer(
     return reviewer
 
 
-def reviewer_to_out(reviewer: models.Reviewer) -> schemas.ReviewerOut:
+def reviewer_to_out(
+    reviewer: models.Reviewer, duplicate_blog_ids: set[int] | None = None
+) -> schemas.ReviewerOut:
     """ReviewerOut.accounts는 그냥 model_validate만 하면 계정의 password가 항상
     None이 된다 — ORM 컬럼명이 password_encrypted라 자동 매핑이 안 되기 때문
     (account_to_out과 동일한 이유). 리뷰어를 반환하는 라우터는 전부 이 함수를
-    거쳐야 계정 비밀번호가 복호화된 채로 나간다."""
+    거쳐야 계정 비밀번호가 복호화된 채로 나간다.
+
+    duplicate_blog_ids를 넘기면 blog_duplicate 플래그도 채운다 — 호출하는 쪽이
+    get_duplicate_blog_reviewer_ids(db)로 한 번만 계산해서 넘기는 방식(목록 조회 시
+    리뷰어마다 매번 쿼리하지 않도록)."""
     out = schemas.ReviewerOut.model_validate(reviewer)
     out.accounts = [account_to_out(a) for a in reviewer.accounts]
+    out.blog_duplicate = bool(duplicate_blog_ids) and reviewer.id in duplicate_blog_ids
     return out
+
+
+def get_duplicate_blog_reviewer_ids(db: Session) -> set[int]:
+    """블로그 주소(공백 제거 + 소문자)가 같은 다른 리뷰어가 있는 리뷰어 id 집합.
+    관리자가 엑셀로 미리 올려둔 정보와 실제 가입자의 정보가 전화번호는 다르지만
+    블로그 주소가 겹치는 경우를 관리자가 눈으로 확인할 수 있게 하기 위한 것 —
+    자동으로 합치지는 않고 표시만 한다."""
+    rows = (
+        db.query(models.Reviewer.id, models.Reviewer.blog_url)
+        .filter(models.Reviewer.blog_url.isnot(None), models.Reviewer.blog_url != "")
+        .all()
+    )
+    by_key: dict[str, list[int]] = {}
+    for reviewer_id, blog_url in rows:
+        key = blog_url.strip().lower()
+        by_key.setdefault(key, []).append(reviewer_id)
+    return {rid for ids in by_key.values() if len(ids) > 1 for rid in ids}
 
 
 def import_reviewers(

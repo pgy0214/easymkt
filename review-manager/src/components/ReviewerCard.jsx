@@ -52,6 +52,14 @@ export default function ReviewerCard({
               {REVIEWER_CATEGORY_LABEL[reviewer.category]}
             </span>
             <h3 className="font-semibold text-gray-900">{reviewer.name}</h3>
+            {reviewer.blog_duplicate && (
+              <span
+                className="rounded-pill bg-danger-bg px-1.5 py-0.5 text-xs font-semibold text-danger-text"
+                title="다른 리뷰어와 블로그 주소가 같습니다 — 같은 사람인지 확인해주세요"
+              >
+                중복의심
+              </span>
+            )}
             {reviewer.gender && (
               <span className={`rounded-pill px-1.5 py-0.5 text-xs font-semibold ${GENDER_BADGE[reviewer.gender]}`}>
                 {GENDER_LABEL[reviewer.gender]}
@@ -88,6 +96,9 @@ export default function ReviewerCard({
             >
               {reviewer.blog_url}
             </a>
+          )}
+          {reviewer.category === 'experience' && reviewer.email && (
+            <p className="text-xs text-gray-500">확인용 이메일: {reviewer.email}</p>
           )}
         </div>
         <div className="flex items-center gap-2">

@@ -521,6 +521,8 @@ const BLOG_INDEX_OPTIONS = [
 function ExperienceProfileCard({ token, reviewer, onUpdated }) {
   const [blogUrl, setBlogUrl] = useState(reviewer.blog_url || '')
   const [blogIndex, setBlogIndex] = useState(reviewer.blog_index || '')
+  const [email, setEmail] = useState(reviewer.email || '')
+  const [duplicate, setDuplicate] = useState(!!reviewer.blog_duplicate)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -529,9 +531,15 @@ function ExperienceProfileCard({ token, reviewer, onUpdated }) {
     setSaving(true)
     setSaved(false)
     try {
-      await portalApi.updateMyBlogUrl(token, blogUrl.trim(), blogIndex)
+      const result = await portalApi.updateMyBlogUrl(
+        token,
+        blogUrl.trim(),
+        blogIndex,
+        email.trim() || undefined,
+      )
       await onUpdated()
       setSaved(true)
+      setDuplicate(!!result.blog_duplicate)
     } catch (err) {
       alert(err.message)
     } finally {
@@ -584,6 +592,21 @@ function ExperienceProfileCard({ token, reviewer, onUpdated }) {
             <ExternalLink size={12} />
           </a>
         </div>
+        {duplicate && (
+          <div className="rounded-btn border border-amber-200 bg-warning-bg p-2.5 text-xs text-warning-text">
+            <p className="mb-1 font-medium">이미 등록된 블로그 주소와 같아요.</p>
+            <p className="mb-2">
+              본인 확인을 위해 이메일을 남겨주시면 관리자가 확인 후 연결해드릴게요.
+            </p>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full"
+            />
+          </div>
+        )}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" size="sm" disabled={saving}>
             저장

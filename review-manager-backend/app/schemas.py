@@ -94,6 +94,7 @@ class ReviewerCreate(BaseModel):
     region: Optional[str] = None  # 체험단 전용
     blog_url: Optional[str] = None  # 체험단 전용
     blog_index: Optional[str] = None  # 체험단 전용, 블로그 지수(등급/점수 등 자유 표기)
+    email: Optional[str] = None  # 체험단 전용, 블로그 주소 중복의심 시 관리자 확인용
     age_group: Optional[str] = None  # 체험단 전용
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None
@@ -110,6 +111,7 @@ class ReviewerUpdate(BaseModel):
     region: Optional[str] = None
     blog_url: Optional[str] = None
     blog_index: Optional[str] = None
+    email: Optional[str] = None
     age_group: Optional[str] = None
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None
@@ -129,6 +131,7 @@ class ReviewerOut(BaseModel):
     region: Optional[str] = None
     blog_url: Optional[str] = None
     blog_index: Optional[str] = None
+    email: Optional[str] = None
     age_group: Optional[str] = None
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None
@@ -136,6 +139,9 @@ class ReviewerOut(BaseModel):
     application_status: Optional[ApplicationStatus] = None
     created_at: datetime.datetime
     accounts: list[ReviewAccountOut] = []
+
+    # 다른 리뷰어와 블로그 주소가 겹치는지 — crud.reviewer_to_out이 계산해서 채워줌
+    blog_duplicate: bool = False
 
 
 class RecentPostOut(BaseModel):
@@ -528,6 +534,7 @@ class PortalClaimIn(BaseModel):
 class PortalBlogUrlIn(BaseModel):
     blog_url: str
     blog_index: Optional[str] = None
+    email: Optional[str] = None
 
 
 class TaskBriefOut(BaseModel):

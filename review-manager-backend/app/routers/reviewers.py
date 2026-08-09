@@ -11,7 +11,8 @@ router = APIRouter(prefix="/api/reviewers", tags=["reviewers"])
 
 @router.get("", response_model=list[schemas.ReviewerOut])
 def list_reviewers(db: Session = Depends(get_db)):
-    return [crud.reviewer_to_out(r) for r in crud.get_reviewers(db)]
+    duplicate_ids = crud.get_duplicate_blog_reviewer_ids(db)
+    return [crud.reviewer_to_out(r, duplicate_ids) for r in crud.get_reviewers(db)]
 
 
 @router.post("", response_model=schemas.ReviewerOut)
