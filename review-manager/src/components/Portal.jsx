@@ -67,12 +67,16 @@ export default function Portal() {
 }
 
 function LoginFlow({ onLoggedIn }) {
-  const [step, setStep] = useState('phone') // 'phone' | 'code'
+  const [step, setStep] = useState('login') // 'login' | 'phone' | 'code' | 'set-password'
   const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [needName, setNeedName] = useState(false)
   const [consent, setConsent] = useState(false)
   const [code, setCode] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
+  const [pendingToken, setPendingToken] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [message, setMessage] = useState(null)
@@ -97,6 +101,7 @@ function LoginFlow({ onLoggedIn }) {
         setKakaoAccessToken(result.kakao_access_token)
         if (result.suggested_name) setName(result.suggested_name)
         setNeedName(true)
+        setStep('phone')
       })
       .catch((err) => setError(err.message))
       .finally(() => setCheckingKakaoRedirect(false))
@@ -107,6 +112,28 @@ function LoginFlow({ onLoggedIn }) {
     if (!kakaoConfig?.configured) return
     const url = `https://kauth.kakao.com/oauth/authorize?client_id=${kakaoConfig.client_id}&redirect_uri=${encodeURIComponent(kakaoConfig.redirect_uri)}&response_type=code`
     window.location.href = url
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    try {
+      const result = await portalApi.login(phone.trim(), password)
+      onLoggedIn(result.token)
+    } catch (err) {
+      if (err.message.includes('등록된 번호가 아닙니다')) {
+        setStep('phone')
+        setError('등록되지 않은 번호예요. 인증번호로 회원가입을 진행해주세요.')
+      } else if (err.message.includes('비밀번호가 아직 설정되지 않았습니다')) {
+        setStep('phone')
+        setError('비밀번호가 아직 없어요. 인증번호로 로그인한 후 설정해주세요.')
+      } else {
+        setError(err.message)
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleRequestOtp(e) {
@@ -138,15 +165,42 @@ function LoginFlow({ onLoggedIn }) {
     setSubmitting(true)
     setError(null)
     try {
-      const result = kakaoAccessToken
-        ? await portalApi.kakaoConfirm({
-            phone: phone.trim(),
-            code: code.trim(),
-            kakao_access_token: kakaoAccessToken,
-            name: name.trim() || undefined,
-          })
-        : await portalApi.verifyOtp(phone.trim(), code.trim())
-      onLoggedIn(result.token)
+      if (kakaoAccessToken) {
+        const result = await portalApi.kakaoConfirm({
+          phone: phone.trim(),
+          code: code.trim(),
+          kakao_access_token: kakaoAccessToken,
+          name: name.trim() || undefined,
+        })
+        onLoggedIn(result.token)
+        return
+      }
+      const result = await portalApi.verifyOtp(phone.trim(), code.trim())
+      setPendingToken(result.token)
+      setError(null)
+      setStep('set-password')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleSetPassword(e) {
+    e.preventDefault()
+    if (newPassword.length < 4) {
+      setError('비밀번호는 4자 이상이어야 해요.')
+      return
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setError('비밀번호가 서로 달라요.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      await portalApi.setMyPassword(pendingToken, newPassword)
+      onLoggedIn(pendingToken)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -162,11 +216,14 @@ function LoginFlow({ onLoggedIn }) {
     )
   }
 
+  const title =
+    step === 'login' ? '로그인' : step === 'set-password' ? '비밀번호 설정' : needName ? '회원가입' : '로그인'
+
   return (
     <div className="mx-auto mt-16 max-w-sm rounded-card border border-gray-200 bg-white p-6">
       <img src="/logo.svg" alt="" className="mx-auto mb-3 h-12 w-12" />
       <h1 className="mb-4 text-center text-lg font-semibold text-gray-900">
-        이지리뷰 <span className="font-normal text-gray-400">{needName ? '회원가입' : '로그인'}</span>
+        이지리뷰 <span className="font-normal text-gray-400">{title}</span>
       </h1>
 
       {kakaoAccessToken && (
@@ -175,8 +232,52 @@ function LoginFlow({ onLoggedIn }) {
         </p>
       )}
 
+      {step === 'login' && (
+        <form onSubmit={handleLogin} className="space-y-3">
+          <Input
+            label="전화번호"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="010-1234-5678"
+          />
+          <Input
+            label="비밀번호"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Button type="submit" variant="primary" disabled={submitting} className="w-full">
+            로그인
+          </Button>
+          {error && <p className="text-sm text-danger-text">{error}</p>}
+          <button
+            type="button"
+            onClick={() => {
+              setStep('phone')
+              setError(null)
+              setMessage(null)
+            }}
+            className="w-full text-center text-xs text-gray-400 underline hover:text-gray-600"
+          >
+            처음이신가요? 비밀번호를 잊으셨나요? 인증번호로 로그인
+          </button>
+        </form>
+      )}
+
       {step === 'phone' && (
         <form onSubmit={handleRequestOtp} className="space-y-3">
+          <button
+            type="button"
+            onClick={() => {
+              setStep('login')
+              setError(null)
+              setMessage(null)
+              setNeedName(false)
+            }}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            ← 비밀번호로 로그인
+          </button>
           <Input
             label="전화번호"
             value={phone}
@@ -225,7 +326,31 @@ function LoginFlow({ onLoggedIn }) {
         </form>
       )}
 
-      {!kakaoAccessToken && kakaoConfig?.configured && (
+      {step === 'set-password' && (
+        <form onSubmit={handleSetPassword} className="space-y-3">
+          <p className="text-sm text-gray-500">
+            앞으로 전화번호와 이 비밀번호로 로그인할 수 있어요.
+          </p>
+          <Input
+            label="새 비밀번호"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <Input
+            label="새 비밀번호 확인"
+            type="password"
+            value={newPasswordConfirm}
+            onChange={(e) => setNewPasswordConfirm(e.target.value)}
+          />
+          <Button type="submit" variant="primary" disabled={submitting} className="w-full">
+            완료
+          </Button>
+          {error && <p className="text-sm text-danger-text">{error}</p>}
+        </form>
+      )}
+
+      {!kakaoAccessToken && kakaoConfig?.configured && (step === 'login' || step === 'phone') && (
         <div className="mt-4 border-t border-gray-100 pt-4">
           <button
             type="button"

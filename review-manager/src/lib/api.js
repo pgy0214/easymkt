@@ -191,6 +191,13 @@ export const portalApi = {
     }),
   verifyOtp: (phone, code) =>
     request('/portal/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) }),
+  login: (phone, password) =>
+    request('/portal/login', { method: 'POST', body: JSON.stringify({ phone, password }) }),
+  setMyPassword: (token, password) =>
+    authedRequest('/portal/me/password', token, {
+      method: 'PATCH',
+      body: JSON.stringify({ password }),
+    }),
 
   devAutoLogin: () => request('/portal/dev-autologin'),
 

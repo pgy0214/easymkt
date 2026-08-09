@@ -41,6 +41,7 @@ class Reviewer(Base):
     otp_expires_at = Column(DateTime, nullable=True)
     kakao_id = Column(String, nullable=True)  # 카카오 로그인 연동 시 저장, 전화번호 OTP 인증 후에만 연결
     privacy_consent_at = Column(DateTime, nullable=True)  # 포털 셀프 회원가입 시 개인정보 수집·이용 동의 시각
+    password_hash = Column(String, nullable=True)  # 포털 로그인용 — 최초 가입/비밀번호 재설정은 OTP로, 이후 로그인은 이걸로
     created_at = Column(DateTime, default=utcnow)
 
     accounts = relationship(

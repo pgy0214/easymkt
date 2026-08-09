@@ -527,6 +527,15 @@ class KakaoConfirmIn(BaseModel):
     name: Optional[str] = None
 
 
+class PortalLoginIn(BaseModel):
+    phone: str
+    password: str
+
+
+class PortalSetPasswordIn(BaseModel):
+    password: str
+
+
 class PortalClaimIn(BaseModel):
     account_id: int
 

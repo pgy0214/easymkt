@@ -80,6 +80,26 @@ def verify_otp(data: schemas.OtpVerifyIn, db: Session = Depends(get_db)):
     return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer))
 
 
+@router.post("/login", response_model=schemas.OtpVerifyOut)
+def login(data: schemas.PortalLoginIn, db: Session = Depends(get_db)):
+    """최초 가입 이후의 일반 로그인 — 전화번호+비밀번호. 비밀번호가 아직 없는
+    계정(엑셀로 미리 올려둔 리뷰어 등)은 인증번호 로그인으로 안내한다."""
+    reviewer = crud.get_reviewer_by_contact(db, data.phone)
+    if not reviewer:
+        raise HTTPException(
+            status_code=404, detail="등록된 번호가 아닙니다 — 인증번호로 먼저 가입해주세요"
+        )
+    if not reviewer.password_hash:
+        raise HTTPException(
+            status_code=400,
+            detail="비밀번호가 아직 설정되지 않았습니다 — 인증번호로 로그인 후 설정해주세요",
+        )
+    if not auth.verify_password(data.password, reviewer.password_hash):
+        raise HTTPException(status_code=400, detail="비밀번호가 올바르지 않습니다")
+    token = auth.issue_token(reviewer.id)
+    return schemas.OtpVerifyOut(token=token, reviewer=crud.reviewer_to_out(reviewer))
+
+
 @router.get("/kakao/config", response_model=schemas.KakaoConfigOut)
 def kakao_config():
     if not kakao.is_configured():
@@ -126,6 +146,22 @@ def get_me(
 ):
     duplicate_ids = crud.get_duplicate_blog_reviewer_ids(db)
     return crud.reviewer_to_out(reviewer, duplicate_ids)
+
+
+@router.patch("/me/password", response_model=schemas.ReviewerOut)
+def set_my_password(
+    data: schemas.PortalSetPasswordIn,
+    reviewer: models.Reviewer = Depends(get_current_reviewer),
+    db: Session = Depends(get_db),
+):
+    """인증번호로 로그인한 상태에서만 호출됨 — 최초 가입 직후, 또는 비밀번호를
+    잊어 인증번호로 다시 들어온 경우 둘 다 여기서 새 비밀번호를 설정한다."""
+    if len(data.password) < 4:
+        raise HTTPException(status_code=400, detail="비밀번호는 4자 이상이어야 합니다")
+    reviewer.password_hash = auth.hash_password(data.password)
+    db.commit()
+    db.refresh(reviewer)
+    return crud.reviewer_to_out(reviewer)
 
 
 @router.patch("/me/blog-url", response_model=schemas.ReviewerOut)
