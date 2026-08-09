@@ -201,10 +201,10 @@ export const portalApi = {
     request('/portal/kakao/confirm', { method: 'POST', body: JSON.stringify(data) }),
 
   me: (token) => authedRequest('/portal/me', token),
-  updateMyBlogUrl: (token, blogUrl) =>
+  updateMyBlogUrl: (token, blogUrl, blogIndex) =>
     authedRequest('/portal/me/blog-url', token, {
       method: 'PATCH',
-      body: JSON.stringify({ blog_url: blogUrl }),
+      body: JSON.stringify({ blog_url: blogUrl, blog_index: blogIndex || null }),
     }),
   addAccount: (token, data) =>
     authedRequest('/portal/accounts', token, { method: 'POST', body: JSON.stringify(data) }),

@@ -527,6 +527,7 @@ class PortalClaimIn(BaseModel):
 
 class PortalBlogUrlIn(BaseModel):
     blog_url: str
+    blog_index: Optional[str] = None
 
 
 class TaskBriefOut(BaseModel):

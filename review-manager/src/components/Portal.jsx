@@ -510,8 +510,17 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
 
 const CAMPAIGN_DDAY_MS = 24 * 60 * 60 * 1000
 
+const BLOG_INDEX_OPTIONS = [
+  '전체',
+  '준최1', '준최2', '준최3', '준최4', '준최5', '준최6', '준최7',
+  '최적1', '최적2', '최적3',
+  '최적1+', '최적2+', '최적3+', '최적4+',
+  '공식블로그', '인플루언서',
+]
+
 function ExperienceProfileCard({ token, reviewer, onUpdated }) {
   const [blogUrl, setBlogUrl] = useState(reviewer.blog_url || '')
+  const [blogIndex, setBlogIndex] = useState(reviewer.blog_index || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -520,7 +529,7 @@ function ExperienceProfileCard({ token, reviewer, onUpdated }) {
     setSaving(true)
     setSaved(false)
     try {
-      await portalApi.updateMyBlogUrl(token, blogUrl.trim())
+      await portalApi.updateMyBlogUrl(token, blogUrl.trim(), blogIndex)
       await onUpdated()
       setSaved(true)
     } catch (err) {
@@ -533,28 +542,53 @@ function ExperienceProfileCard({ token, reviewer, onUpdated }) {
   return (
     <Card padding="md" className="space-y-2">
       <h2 className="font-medium text-gray-800">내 계정</h2>
-      <form onSubmit={handleSave} className="flex items-end gap-2">
-        <div className="flex-1">
-          <label className="block text-xs text-gray-500">블로그 주소</label>
-          <Input
-            value={blogUrl}
-            onChange={(e) => setBlogUrl(e.target.value)}
-            placeholder="https://blog.naver.com/..."
-            className="w-full"
-          />
+      <form onSubmit={handleSave} className="space-y-2">
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="block text-xs text-gray-500">블로그 주소</label>
+            <div className="flex items-center gap-1">
+              <Input
+                value={blogUrl}
+                onChange={(e) => setBlogUrl(e.target.value)}
+                placeholder="https://blog.naver.com/..."
+                className="w-full"
+              />
+              <CopyButton value={blogUrl} label="블로그 주소" />
+            </div>
+          </div>
+          <div className="w-28 shrink-0">
+            <label className="block text-xs text-gray-500">지수</label>
+            <select
+              value={blogIndex}
+              onChange={(e) => setBlogIndex(e.target.value)}
+              className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+            >
+              <option value="">선택 안 함</option>
+              {BLOG_INDEX_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <a
-          href="https://blogdex.space/lookup"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-0.5 whitespace-nowrap rounded-btn border border-gray-300 px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-        >
-          블덱스 바로가기
-          <ExternalLink size={12} />
-        </a>
-        <Button type="submit" variant="primary" size="sm" disabled={saving}>
-          저장
-        </Button>
+        <div className="flex items-center justify-between gap-2 rounded-btn border border-gray-200 bg-gray-50 px-2.5 py-1.5">
+          <p className="text-xs text-gray-500">블덱스에서 지수를 확인 후 선택해주세요.</p>
+          <a
+            href="https://blogdex.space/lookup"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-btn border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            블덱스 바로가기
+            <ExternalLink size={12} />
+          </a>
+        </div>
+        <div className="flex justify-end">
+          <Button type="submit" variant="primary" size="sm" disabled={saving}>
+            저장
+          </Button>
+        </div>
       </form>
       {saved && <p className="text-xs text-success-text">저장했어요.</p>}
     </Card>

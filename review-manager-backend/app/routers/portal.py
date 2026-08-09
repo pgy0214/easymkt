@@ -132,6 +132,7 @@ def update_my_blog_url(
     db: Session = Depends(get_db),
 ):
     reviewer.blog_url = data.blog_url
+    reviewer.blog_index = data.blog_index
     db.commit()
     db.refresh(reviewer)
     return crud.reviewer_to_out(reviewer)
