@@ -18,14 +18,43 @@ BLOG_INDEX_HEADERS = {"지수", "블로그지수", "블로그 지수"}
 AGE_GROUP_HEADERS = {"연령대"}
 GENDER_HEADERS = {"성별"}
 GENDER_VALUE_MAP = {"남": "male", "남성": "male", "male": "male", "여": "female", "여성": "female", "female": "female"}
+TIMESTAMP_HEADERS = {"타임스탬프", "신청시간"}
+
+
+def _parse_timestamp(raw: str | None) -> datetime.datetime | None:
+    """구글폼 제출 시각 파서. 구글시트 기본 타임스탬프 형식(예: "2024. 1. 18 오후 1:23:45")과
+    ISO 계열 형식을 모두 지원한다."""
+    if not raw:
+        return None
+    text = raw.strip()
+
+    match = re.match(
+        r"(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\s+(오전|오후)\s*(\d{1,2}):(\d{2}):(\d{2})", text
+    )
+    if match:
+        year, month, day, ampm, hour, minute, second = match.groups()
+        hour = int(hour) % 12
+        if ampm == "오후":
+            hour += 12
+        try:
+            return datetime.datetime(int(year), int(month), int(day), hour, int(minute), int(second))
+        except ValueError:
+            return None
+
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y.%m.%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"):
+        try:
+            return datetime.datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 def parse_reviewer_rows(content: bytes, filename: str) -> list[dict]:
     """Parse an uploaded .xlsx or .csv file into normalized reviewer rows:
     {name, contact_info, note, region, blog_url, blog_index, age_group,
-    gender}. Rows without a name are skipped. region/blog_url/blog_index/
-    age_group/gender only matter for the 체험단 import path — they're just
-    None if the sheet doesn't have those columns."""
+    gender, applied_at}. Rows without a name are skipped. region/blog_url/
+    blog_index/age_group/gender/applied_at only matter for the 체험단 import
+    path — they're just None if the sheet doesn't have those columns."""
     if filename.lower().endswith(".csv"):
         rows = _parse_csv(content)
     else:
@@ -47,6 +76,7 @@ def parse_reviewer_rows(content: bytes, filename: str) -> list[dict]:
                 "blog_index": _first_matching(row, BLOG_INDEX_HEADERS),
                 "age_group": _first_matching(row, AGE_GROUP_HEADERS),
                 "gender": GENDER_VALUE_MAP.get(gender_raw.strip().lower()) if gender_raw else None,
+                "applied_at": _parse_timestamp(_first_matching(row, TIMESTAMP_HEADERS)),
             }
         )
     return results

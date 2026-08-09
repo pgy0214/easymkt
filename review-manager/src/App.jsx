@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AdminAccountManager from './components/AdminAccountManager.jsx'
 import AdminLogin from './components/AdminLogin.jsx'
+import ExperienceManager from './components/ExperienceManager.jsx'
 import Nav from './components/Nav.jsx'
 import ReceiptGenerator from './components/ReceiptGenerator.jsx'
 import ReviewerManager from './components/ReviewerManager.jsx'
@@ -35,7 +36,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-3 py-3 sm:px-4 sm:py-4">
-        <h1 className="text-base font-semibold text-gray-900 sm:text-lg">
+        <h1 className="flex items-center gap-1.5 text-base font-semibold text-gray-900 sm:text-lg">
+          <img src="/logo.svg" alt="" className="h-6 w-6" />
           이지리뷰 <span className="font-normal text-gray-400">(관리자모드)</span>
         </h1>
         <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-800">
@@ -50,6 +52,7 @@ export default function App() {
         {tab === 'targets' && <TargetForm />}
         {tab === 'tasks' && <TaskDashboard />}
         {tab === 'receipt' && <ReceiptGenerator />}
+        {tab === 'experience' && <ExperienceManager />}
         {tab === 'settlement' && <SettlementSummary />}
         {tab === 'settings' && <SettingsPanel />}
       </main>

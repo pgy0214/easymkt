@@ -7,6 +7,7 @@ Platform = Literal["naver", "kakao"]
 ReviewerCategory = Literal["admin", "reviewer", "experience", "press"]
 Gender = Literal["male", "female"]
 TimeSlot = Literal["morning", "afternoon", "night"]
+ApplicationStatus = Literal["pending", "approved", "rejected"]
 
 
 # --- Admin dashboard login ---
@@ -96,6 +97,8 @@ class ReviewerCreate(BaseModel):
     age_group: Optional[str] = None  # 체험단 전용
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None
+    applied_at: Optional[datetime.datetime] = None  # 체험단 전용, 지원 시각
+    application_status: Optional[ApplicationStatus] = None  # 체험단 전용
 
 
 class ReviewerUpdate(BaseModel):
@@ -110,6 +113,8 @@ class ReviewerUpdate(BaseModel):
     age_group: Optional[str] = None
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None
+    applied_at: Optional[datetime.datetime] = None
+    application_status: Optional[ApplicationStatus] = None
 
 
 class ReviewerOut(BaseModel):
@@ -127,8 +132,15 @@ class ReviewerOut(BaseModel):
     age_group: Optional[str] = None
     gender: Optional[Gender] = None
     birth_date: Optional[datetime.date] = None
+    applied_at: Optional[datetime.datetime] = None
+    application_status: Optional[ApplicationStatus] = None
     created_at: datetime.datetime
     accounts: list[ReviewAccountOut] = []
+
+
+class RecentPostOut(BaseModel):
+    title: str
+    posted_date: Optional[datetime.date] = None
 
 
 # --- Store ---

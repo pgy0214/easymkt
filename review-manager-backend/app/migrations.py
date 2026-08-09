@@ -46,6 +46,10 @@ def run_migrations(engine) -> None:
         # reviewers: kakao_id — 카카오 로그인 연동 시 저장 (전화번호 OTP로 확인 후에만 연결)
         _add_column_if_missing(conn, "reviewers", "kakao_id", "kakao_id TEXT")
 
+        # reviewers: applied_at/application_status — 체험단 전용, 지원 시각과 승인 상태
+        _add_column_if_missing(conn, "reviewers", "applied_at", "applied_at DATETIME")
+        _add_column_if_missing(conn, "reviewers", "application_status", "application_status TEXT")
+
         # review_accounts: ip_address — IP assigned per admin-owned account
         _add_column_if_missing(conn, "review_accounts", "ip_address", "ip_address TEXT")
         _add_column_if_missing(

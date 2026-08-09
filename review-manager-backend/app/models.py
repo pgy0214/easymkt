@@ -34,6 +34,8 @@ class Reviewer(Base):
     age_group = Column(String, nullable=True)  # 체험단 전용
     gender = Column(String, nullable=True)  # male|female
     birth_date = Column(Date, nullable=True)
+    applied_at = Column(DateTime, nullable=True)  # 체험단 전용, 실제 구글폼 제출(신청) 시각
+    application_status = Column(String, nullable=True)  # 체험단 전용, pending|approved|rejected
     otp_code = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
     kakao_id = Column(String, nullable=True)  # 카카오 로그인 연동 시 저장, 전화번호 OTP 인증 후에만 연결

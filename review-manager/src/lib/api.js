@@ -64,6 +64,7 @@ export const api = {
   updateReviewer: (id, data) =>
     request(`/reviewers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteReviewer: (id) => request(`/reviewers/${id}`, { method: 'DELETE' }),
+  fetchRecentPosts: (id) => request(`/reviewers/${id}/recent-posts`, { method: 'POST' }),
 
   importReviewers: (file, category = 'reviewer') => {
     const form = new FormData()

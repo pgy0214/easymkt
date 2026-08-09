@@ -97,6 +97,11 @@ def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewe
     contact_info = data.contact_info
     if data.category == "admin":
         contact_info = _normalize_phone(contact_info)
+    applied_at = data.applied_at
+    application_status = data.application_status
+    if data.category == "experience":
+        applied_at = applied_at or datetime.datetime.utcnow()
+        application_status = application_status or "pending"
     reviewer = models.Reviewer(
         name=data.name,
         category=data.category,
@@ -109,6 +114,8 @@ def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewe
         age_group=data.age_group,
         gender=data.gender,
         birth_date=data.birth_date,
+        applied_at=applied_at,
+        application_status=application_status,
     )
     db.add(reviewer)
     db.commit()
@@ -144,6 +151,10 @@ def update_reviewer(
         reviewer.gender = data.gender
     if data.birth_date is not None:
         reviewer.birth_date = data.birth_date
+    if data.applied_at is not None:
+        reviewer.applied_at = data.applied_at
+    if data.application_status is not None:
+        reviewer.application_status = data.application_status
     db.commit()
     db.refresh(reviewer)
     return reviewer
@@ -206,6 +217,8 @@ def import_reviewers(
             blog_index=row.get("blog_index") if category == "experience" else None,
             age_group=row.get("age_group") if category == "experience" else None,
             gender=row.get("gender") if category == "experience" else None,
+            applied_at=(row.get("applied_at") or datetime.datetime.utcnow()) if category == "experience" else None,
+            application_status="pending" if category == "experience" else None,
         )
         db.add(reviewer)
         created += 1

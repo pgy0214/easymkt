@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
+from app.crawlers import naver_blog
 from app.database import get_db
 from app.importers import parse_admin_account_rows, parse_reviewer_rows
 
@@ -70,6 +71,19 @@ async def import_admin_accounts(file: UploadFile = File(...), db: Session = Depe
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"파일을 읽을 수 없습니다: {e}")
     return crud.import_admin_accounts(db, rows)
+
+
+@router.post("/{reviewer_id}/recent-posts", response_model=list[schemas.RecentPostOut])
+def get_recent_posts(reviewer_id: int, db: Session = Depends(get_db)):
+    reviewer = crud.get_reviewer(db, reviewer_id)
+    if not reviewer:
+        raise HTTPException(status_code=404, detail="리뷰어를 찾을 수 없습니다")
+    if not reviewer.blog_url:
+        raise HTTPException(status_code=400, detail="등록된 블로그 URL이 없습니다")
+    try:
+        return naver_blog.fetch_recent_posts(reviewer.blog_url)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"최근 게시글을 가져오지 못했습니다: {e}")
 
 
 @router.post("/{reviewer_id}/accounts", response_model=schemas.ReviewAccountOut)
