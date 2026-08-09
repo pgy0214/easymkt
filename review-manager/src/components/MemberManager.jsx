@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
 import { formatDateTime, GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
 import Badge from './ui/Badge.jsx'
-import Card from './ui/Card.jsx'
 import Input from './ui/Input.jsx'
 import Pagination from './Pagination.jsx'
 
@@ -68,44 +67,70 @@ export default function MemberManager() {
         <p className="shrink-0 text-xs text-gray-400">전체 {members.length}명</p>
       </div>
 
-      <div className="space-y-2">
-        {paged.length === 0 && <p className="text-sm text-gray-400">가입한 회원이 없습니다.</p>}
-        {paged.map((r) => {
-          const accountCount = r.accounts?.length ?? 0
-          const hasReviewerActivity = accountCount > 0
-          const hasExperienceActivity = !!(r.blog_url || r.region || r.age_group || r.topics)
-          return (
-            <Card key={r.id} padding="md" className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge color={CATEGORY_COLOR[r.category]}>{REVIEWER_CATEGORY_LABEL[r.category]}</Badge>
-                <span className="font-semibold text-gray-900">{r.name}</span>
-                <span className="text-sm text-gray-500">@{r.username}</span>
-                {r.gender && (
-                  <Badge color={r.gender === 'male' ? 'sky' : 'rose'}>{GENDER_LABEL[r.gender]}</Badge>
-                )}
-                {hasReviewerActivity && <Badge variant="info">리뷰단</Badge>}
-                {hasExperienceActivity && <Badge color="pink">체험단</Badge>}
-              </div>
-              <p className="text-sm text-gray-600">연락처: {r.contact_info || '-'}</p>
-              {hasExperienceActivity && (
-                <p className="text-xs text-gray-500">
-                  {[r.region, r.age_group, r.topics].filter(Boolean).join(' · ')}
-                </p>
-              )}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <Badge variant={r.privacy_consent ? 'success' : 'neutral'}>
-                  개인정보 동의 {r.privacy_consent ? 'O' : 'X'}
-                </Badge>
-                <Badge variant={r.marketing_consent ? 'success' : 'neutral'}>
-                  마케팅 동의 {r.marketing_consent ? 'O' : 'X'}
-                </Badge>
-                <span className="text-xs text-gray-400">등록 계정 {accountCount}개</span>
-                <span className="text-xs text-gray-400">등록일 {formatDateTime(r.created_at)}</span>
-              </div>
-            </Card>
-          )
-        })}
-      </div>
+      {paged.length === 0 && <p className="text-sm text-gray-400">가입한 회원이 없습니다.</p>}
+
+      {paged.length > 0 && (
+        <div className="overflow-x-auto rounded-card border border-gray-200 bg-white">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="bg-gray-50 text-left text-xs text-gray-500">
+              <tr>
+                <th className="px-3 py-2">카테고리</th>
+                <th className="px-3 py-2">이름</th>
+                <th className="px-3 py-2">연락처</th>
+                <th className="px-3 py-2">활동</th>
+                <th className="px-3 py-2">동의</th>
+                <th className="px-3 py-2">등록일</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {paged.map((r) => {
+                const accountCount = r.accounts?.length ?? 0
+                const hasReviewerActivity = accountCount > 0
+                const hasExperienceActivity = !!(r.blog_url || r.region || r.age_group || r.topics)
+                return (
+                  <tr key={r.id}>
+                    <td className="px-3 py-2 align-top">
+                      <Badge color={CATEGORY_COLOR[r.category]}>{REVIEWER_CATEGORY_LABEL[r.category]}</Badge>
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-gray-800">{r.name}</span>
+                        <span className="text-xs text-gray-400">@{r.username}</span>
+                        {r.gender && (
+                          <Badge color={r.gender === 'male' ? 'sky' : 'rose'}>{GENDER_LABEL[r.gender]}</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 align-top text-gray-600">{r.contact_info || '-'}</td>
+                    <td className="px-3 py-2 align-top">
+                      <div className="flex flex-wrap gap-1">
+                        {hasReviewerActivity && <Badge variant="info">리뷰단 {accountCount}개</Badge>}
+                        {hasExperienceActivity && <Badge color="pink">체험단 1개</Badge>}
+                        {!hasReviewerActivity && !hasExperienceActivity && (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant={r.privacy_consent ? 'success' : 'neutral'}>
+                          개인정보 {r.privacy_consent ? 'O' : 'X'}
+                        </Badge>
+                        <Badge variant={r.marketing_consent ? 'success' : 'neutral'}>
+                          마케팅 {r.marketing_consent ? 'O' : 'X'}
+                        </Badge>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 align-top text-xs text-gray-400">
+                      {formatDateTime(r.created_at)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <Pagination
         page={page}
