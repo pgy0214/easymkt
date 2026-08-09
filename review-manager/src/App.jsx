@@ -3,6 +3,7 @@ import AdminAccountManager from './components/AdminAccountManager.jsx'
 import AdminLogin from './components/AdminLogin.jsx'
 import CampaignManager from './components/CampaignManager.jsx'
 import ExperienceManager from './components/ExperienceManager.jsx'
+import MemberManager from './components/MemberManager.jsx'
 import Nav from './components/Nav.jsx'
 import ReceiptGenerator from './components/ReceiptGenerator.jsx'
 import ReviewerManager from './components/ReviewerManager.jsx'
@@ -57,6 +58,7 @@ export default function App() {
         {tab === 'experience-pool' && <ExperienceManager />}
         {tab === 'settlement' && <SettlementSummary />}
         {tab === 'settings' && <SettingsPanel />}
+        {tab === 'members' && <MemberManager />}
       </main>
     </div>
   )

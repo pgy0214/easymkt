@@ -7,6 +7,7 @@ const GROUPS = [
     label: '계정',
     icon: Users,
     children: [
+      { id: 'reviewers', label: '리뷰어 관리' },
       { id: 'admin-accounts', label: '관리자 계정' },
     ],
   },
@@ -36,7 +37,7 @@ const GROUPS = [
     icon: Settings2,
     children: [
       { id: 'settings', label: '일반설정' },
-      { id: 'reviewers', label: '회원관리' },
+      { id: 'members', label: '회원관리' },
     ],
   },
 ]
