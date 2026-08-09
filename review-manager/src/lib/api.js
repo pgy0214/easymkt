@@ -184,8 +184,11 @@ export const experienceCampaignApi = {
 }
 
 export const portalApi = {
-  requestOtp: (phone, name) =>
-    request('/portal/otp/request', { method: 'POST', body: JSON.stringify({ phone, name }) }),
+  requestOtp: (phone, name, privacyConsent) =>
+    request('/portal/otp/request', {
+      method: 'POST',
+      body: JSON.stringify({ phone, name, privacy_consent: privacyConsent }),
+    }),
   verifyOtp: (phone, code) =>
     request('/portal/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) }),
 

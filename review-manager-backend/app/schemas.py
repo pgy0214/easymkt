@@ -478,6 +478,7 @@ class NotifyResultItem(BaseModel):
 class OtpRequestIn(BaseModel):
     phone: str
     name: Optional[str] = None  # used to create a new reviewer if phone isn't found yet
+    privacy_consent: bool = False  # 신규 가입일 때만 필수 — 개인정보 수집·이용 동의
 
 
 class OtpVerifyIn(BaseModel):

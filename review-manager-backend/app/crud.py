@@ -27,8 +27,25 @@ def get_reviewer(db: Session, reviewer_id: int) -> models.Reviewer | None:
     return db.query(models.Reviewer).filter(models.Reviewer.id == reviewer_id).first()
 
 
+def _digits_only(raw: str | None) -> str:
+    return re.sub(r"\D", "", raw or "")
+
+
 def get_reviewer_by_contact(db: Session, phone: str) -> models.Reviewer | None:
-    return db.query(models.Reviewer).filter(models.Reviewer.contact_info == phone).first()
+    """전화번호로 리뷰어를 찾는다. 관리자가 엑셀로 미리 올려둔 레코드는 시트에 적힌
+    형식 그대로(하이픈 유무 등 제각각) 저장돼 있을 수 있어서, 정확히 일치하는 값이
+    없으면 숫자만 비교하는 방식으로 한 번 더 찾는다 — 그래야 스프레드시트의
+    "01012345678"과 포털에 입력한 "010-1234-5678"이 같은 사람으로 인식된다."""
+    exact = db.query(models.Reviewer).filter(models.Reviewer.contact_info == phone).first()
+    if exact:
+        return exact
+    digits = _digits_only(phone)
+    if not digits:
+        return None
+    for reviewer in db.query(models.Reviewer).filter(models.Reviewer.contact_info.isnot(None)):
+        if _digits_only(reviewer.contact_info) == digits:
+            return reviewer
+    return None
 
 
 def get_reviewer_by_kakao_id(db: Session, kakao_id: str) -> models.Reviewer | None:

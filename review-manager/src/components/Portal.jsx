@@ -71,6 +71,7 @@ function LoginFlow({ onLoggedIn }) {
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
   const [needName, setNeedName] = useState(false)
+  const [consent, setConsent] = useState(false)
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -110,16 +111,20 @@ function LoginFlow({ onLoggedIn }) {
 
   async function handleRequestOtp(e) {
     e.preventDefault()
+    if (needName && !consent) {
+      setError('개인정보 수집·이용에 동의해야 가입할 수 있어요.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
-      await portalApi.requestOtp(phone.trim(), needName ? name.trim() : undefined)
+      await portalApi.requestOtp(phone.trim(), needName ? name.trim() : undefined, needName ? consent : undefined)
       setMessage('인증번호를 보냈습니다. 문자로 받은 6자리 번호를 입력해주세요.')
       setStep('code')
     } catch (err) {
       if (err.message.includes('등록된 번호가 아닙니다')) {
         setNeedName(true)
-        setError('처음 오셨네요! 이름을 입력하고 다시 눌러주세요.')
+        setError('처음 오셨네요! 회원가입을 진행해주세요.')
       } else {
         setError(err.message)
       }
@@ -161,7 +166,7 @@ function LoginFlow({ onLoggedIn }) {
     <div className="mx-auto mt-16 max-w-sm rounded-card border border-gray-200 bg-white p-6">
       <img src="/logo.svg" alt="" className="mx-auto mb-3 h-12 w-12" />
       <h1 className="mb-4 text-center text-lg font-semibold text-gray-900">
-        이지리뷰 <span className="font-normal text-gray-400">로그인</span>
+        이지리뷰 <span className="font-normal text-gray-400">{needName ? '회원가입' : '로그인'}</span>
       </h1>
 
       {kakaoAccessToken && (
@@ -179,14 +184,27 @@ function LoginFlow({ onLoggedIn }) {
             placeholder="010-1234-5678"
           />
           {needName && (
-            <Input
-              label="이름 (처음이시면 입력해주세요)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+            <>
+              <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} />
+              <div className="rounded-btn border border-gray-200 bg-gray-50 p-2.5 text-xs text-gray-500">
+                <p className="mb-1 font-medium text-gray-600">개인정보 수집·이용 동의</p>
+                <p>
+                  수집 항목: 이름, 전화번호 · 이용 목적: 리뷰단/체험단 작업 배정 및 연락 ·
+                  보유 기간: 회원 탈퇴 시까지
+                </p>
+              </div>
+              <label className="flex items-center gap-1.5 text-xs text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                />
+                위 개인정보 수집·이용에 동의합니다 (필수)
+              </label>
+            </>
           )}
           <Button type="submit" variant="primary" disabled={submitting} className="w-full">
-            인증번호 받기
+            {needName ? '회원가입하고 인증번호 받기' : '인증번호 받기'}
           </Button>
           {error && <p className="text-sm text-danger-text">{error}</p>}
         </form>

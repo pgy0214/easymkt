@@ -259,4 +259,9 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "experience_campaigns", "sub_keyword", "sub_keyword TEXT")
         _add_column_if_missing(conn, "experience_campaigns", "contact_name", "contact_name TEXT")
 
+        # reviewers: privacy_consent_at — 포털 셀프 회원가입(전화번호 신규) 시 개인정보
+        # 수집·이용 동의 시각. 관리자가 엑셀로 미리 올려둔 기존 레코드는 null로 남는다
+        # (오프라인에서 이미 동의를 받은 것으로 간주 — 실제 앱 가입은 아니었으므로).
+        _add_column_if_missing(conn, "reviewers", "privacy_consent_at", "privacy_consent_at DATETIME")
+
         conn.commit()

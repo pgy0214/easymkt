@@ -1,3 +1,4 @@
+import datetime
 import os
 from typing import Optional
 
@@ -49,10 +50,14 @@ def request_otp(data: schemas.OtpRequestIn, db: Session = Depends(get_db)):
             raise HTTPException(
                 status_code=404, detail="등록된 번호가 아닙니다 — 이름을 함께 입력하면 새로 등록됩니다"
             )
+        if not data.privacy_consent:
+            raise HTTPException(status_code=400, detail="개인정보 수집·이용에 동의해주세요")
         reviewer = crud.create_reviewer(
             db,
             schemas.ReviewerCreate(name=data.name, contact_info=data.phone, is_active=False),
         )
+        reviewer.privacy_consent_at = datetime.datetime.utcnow()
+        db.commit()
 
     code = crud.issue_otp(db, reviewer)
     try:
