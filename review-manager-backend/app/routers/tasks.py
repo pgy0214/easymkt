@@ -1,9 +1,9 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app import crud, schemas
+from app import crud, importers, schemas
 from app.crawlers import kakao_blind_check, naver_blind_check
 from app.database import get_db
 
@@ -101,3 +101,57 @@ def recheck_blind(task_id: int, db: Session = Depends(get_db)):
 
     db.refresh(task)
     return crud.task_to_out(db, task)
+
+
+@router.post("/blind-check/bulk", response_model=list[schemas.BlindBulkCheckRowOut])
+async def bulk_blind_check(file: UploadFile = File(...)):
+    """이 프로그램에서 만든 캠페인(Task)과 무관한, 과거/외부 캠페인의 리뷰를 엑셀
+    업로드로 한꺼번에 확인한다. 행마다 {매장URL, 마이플레이스링크}가 필요 —
+    마이플레이스 링크에 박힌 사용자 id로 그 매장의 현재 리뷰 목록을 대조해
+    노출/블라인드 여부를 판정한다(닉네임은 바뀔 수 있어 매칭에 쓰지 않는다)."""
+    content = await file.read()
+    rows = importers.parse_blind_check_rows(content, file.filename or "upload.xlsx")
+    if not rows:
+        raise HTTPException(
+            status_code=400, detail="매장URL/마이플레이스링크 컬럼이 모두 채워진 행이 없습니다"
+        )
+
+    store_profile_ids: dict[str, set[str] | None] = {}
+    results: list[schemas.BlindBulkCheckRowOut] = []
+    for idx, row in enumerate(rows):
+        store_url = row["store_url"]
+        profile_url = row["profile_url"]
+        note = row["note"]
+
+        if store_url not in store_profile_ids:
+            try:
+                store_profile_ids[store_url] = naver_blind_check.scrape_store_review_profile_ids(store_url)
+            except Exception as e:
+                store_profile_ids[store_url] = None
+                naver_blind_check.logger.exception("블라인드 일괄확인 매장 스크래핑 실패: %s", store_url)
+
+        profile_ids = store_profile_ids[store_url]
+        profile_id = naver_blind_check.extract_profile_id(profile_url)
+
+        if profile_ids is None:
+            results.append(
+                schemas.BlindBulkCheckRowOut(
+                    row_index=idx, store_url=store_url, profile_url=profile_url, note=note,
+                    error="매장 리뷰 목록을 가져오지 못했습니다",
+                )
+            )
+        elif not profile_id:
+            results.append(
+                schemas.BlindBulkCheckRowOut(
+                    row_index=idx, store_url=store_url, profile_url=profile_url, note=note,
+                    error="마이플레이스 링크에서 사용자 id를 찾지 못했습니다",
+                )
+            )
+        else:
+            results.append(
+                schemas.BlindBulkCheckRowOut(
+                    row_index=idx, store_url=store_url, profile_url=profile_url, note=note,
+                    is_blinded=profile_id not in profile_ids,
+                )
+            )
+    return results

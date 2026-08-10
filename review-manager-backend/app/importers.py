@@ -198,6 +198,33 @@ def parse_card_rule_rows(content: bytes, filename: str) -> list[dict]:
 
 REVIEW_TEXT_HEADERS = {"리뷰내용", "리뷰 내용", "원고", "내용"}
 
+STORE_URL_HEADERS = {"매장URL", "매장 URL", "매장링크", "매장 링크"}
+PROFILE_URL_HEADERS = {"마이플레이스링크", "마이플레이스 링크", "마이플레이스URL", "마이플레이스 URL", "프로필링크", "프로필 링크"}
+BLIND_CHECK_NOTE_HEADERS = {"비고", "메모"}
+
+
+def parse_blind_check_rows(content: bytes, filename: str) -> list[dict]:
+    """블라인드 일괄확인 엑셀 파서 — {매장URL, 마이플레이스링크} 값이 모두 있는 행만
+    대상으로 삼는다(둘 중 하나라도 없으면 그 리뷰를 특정할 수 없어 건너뜀)."""
+    if filename.lower().endswith(".csv"):
+        rows = _parse_csv(content)
+    else:
+        rows = _parse_xlsx(content)
+
+    results = []
+    for row in rows:
+        store_url = _first_matching(row, STORE_URL_HEADERS)
+        profile_url = _first_matching(row, PROFILE_URL_HEADERS)
+        if store_url and profile_url:
+            results.append(
+                {
+                    "store_url": store_url,
+                    "profile_url": profile_url,
+                    "note": _first_matching(row, BLIND_CHECK_NOTE_HEADERS),
+                }
+            )
+    return results
+
 
 def parse_review_text_rows(content: bytes, filename: str) -> list[str]:
     """캠페인 리뷰 원고 풀 엑셀 파서 — "번호"는 라벨일 뿐 순서에 쓰지 않고, 파일에 나온

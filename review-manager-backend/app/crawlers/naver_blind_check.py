@@ -1,4 +1,5 @@
 import datetime
+import re
 import time as time_module
 
 from bs4 import BeautifulSoup
@@ -10,6 +11,76 @@ from app.crawlers.blind_check_common import apply_scrape_result
 
 REVIEW_WINDOW_DAYS = 30
 MAX_LOAD_MORE_ATTEMPTS = 20
+
+PROFILE_ID_RE = re.compile(r"/my/([a-f0-9]+)")
+PLACE_ID_RE = re.compile(r"/(?:place|restaurant|accommodation|hairshop|hospital)/(\d+)")
+
+
+def extract_profile_id(url: str) -> str | None:
+    """네이버 마이플레이스 링크(예: https://m.place.naver.com/my/{id}/review)에서
+    고유 사용자 id를 뽑아낸다 — 닉네임은 언제든 바뀔 수 있지만 이 id는 안 바뀌므로,
+    리뷰 목록에 걸린 작성자 프로필 링크와 이 id를 직접 비교해 매칭한다."""
+    if not url:
+        return None
+    match = PROFILE_ID_RE.search(url)
+    return match.group(1) if match else None
+
+
+def _normalize_review_list_url(store_url: str) -> str:
+    """관리자가 붙여넣는 매장 URL은 map.naver.com(PC 지도)이나 m.place.naver.com의
+    업종별 경로(restaurant/accommodation/...)까지 제각각이다. 어떤 형태든 리뷰
+    id 하나만 뽑아내면 업종에 상관없이 통하는 m.place.naver.com/place/{id}/review/
+    visitor 경로로 통일한다 — map.naver.com URL은 그대로 열면 리뷰 목록이 아니라
+    지도 화면이라 이 변환이 꼭 필요하다."""
+    if "/review/" in store_url:
+        return store_url
+    match = PLACE_ID_RE.search(store_url)
+    if match:
+        return f"https://m.place.naver.com/place/{match.group(1)}/review/visitor?reviewSort=recent"
+    return store_url.rstrip("/") + "/review/visitor?reviewSort=recent"
+
+
+def scrape_store_review_profile_ids(store_url: str, window_days: int = REVIEW_WINDOW_DAYS) -> set[str]:
+    """매장 리뷰 목록을 스크롤하며 현재 노출 중인 리뷰 작성자들의 프로필 id 집합을 모은다.
+    개별 리뷰엔 직접 링크가 없어 이 방식으로만 "이 사람 리뷰가 지금 보이는가"를 판정할 수 있다."""
+    url = _normalize_review_list_url(store_url)
+
+    profile_ids: set[str] = set()
+    with chrome_driver() as driver:
+        driver.get(url)
+        time_module.sleep(2)
+
+        cutoff = datetime.date.today() - datetime.timedelta(days=window_days)
+        stop = False
+        attempts = 0
+        while not stop and attempts < MAX_LOAD_MORE_ATTEMPTS:
+            attempts += 1
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            items = soup.select("li.place_apply_pui")
+            profile_ids = set()
+            oldest_on_page = None
+            for item in items:
+                a_prof = item.select_one('a[data-pui-click-code="profile"]')
+                pid = extract_profile_id(a_prof.get("href")) if a_prof else None
+                if pid:
+                    profile_ids.add(pid)
+                date_el = item.select_one("time")
+                posted_date = _parse_date_text(date_el.get_text(strip=True)) if date_el else None
+                if posted_date and (oldest_on_page is None or posted_date < oldest_on_page):
+                    oldest_on_page = posted_date
+
+            if oldest_on_page and oldest_on_page < cutoff:
+                stop = True
+                continue
+
+            try:
+                more_button = driver.find_element(By.CSS_SELECTOR, "a.fvwqf")
+                driver.execute_script("arguments[0].click()", more_button)
+                time_module.sleep(1.5)
+            except Exception:
+                stop = True
+
+    return profile_ids
 
 
 def scrape_store_reviews(store_url: str) -> list[dict]:

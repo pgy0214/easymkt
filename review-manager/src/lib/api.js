@@ -145,6 +145,11 @@ export const api = {
   updateTaskSettlement: (id, data) =>
     request(`/tasks/${id}/settlement`, { method: 'PATCH', body: JSON.stringify(data) }),
   recheckBlind: (id) => request(`/tasks/${id}/recheck-blind`, { method: 'POST' }),
+  bulkBlindCheck: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest('/tasks/blind-check/bulk', form)
+  },
   assignTask: (id, accountId) =>
     request(`/tasks/${id}/assign`, { method: 'POST', body: JSON.stringify({ account_id: accountId }) }),
 

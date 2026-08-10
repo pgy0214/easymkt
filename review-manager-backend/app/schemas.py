@@ -427,6 +427,15 @@ class TaskSettlementUpdate(BaseModel):
     settlement_amount: Optional[int] = None
 
 
+class BlindBulkCheckRowOut(BaseModel):
+    row_index: int
+    store_url: str
+    profile_url: str
+    note: Optional[str] = None
+    is_blinded: Optional[bool] = None  # None이면 확인 실패(error 참고)
+    error: Optional[str] = None
+
+
 # --- Settlement summary ---
 
 class SettlementSummaryItem(BaseModel):
