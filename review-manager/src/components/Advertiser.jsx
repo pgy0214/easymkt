@@ -59,6 +59,11 @@ function LoginFlow({ onLoggedIn }) {
     setError(null)
     try {
       const result = await portalApi.login(username.trim(), password)
+      const me = await advertiserApi.me(result.token)
+      if (me.category !== 'advertiser') {
+        setError('광고주 권한이 없는 계정입니다. 관리자에게 문의해주세요.')
+        return
+      }
       onLoggedIn(result.token)
     } catch (err) {
       setError(err.message)

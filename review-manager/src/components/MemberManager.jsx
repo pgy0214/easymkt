@@ -35,6 +35,16 @@ export default function MemberManager() {
       .finally(() => setLoading(false))
   }, [])
 
+  async function handleGrantAdvertiser(reviewer) {
+    if (!confirm(`${reviewer.name}(@${reviewer.username})에게 광고주 권한을 부여할까요?`)) return
+    try {
+      const updated = await api.updateReviewer(reviewer.id, { category: 'advertiser' })
+      setReviewers((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
   // 아이디/비밀번호를 직접 지정해 셀프 회원가입을 완료한 회원만 — 관리자가
   // 엑셀로 미리 올려둔 정보만 있고 아직 가입하지 않은 행은 제외한다.
   const members = useMemo(() => {
@@ -96,6 +106,7 @@ export default function MemberManager() {
                 <th className="px-3 py-2">활동</th>
                 <th className="px-3 py-2">동의</th>
                 <th className="px-3 py-2">등록일</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -141,6 +152,16 @@ export default function MemberManager() {
                     </td>
                     <td className="px-3 py-2 align-top text-xs text-gray-400">
                       {formatDateTime(r.created_at)}
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      {r.category !== 'advertiser' && r.category !== 'admin' && (
+                        <button
+                          onClick={() => handleGrantAdvertiser(r)}
+                          className="whitespace-nowrap text-xs text-brand-600 hover:underline"
+                        >
+                          광고주 권한 부여
+                        </button>
+                      )}
                     </td>
                   </tr>
                 )
