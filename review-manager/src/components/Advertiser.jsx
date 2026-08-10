@@ -92,7 +92,8 @@ function LoginFlow({ onLoggedIn }) {
         setPendingToken(result.token)
         setStep('complete-signup')
       } else {
-        onLoggedIn(result.token)
+        setError('이미 가입된 전화번호입니다. 로그인 화면에서 아이디/비밀번호로 로그인해주세요.')
+        setStep('login')
       }
     } catch (err) {
       setError(err.message)
