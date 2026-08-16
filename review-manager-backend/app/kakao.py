@@ -15,7 +15,7 @@ def client_id() -> str:
 
 
 def redirect_uri() -> str:
-    return os.environ.get("KAKAO_REDIRECT_URI", "http://localhost:5173/portal")
+    return os.environ.get("KAKAO_REDIRECT_URI", "http://localhost:5173/")
 
 
 def exchange_code_for_token(code: str) -> str:
