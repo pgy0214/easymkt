@@ -1,5 +1,10 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "build": {
+    "env": {
+      "VITE_API_BASE_URL": "https://review-managing-production.up.railway.app"
+    }
+  }
 }
