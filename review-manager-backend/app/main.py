@@ -46,9 +46,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Review Manager API", lifespan=lifespan)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
+# Railway의 FRONTEND_ORIGINS 환경변수가 대시보드엔 정상 저장되는데도 실행
+# 프로세스에는 반영되지 않는 현상이 반복 확인되어(Vercel의 커스텀 env var
+# 미반영 문제와 동일 패턴), 환경변수 의존을 없애고 코드에 직접 명시한다.
+# 둘 다 공개 프론트엔드 도메인이라 코드에 있어도 민감정보 아님.
+_frontend_origins = [
+    "http://localhost:5173",
+    "https://review-managing.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_frontend_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
