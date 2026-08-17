@@ -1,1 +1,42 @@
 @import "tailwindcss";
+
+@theme {
+  /* 토스 스타일 포인트 컬러 — 기존 blue-*는 다른 화면이 아직 쓰고 있어 건드리지 않고 새 네임스페이스로 추가 */
+  --color-brand-50: #EFF6FF;
+  --color-brand-100: #DFEBFF;
+  --color-brand-200: #BFDBFE;
+  --color-brand-300: #8FC0FD;
+  --color-brand-400: #5B9EF7;
+  --color-brand-500: #3182F6;
+  --color-brand-600: #2272EB;
+  --color-brand-700: #1B64DA;
+  --color-brand-900: #0F3E96;
+
+  /* 중립색 — gray-*는 코드베이스에서 아직 안 쓰여 안전하게 재정의 가능 */
+  --color-gray-50: #FBFBFC;
+  --color-gray-100: #F2F4F6;
+  --color-gray-150: #EDEFF2;
+  --color-gray-200: #E5E8EB;
+  --color-gray-300: #D1D6DB;
+  --color-gray-400: #B0B8C1;
+  --color-gray-500: #8B95A1;
+  --color-gray-600: #6B7684;
+  --color-gray-700: #4E5968;
+  --color-gray-800: #333D4B;
+  --color-gray-900: #191F28;
+
+  /* 모서리 반경 — 기존 rounded-lg 등 코어 스케일과 충돌하지 않는 이름 */
+  --radius-btn: 12px;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+
+  /* 상태색 */
+  --color-success-bg: #E7F6EC;
+  --color-success-text: #1E9B4E;
+  --color-warning-bg: #FFF3DB;
+  --color-warning-text: #B88600;
+  --color-danger-bg: #FDECEC;
+  --color-danger-text: #E0393E;
+  --color-info-bg: #E8F1FF;
+  --color-info-text: #2A6DF0;
+}
