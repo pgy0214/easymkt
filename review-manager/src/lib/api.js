@@ -1,5 +1,7 @@
-const BASE_URL = 'http://localhost:8000/api'
-export const API_ORIGIN = 'http://localhost:8000'
+export const API_ORIGIN = import.meta.env.DEV
+  ? 'http://localhost:8000'
+  : 'https://review-managing-production.up.railway.app'
+const BASE_URL = `${API_ORIGIN}/api`
 const ADMIN_TOKEN_KEY = 'admin_token'
 
 function adminAuthHeader() {
@@ -54,6 +56,19 @@ function authedRequest(path, token, options = {}) {
   })
 }
 
+async function authedUploadRequest(path, token, form) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    body: form,
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `요청 실패 (${res.status})`)
+  }
+  return res.json()
+}
+
 export const api = {
   login: (username, password) =>
     request('/admin/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
@@ -61,6 +76,8 @@ export const api = {
   getReviewers: () => request('/reviewers'),
   createReviewer: (data) =>
     request('/reviewers', { method: 'POST', body: JSON.stringify(data) }),
+  createMember: (data) =>
+    request('/reviewers/members', { method: 'POST', body: JSON.stringify(data) }),
   updateReviewer: (id, data) =>
     request(`/reviewers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteReviewer: (id) => request(`/reviewers/${id}`, { method: 'DELETE' }),
@@ -145,11 +162,16 @@ export const api = {
   updateTaskSettlement: (id, data) =>
     request(`/tasks/${id}/settlement`, { method: 'PATCH', body: JSON.stringify(data) }),
   recheckBlind: (id) => request(`/tasks/${id}/recheck-blind`, { method: 'POST' }),
-  bulkBlindCheck: (file) => {
+  startBulkBlindCheck: (file, storeId, liveView) => {
     const form = new FormData()
     form.append('file', file)
-    return uploadRequest('/tasks/blind-check/bulk', form)
+    form.append('store_id', storeId)
+    form.append('live_view', liveView ? 'true' : 'false')
+    return uploadRequest('/tasks/blind-check/bulk/start', form)
   },
+  getBulkBlindCheckJob: (jobId) => request(`/tasks/blind-check/bulk/${jobId}`),
+  cancelBulkBlindCheckJob: (jobId) =>
+    request(`/tasks/blind-check/bulk/${jobId}/cancel`, { method: 'POST' }),
   assignTask: (id, accountId) =>
     request(`/tasks/${id}/assign`, { method: 'POST', body: JSON.stringify({ account_id: accountId }) }),
 
@@ -223,6 +245,11 @@ export const portalApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+  uploadBusinessRegistrationImage: (token, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return authedUploadRequest('/portal/me/business-registration-image', token, form)
+  },
 
   devAutoLogin: () => request('/portal/dev-autologin'),
 
@@ -278,4 +305,28 @@ export const advertiserApi = {
     authedRequest('/advertiser/campaigns', token, { method: 'POST', body: JSON.stringify(data) }),
   deleteCampaign: (token, id) =>
     authedRequest(`/advertiser/campaigns/${id}`, token, { method: 'DELETE' }),
+
+  getReviewTargets: (token) => authedRequest('/advertiser/review-targets', token),
+  createReviewTarget: (token, data) =>
+    authedRequest('/advertiser/review-targets', token, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteReviewTarget: (token, id) =>
+    authedRequest(`/advertiser/review-targets/${id}`, token, { method: 'DELETE' }),
+  previewReviewText: (token, data) =>
+    authedRequest('/advertiser/review-targets/preview-review-text', token, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  uploadReviewTargetReviewTexts: (token, id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return authedUploadRequest(`/advertiser/review-targets/${id}/review-texts`, token, form)
+  },
+  uploadReviewTargetPhotos: (token, id, files) => {
+    const form = new FormData()
+    files.forEach((file) => form.append('files', file))
+    return authedUploadRequest(`/advertiser/review-targets/${id}/photos`, token, form)
+  },
 }
