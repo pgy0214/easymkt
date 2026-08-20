@@ -103,6 +103,17 @@ class ReviewerCreate(BaseModel):
     topics: Optional[list[str]] = None  # 체험단 전용, 관심 주제
 
 
+class MemberCreateIn(BaseModel):
+    """회원관리 화면의 "회원 임의 추가" — 전화번호 인증 없이 관리자가 직접
+    아이디/비밀번호를 지정해 셀프가입을 마친 상태로 바로 생성한다."""
+
+    category: ReviewerCategory
+    name: str
+    username: str
+    password: str
+    contact_info: Optional[str] = None
+
+
 class ReviewerUpdate(BaseModel):
     name: Optional[str] = None
     category: Optional[ReviewerCategory] = None
@@ -141,6 +152,7 @@ class ReviewerOut(BaseModel):
     application_status: Optional[ApplicationStatus] = None
     username: Optional[str] = None
     topics: Optional[str] = None
+    business_registration_image_path: Optional[str] = None
     created_at: datetime.datetime
     accounts: list[ReviewAccountOut] = []
 
@@ -429,11 +441,26 @@ class TaskSettlementUpdate(BaseModel):
 
 class BlindBulkCheckRowOut(BaseModel):
     row_index: int
+    store_name: str
     store_url: str
     profile_url: str
     note: Optional[str] = None
     is_blinded: Optional[bool] = None  # None이면 확인 실패(error 참고)
+    review_date: Optional[str] = None  # 노출 중일 때만 채워짐(영수증 날짜 = 리뷰 게시일)
     error: Optional[str] = None
+
+
+class BlindBulkCheckStartOut(BaseModel):
+    job_id: str
+    total: int
+
+
+class BlindBulkCheckJobOut(BaseModel):
+    job_id: str
+    status: Literal["running", "done", "cancelled"]
+    total: int
+    processed: int
+    results: list[BlindBulkCheckRowOut]
 
 
 # --- Settlement summary ---
