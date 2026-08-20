@@ -28,9 +28,16 @@ from app import photo_washer
 
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 
-# 폰트 경로 — 레거시 코드와 동일 (건드리지 말 것)
-PATH_SANDOLL = r"C:\Users\PARK GWANYONG\AppData\Local\Microsoft\Windows\Fonts\AppleSDGothicNeoL.ttf"
-PATH_ARIAL = r"C:\Windows\Fonts\Arial.ttf"
+# 폰트 경로 — 원래 이 컴퓨터의 개인 계정 폴더(AppleSDGothicNeoL)와 Windows 시스템
+# 폰트(Arial)를 직접 가리키고 있어서, 다른 컴퓨터/서버(Railway 등)에는 파일 자체가
+# 없어 영수증 생성이 100% 실패했다. 둘 다 상업 라이선스 폰트라 리포지토리에 복사해
+# 넣을 수 없어서, 자유 재배포 가능한 대체 폰트(Pretendard — OFL 라이선스)를
+# 리포지토리에 번들해서 상대경로로 쓰도록 변경. 어느 환경에서 실행하든 동일하게
+# 작동한다. 시각적으로 비슷한 산세리프체지만 완전히 동일하지는 않다 — 검토 후
+# 다른 폰트로 바꾸고 싶으면 이 두 경로만 바꾸면 됨.
+_FONTS_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+PATH_SANDOLL = os.path.join(_FONTS_DIR, "Pretendard-Light.otf")
+PATH_ARIAL = os.path.join(_FONTS_DIR, "Roboto-Regular.ttf")
 
 # 상품명은 x=50에서 시작해 오른쪽으로 그려지고, 단가는 x=390에서 우측정렬로 그려진다
 # (draw_mixed/draw_mixed_right, 건드리지 말 것 — canvas 레이아웃은 레거시 그대로 유지).
