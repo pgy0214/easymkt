@@ -174,6 +174,11 @@ export const api = {
     request(`/tasks/blind-check/bulk/${jobId}/cancel`, { method: 'POST' }),
   assignTask: (id, accountId) =>
     request(`/tasks/${id}/assign`, { method: 'POST', body: JSON.stringify({ account_id: accountId }) }),
+  uploadTaskReceiptImage: (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest(`/tasks/${id}/receipt-image`, form)
+  },
 
   getSettlementSummary: () => request('/settlement/summary'),
   getRevenue: (dateFrom, dateTo) =>

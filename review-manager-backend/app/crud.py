@@ -9,7 +9,7 @@ import secrets
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app import crypto, models, photo_washer, review_writer, schemas
+from app import auth, crypto, models, photo_washer, review_writer, schemas
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +149,30 @@ def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewe
         applied_at=applied_at,
         application_status=application_status,
         topics=",".join(data.topics) if data.topics else None,
+    )
+    db.add(reviewer)
+    db.commit()
+    db.refresh(reviewer)
+    return reviewer
+
+
+def create_member(db: Session, data: schemas.MemberCreateIn) -> models.Reviewer:
+    """회원관리 "임의 추가" — 포털 셀프가입(전화번호 인증→아이디/비밀번호 입력)을
+    관리자가 대신 완료시켜주는 것과 같다. privacy_consent_at을 지금 시각으로
+    바로 채워서 목록에서 "가입 완료된 회원"으로 곧장 보이게 한다. 광고주는 셀프
+    가입과 동일하게 사업자등록증 승인 전까지 is_active=False로 시작한다 — 관리자가
+    직접 추가했다고 승인 절차를 건너뛰면 안 된다."""
+    contact_info = data.contact_info
+    if data.category == "admin":
+        contact_info = _normalize_phone(contact_info)
+    reviewer = models.Reviewer(
+        name=data.name,
+        category=data.category,
+        username=data.username,
+        password_hash=auth.hash_password(data.password),
+        contact_info=contact_info,
+        is_active=data.category != "advertiser",
+        privacy_consent_at=datetime.datetime.utcnow(),
     )
     db.add(reviewer)
     db.commit()
@@ -392,6 +416,12 @@ def create_account(
         password_encrypted=crypto.encrypt(data.password) if data.password else None,
     )
     db.add(account)
+    # 계정을 하나라도 등록하면 그 자체로 "작업 받을 준비가 됐다"는 뜻이라 관리자
+    # 승인 없이 바로 활성화한다 — 광고주는 계정 개념이 없어 별도로 사업자등록증
+    # 승인 절차를 거친다(advertiser.py의 get_approved_advertiser 참고).
+    reviewer = db.query(models.Reviewer).filter(models.Reviewer.id == reviewer_id).first()
+    if reviewer and not reviewer.is_active:
+        reviewer.is_active = True
     db.commit()
     db.refresh(account)
     return account
@@ -599,6 +629,20 @@ def save_reference_photo(
     with open(dest, "wb") as f:
         f.write(content)
     target.reference_photo_path = f"/uploads/campaigns/target_{target.id}{ext}"
+    db.commit()
+
+
+def save_task_receipt_image(db: Session, task: models.Task, content: bytes, filename: str) -> None:
+    """관리자가 로컬(크롬/폰트가 있는 환경)에서 만든 영수증 이미지를 수동으로 업로드할 때
+    쓴다 — 크롤러가 자동 생성하는 경로(app/crawlers/naver_date_check.py)와 별개로, 크롬·
+    폰트가 없는 클라우드 배포판에서도 이미 만들어진 이미지를 작업에 붙일 수 있게 해준다."""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError(f"지원하지 않는 이미지 형식입니다: {ext or '(확장자 없음)'}")
+    dest = os.path.join(UPLOADS_DIR, "receipts", f"task_{task.id}{ext}")
+    with open(dest, "wb") as f:
+        f.write(content)
+    task.receipt_image_path = f"/uploads/receipts/task_{task.id}{ext}"
     db.commit()
 
 
@@ -1530,6 +1574,25 @@ def save_experience_campaign_image(
     db.commit()
     db.refresh(campaign)
     return _experience_campaign_to_out(db, campaign)
+
+
+def save_business_registration_image(
+    db: Session, reviewer: models.Reviewer, content: bytes, filename: str
+) -> models.Reviewer:
+    """광고주 회원가입 시 첨부하는 사업자등록증 — 업로드만으로는 승인(is_active)되지
+    않는다, 관리자가 회원관리에서 이미지를 직접 확인하고 활성화해줘야 한다."""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError(f"지원하지 않는 이미지 형식입니다: {ext or '(확장자 없음)'}")
+    dest_dir = os.path.join(UPLOADS_DIR, "business_registrations")
+    os.makedirs(dest_dir, exist_ok=True)
+    dest = os.path.join(dest_dir, f"reviewer_{reviewer.id}{ext}")
+    with open(dest, "wb") as f:
+        f.write(content)
+    reviewer.business_registration_image_path = f"/uploads/business_registrations/reviewer_{reviewer.id}{ext}"
+    db.commit()
+    db.refresh(reviewer)
+    return reviewer
 
 
 def experience_application_to_out(app_row: models.ExperienceApplication) -> schemas.ExperienceApplicationOut:
