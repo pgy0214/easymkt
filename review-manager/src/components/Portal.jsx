@@ -4,6 +4,7 @@ import { api, API_ORIGIN, portalApi } from '../lib/api.js'
 import {
   AGE_GROUP_OPTIONS,
   BLOG_INDEX_OPTIONS,
+  CATEGORY_LABEL,
   formatDateTime,
   formatKRW,
   PLATFORM_LABEL,
@@ -139,6 +140,10 @@ function LoginFlow({ onLoggedIn }) {
   // 임시 비밀번호 발급 결과
   const [tempPasswordResult, setTempPasswordResult] = useState(null)
 
+  // 이미 가입된 번호로 인증했을 때 — 카테고리 안내 + 비밀번호 찾기용 아이디 확인
+  const [matchedReviewer, setMatchedReviewer] = useState(null)
+  const [confirmUsername, setConfirmUsername] = useState('')
+
   useEffect(() => {
     portalApi.kakaoConfig().then(setKakaoConfig).catch(() => setKakaoConfig({ configured: false }))
 
@@ -233,12 +238,36 @@ function LoginFlow({ onLoggedIn }) {
         setError(null)
         setStep('complete-signup')
       } else {
-        // 이미 가입된 계정 — 비밀번호를 잊어서 온 경우: 임시 비밀번호를 바로 발급
-        const reset = await portalApi.resetPassword(result.token)
-        setTempPasswordResult(reset)
+        // 이미 가입된 번호 — 전화번호만으로 곧바로 비밀번호를 재발급하면 그 번호를
+        // 잠깐이라도 쓸 수 있는 사람이 남의 계정 비밀번호를 리셋할 수 있어서(보안
+        // 문제), 여기서 바로 발급하지 않는다. 어느 계정인지(카테고리)만 안내하고,
+        // 진짜 본인이면 가입할 때 정한 아이디까지 알고 있을 거라 그걸로 한 번 더
+        // 확인한 뒤에만(handleConfirmReset) 임시 비밀번호를 내준다.
+        setPendingToken(result.token)
+        setMatchedReviewer(result.reviewer)
+        setConfirmUsername('')
         setError(null)
-        setStep('temp-password')
+        setStep('already-registered')
       }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleConfirmReset(e) {
+    e.preventDefault()
+    if (confirmUsername.trim().toLowerCase() !== (matchedReviewer?.username || '').toLowerCase()) {
+      setError('아이디가 일치하지 않습니다. 관리자에게 문의해주세요.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      const reset = await portalApi.resetPassword(pendingToken)
+      setTempPasswordResult(reset)
+      setStep('temp-password')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -388,6 +417,35 @@ function LoginFlow({ onLoggedIn }) {
             확인
           </Button>
           {error && <p className="text-sm text-danger-text">{error}</p>}
+        </form>
+      )}
+
+      {step === 'already-registered' && matchedReviewer && (
+        <form onSubmit={handleConfirmReset} className="space-y-3">
+          <p className="text-sm text-gray-600">
+            이미 {CATEGORY_LABEL[matchedReviewer.category] || '다른'}로 가입된 번호입니다.
+            추가문의는 관리자에게 부탁드립니다.
+          </p>
+          <p className="text-xs text-gray-400">
+            본인 계정의 비밀번호를 잊으셨다면, 가입할 때 정한 아이디를 입력해주세요.
+          </p>
+          <Input
+            label="아이디"
+            value={confirmUsername}
+            onChange={(e) => setConfirmUsername(e.target.value)}
+            autoComplete="off"
+          />
+          <Button type="submit" variant="primary" disabled={submitting} className="w-full">
+            임시 비밀번호 받기
+          </Button>
+          {error && <p className="text-sm text-danger-text">{error}</p>}
+          <button
+            type="button"
+            onClick={() => backToLogin()}
+            className="w-full text-center text-xs text-gray-400 underline hover:text-gray-600"
+          >
+            로그인 화면으로
+          </button>
         </form>
       )}
 

@@ -3,7 +3,7 @@ import os
 import re
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import auth, crud, kakao, models, schemas, sms
@@ -235,6 +235,23 @@ def update_my_profile(
     db.refresh(reviewer)
     duplicate_ids = crud.get_duplicate_blog_reviewer_ids(db)
     return crud.reviewer_to_out(reviewer, duplicate_ids)
+
+
+@router.post("/me/business-registration-image", response_model=schemas.ReviewerOut)
+async def upload_business_registration_image(
+    file: UploadFile = File(...),
+    reviewer: models.Reviewer = Depends(get_current_reviewer),
+    db: Session = Depends(get_db),
+):
+    """광고주 회원가입 중 사업자등록증을 첨부한다. 업로드만으로 바로 승인되는 게
+    아니라, 관리자가 회원관리에서 이미지를 확인하고 활성화해줘야 매장등록/
+    캠페인생성이 가능해진다(advertiser.py의 승인 게이트 참고)."""
+    content = await file.read()
+    try:
+        reviewer = crud.save_business_registration_image(db, reviewer, content, file.filename or "image.jpg")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return crud.reviewer_to_out(reviewer)
 
 
 @router.patch("/me/blog-url", response_model=schemas.ReviewerOut)

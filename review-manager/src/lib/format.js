@@ -41,6 +41,14 @@ export const PLATFORM_LABEL = {
   kakao: '카카오맵',
 }
 
+export const CATEGORY_LABEL = {
+  admin: '관리자',
+  advertiser: '광고주',
+  reviewer: '리뷰어',
+  experience: '체험단',
+  press: '기자단',
+}
+
 export const STATUS_LABEL = {
   open: '오픈풀(미배정)',
   claimed: '클레임됨',

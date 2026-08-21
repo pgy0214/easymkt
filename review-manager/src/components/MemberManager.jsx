@@ -1,8 +1,11 @@
+import { Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { api } from '../lib/api.js'
+import { api, API_ORIGIN } from '../lib/api.js'
 import { formatDateTime, GENDER_LABEL } from '../lib/format.js'
 import Badge from './ui/Badge.jsx'
+import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
+import Modal from './ui/Modal.jsx'
 import Pagination from './Pagination.jsx'
 
 // 회원관리 화면에서 다루는 회원 종류는 관리자/광고주/리뷰어 세 가지뿐이다(광고주는
@@ -19,6 +22,8 @@ function memberType(category) {
   return MEMBER_TYPES.find((t) => t.value === category) ?? MEMBER_TYPES[2]
 }
 
+const EMPTY_MEMBER = { category: 'reviewer', name: '', username: '', password: '', contact_info: '' }
+
 export default function MemberManager() {
   const [reviewers, setReviewers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -26,6 +31,10 @@ export default function MemberManager() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
+  const [addOpen, setAddOpen] = useState(false)
+  const [memberForm, setMemberForm] = useState(EMPTY_MEMBER)
+  const [addSubmitting, setAddSubmitting] = useState(false)
+  const [addError, setAddError] = useState(null)
 
   useEffect(() => {
     api
@@ -35,10 +44,35 @@ export default function MemberManager() {
       .finally(() => setLoading(false))
   }, [])
 
+  async function handleAddMember(e) {
+    e.preventDefault()
+    setAddSubmitting(true)
+    setAddError(null)
+    try {
+      const created = await api.createMember(memberForm)
+      setReviewers((prev) => [...prev, created])
+      setAddOpen(false)
+      setMemberForm(EMPTY_MEMBER)
+    } catch (err) {
+      setAddError(err.message)
+    } finally {
+      setAddSubmitting(false)
+    }
+  }
+
   async function handleGrantAdvertiser(reviewer) {
     if (!confirm(`${reviewer.name}(@${reviewer.username})에게 광고주 권한을 부여할까요?`)) return
     try {
       const updated = await api.updateReviewer(reviewer.id, { category: 'advertiser' })
+      setReviewers((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function handleToggleActive(reviewer) {
+    try {
+      const updated = await api.updateReviewer(reviewer.id, { is_active: !reviewer.is_active })
       setReviewers((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
     } catch (err) {
       alert(err.message)
@@ -58,6 +92,18 @@ export default function MemberManager() {
           r.username.includes(q) ||
           (r.contact_info || '').includes(q),
       )
+      .slice()
+      .sort((a, b) => {
+        const typeDiff = MEMBER_TYPES.findIndex((t) => t.value === a.category) -
+          MEMBER_TYPES.findIndex((t) => t.value === b.category)
+        if (typeDiff !== 0) return typeDiff
+        // 광고주 그룹 안에서는 승인 대기(is_active === false)인 사람을 맨 위로.
+        if (a.category === 'advertiser') {
+          const activeDiff = Number(a.is_active) - Number(b.is_active)
+          if (activeDiff !== 0) return activeDiff
+        }
+        return 0
+      })
   }, [reviewers, search])
 
   useEffect(() => setPage(1), [search])
@@ -69,9 +115,22 @@ export default function MemberManager() {
 
   return (
     <div className="space-y-3">
-      <div>
-        <h2 className="text-base font-semibold text-gray-900">회원관리</h2>
-        <p className="text-xs text-gray-400">아이디/비밀번호로 직접 회원가입을 완료한 회원의 가입 정보입니다</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">회원관리</h2>
+          <p className="text-xs text-gray-400">아이디/비밀번호로 직접 회원가입을 완료한 회원의 가입 정보입니다</p>
+        </div>
+        <Button
+          size="sm"
+          onClick={() => {
+            setMemberForm(EMPTY_MEMBER)
+            setAddError(null)
+            setAddOpen(true)
+          }}
+        >
+          <Plus size={14} className="mr-1 inline" />
+          회원 임의 추가
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -104,6 +163,7 @@ export default function MemberManager() {
                 <th className="px-3 py-2">연락처</th>
                 <th className="px-3 py-2">지역</th>
                 <th className="px-3 py-2">활동</th>
+                <th className="px-3 py-2">사업자등록증</th>
                 <th className="px-3 py-2">동의</th>
                 <th className="px-3 py-2">등록일</th>
                 <th className="px-3 py-2" />
@@ -113,7 +173,7 @@ export default function MemberManager() {
               {paged.map((r) => {
                 const accountCount = r.accounts?.length ?? 0
                 const hasReviewerActivity = accountCount > 0
-                const hasExperienceActivity = !!(r.blog_url || r.region || r.age_group || r.topics)
+                const hasExperienceActivity = !!r.blog_url
                 const type = memberType(r.category)
                 return (
                   <tr key={r.id}>
@@ -141,6 +201,24 @@ export default function MemberManager() {
                       </div>
                     </td>
                     <td className="px-3 py-2 align-top">
+                      {r.category === 'advertiser' ? (
+                        r.business_registration_image_path ? (
+                          <a
+                            href={`${API_ORIGIN}${r.business_registration_image_path}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-brand-600 hover:underline"
+                          >
+                            이미지 확인
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-400">미제출</span>
+                        )
+                      ) : (
+                        <span className="text-xs text-gray-300">-</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 align-top">
                       <div className="flex flex-wrap gap-1">
                         <Badge variant={r.privacy_consent ? 'success' : 'neutral'}>
                           개인정보 {r.privacy_consent ? 'O' : 'X'}
@@ -154,14 +232,26 @@ export default function MemberManager() {
                       {formatDateTime(r.created_at)}
                     </td>
                     <td className="px-3 py-2 align-top">
-                      {r.category !== 'advertiser' && r.category !== 'admin' && (
-                        <button
-                          onClick={() => handleGrantAdvertiser(r)}
-                          className="whitespace-nowrap text-xs text-brand-600 hover:underline"
-                        >
-                          광고주 권한 부여
-                        </button>
-                      )}
+                      <div className="flex flex-col items-start gap-1">
+                        {r.category !== 'admin' && (
+                          <button
+                            onClick={() => handleToggleActive(r)}
+                            className={`whitespace-nowrap text-xs hover:underline ${
+                              r.is_active ? 'text-gray-500' : 'text-brand-600 font-medium'
+                            }`}
+                          >
+                            {r.is_active ? '비활성화' : '활성화'}
+                          </button>
+                        )}
+                        {r.category !== 'advertiser' && r.category !== 'admin' && r.category !== 'reviewer' && (
+                          <button
+                            onClick={() => handleGrantAdvertiser(r)}
+                            className="whitespace-nowrap text-xs text-brand-600 hover:underline"
+                          >
+                            광고주 권한 부여
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -178,6 +268,70 @@ export default function MemberManager() {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)}>
+        <h3 className="mb-3 font-semibold text-gray-800">회원 임의 추가</h3>
+        <p className="mb-3 text-xs text-gray-400">
+          전화번호 인증 없이 아이디/비밀번호를 바로 지정해서 가입 완료 상태로 만듭니다.
+        </p>
+        <form onSubmit={handleAddMember} className="space-y-3">
+          <div>
+            <label className="block text-xs text-gray-500">회원 종류</label>
+            <select
+              value={memberForm.category}
+              onChange={(e) => setMemberForm((prev) => ({ ...prev, category: e.target.value }))}
+              className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+            >
+              {MEMBER_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500">이름</label>
+            <Input
+              value={memberForm.name}
+              onChange={(e) => setMemberForm((prev) => ({ ...prev, name: e.target.value }))}
+              className="w-full"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500">아이디</label>
+            <Input
+              value={memberForm.username}
+              onChange={(e) => setMemberForm((prev) => ({ ...prev, username: e.target.value }))}
+              placeholder="영문 소문자/숫자/밑줄 4~20자"
+              className="w-full"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500">비밀번호</label>
+            <Input
+              value={memberForm.password}
+              onChange={(e) => setMemberForm((prev) => ({ ...prev, password: e.target.value }))}
+              placeholder="4자 이상"
+              className="w-full"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500">연락처</label>
+            <Input
+              value={memberForm.contact_info}
+              onChange={(e) => setMemberForm((prev) => ({ ...prev, contact_info: e.target.value }))}
+              className="w-full"
+            />
+          </div>
+          {addError && <p className="text-sm text-danger-text">{addError}</p>}
+          <Button type="submit" variant="primary" disabled={addSubmitting} className="w-full">
+            {addSubmitting ? '추가 중...' : '추가'}
+          </Button>
+        </form>
+      </Modal>
     </div>
   )
 }

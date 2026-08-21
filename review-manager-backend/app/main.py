@@ -9,8 +9,8 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app import scheduler
-from app.database import Base, engine
+from app import crud, scheduler
+from app.database import Base, SessionLocal, engine
 from app.migrations import run_migrations
 from app.routers import (
     accounts,
@@ -38,6 +38,11 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     run_migrations(engine)
     Base.metadata.create_all(bind=engine)  # recreate tables migrations may have dropped
+    db = SessionLocal()
+    try:
+        crud.seed_test_accounts(db)
+    finally:
+        db.close()
     scheduler.start_scheduler()
     yield
     scheduler.shutdown_scheduler()

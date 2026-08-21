@@ -2,6 +2,7 @@ import { Loader2, LogOut, Plus, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { advertiserApi, api, API_ORIGIN, portalApi } from '../lib/api.js'
 import {
+  CATEGORY_LABEL,
   enforceProductNameLength,
   formatBusinessNumber,
   formatDate,
@@ -12,6 +13,7 @@ import {
   WEEKDAY_LABELS,
 } from '../lib/format.js'
 import ProductRowsEditor from './ProductRowsEditor.jsx'
+import CopyButton from './CopyButton.jsx'
 import Badge from './ui/Badge.jsx'
 import Button from './ui/Button.jsx'
 import Card from './ui/Card.jsx'
@@ -61,7 +63,11 @@ function LoginFlow({ onLoggedIn }) {
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('')
   const [signupName, setSignupName] = useState('')
   const [signupConsent, setSignupConsent] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [businessRegFile, setBusinessRegFile] = useState(null)
+  const [matchedReviewer, setMatchedReviewer] = useState(null)
+  const [confirmUsername, setConfirmUsername] = useState('')
+  const [tempPasswordResult, setTempPasswordResult] = useState(null)
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -116,9 +122,34 @@ function LoginFlow({ onLoggedIn }) {
         setPendingToken(result.token)
         setStep('complete-signup')
       } else {
-        setError('이미 가입된 전화번호입니다. 로그인 화면에서 아이디/비밀번호로 로그인해주세요.')
-        setStep('login')
+        // 이미 가입된 번호 — 전화번호만으로 곧바로 비밀번호를 재발급하면 보안
+        // 문제가 있어서(handleVerify in Portal.jsx와 동일한 이유), 카테고리
+        // 안내만 하고 아이디까지 확인된 뒤에만 임시 비밀번호를 내준다.
+        setPendingToken(result.token)
+        setMatchedReviewer(result.reviewer)
+        setConfirmUsername('')
+        setError(null)
+        setStep('already-registered')
       }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleConfirmReset(e) {
+    e.preventDefault()
+    if (confirmUsername.trim().toLowerCase() !== (matchedReviewer?.username || '').toLowerCase()) {
+      setError('아이디가 일치하지 않습니다. 관리자에게 문의해주세요.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      const reset = await portalApi.resetPassword(pendingToken)
+      setTempPasswordResult(reset)
+      setStep('temp-password')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -148,7 +179,7 @@ function LoginFlow({ onLoggedIn }) {
         password: signupPassword,
         name: signupName.trim(),
         privacy_consent: signupConsent,
-        marketing_consent: false,
+        marketing_consent: marketingConsent,
         category: 'advertiser',
       })
       setStep('business-registration')
@@ -181,8 +212,10 @@ function LoginFlow({ onLoggedIn }) {
     login: '로그인',
     phone: '본인확인',
     code: '본인확인',
+    'already-registered': '본인확인',
     'complete-signup': '회원가입',
     'business-registration': '사업자등록증 제출',
+    'temp-password': '임시 비밀번호 발급',
   }
 
   return (
@@ -252,6 +285,72 @@ function LoginFlow({ onLoggedIn }) {
         </form>
       )}
 
+      {step === 'already-registered' && matchedReviewer && (
+        <form onSubmit={handleConfirmReset} className="space-y-3">
+          <p className="text-sm text-gray-600">
+            이미 {CATEGORY_LABEL[matchedReviewer.category] || '다른'}로 가입된 번호입니다.
+            추가문의는 관리자에게 부탁드립니다.
+          </p>
+          <p className="text-xs text-gray-400">
+            본인 계정의 비밀번호를 잊으셨다면, 가입할 때 정한 아이디를 입력해주세요.
+          </p>
+          <Input
+            label="아이디"
+            value={confirmUsername}
+            onChange={(e) => setConfirmUsername(e.target.value)}
+            autoComplete="off"
+          />
+          <Button type="submit" variant="primary" disabled={submitting} className="w-full">
+            임시 비밀번호 받기
+          </Button>
+          {error && <p className="text-sm text-danger-text">{error}</p>}
+          <button
+            type="button"
+            onClick={() => {
+              setStep('login')
+              setError(null)
+            }}
+            className="w-full text-center text-xs text-gray-400 underline hover:text-gray-600"
+          >
+            로그인 화면으로
+          </button>
+        </form>
+      )}
+
+      {step === 'temp-password' && tempPasswordResult && (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            임시 비밀번호가 발급되었습니다. 아래 정보로 로그인한 뒤 비밀번호를 기억해두세요.
+          </p>
+          <div className="space-y-1 rounded-btn border border-gray-200 bg-gray-50 p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">아이디</span>
+              <span className="font-medium text-gray-800">{tempPasswordResult.username}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">임시 비밀번호</span>
+              <span className="flex items-center gap-1 font-medium text-gray-800">
+                {tempPasswordResult.temp_password}
+                <CopyButton value={tempPasswordResult.temp_password} label="임시 비밀번호" />
+              </span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            className="w-full"
+            onClick={() => {
+              setUsername(tempPasswordResult.username)
+              setPassword('')
+              setStep('login')
+              setError(null)
+            }}
+          >
+            로그인 화면으로
+          </Button>
+        </div>
+      )}
+
       {step === 'complete-signup' && (
         <form onSubmit={handleCompleteSignup} className="space-y-3">
           <Input
@@ -259,18 +358,21 @@ function LoginFlow({ onLoggedIn }) {
             value={signupUsername}
             onChange={(e) => setSignupUsername(e.target.value)}
             placeholder="영문 소문자/숫자 4~20자"
+            autoComplete="off"
           />
           <Input
             label="비밀번호"
             type="password"
             value={signupPassword}
             onChange={(e) => setSignupPassword(e.target.value)}
+            autoComplete="new-password"
           />
           <Input
             label="비밀번호 확인"
             type="password"
             value={signupPasswordConfirm}
             onChange={(e) => setSignupPasswordConfirm(e.target.value)}
+            autoComplete="new-password"
           />
           <Input label="이름 / 업체 담당자명" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
           <label className="flex items-center gap-1.5 text-xs text-gray-600">
@@ -279,7 +381,15 @@ function LoginFlow({ onLoggedIn }) {
               checked={signupConsent}
               onChange={(e) => setSignupConsent(e.target.checked)}
             />
-            개인정보 수집·이용에 동의합니다
+            개인정보 수집·이용에 동의합니다 (필수)
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-gray-600">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+            />
+            문자 등 마케팅 정보 수신에 동의합니다 (선택)
           </label>
           <Button type="submit" variant="primary" disabled={submitting} className="w-full">
             가입 완료
@@ -294,12 +404,15 @@ function LoginFlow({ onLoggedIn }) {
             사업자등록증 이미지를 첨부해주세요. 관리자가 확인 후 승인해야 매장 등록과
             캠페인 개설이 가능해요. 가입 자체는 지금 완료됩니다.
           </p>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setBusinessRegFile(e.target.files?.[0] || null)}
-            className="w-full rounded-btn border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
-          />
+          <label className="inline-block cursor-pointer rounded-btn border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+            {businessRegFile ? businessRegFile.name : '파일 선택'}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => setBusinessRegFile(e.target.files?.[0] || null)}
+            />
+          </label>
           <Button type="submit" variant="primary" disabled={submitting} className="w-full">
             {submitting ? '제출 중...' : '제출하고 계속하기'}
           </Button>

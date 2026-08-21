@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import AdminAccountManager from './components/AdminAccountManager.jsx'
-import AdminLogin from './components/AdminLogin.jsx'
 import CampaignManager from './components/CampaignManager.jsx'
 import ExperienceManager from './components/ExperienceManager.jsx'
 import MemberManager from './components/MemberManager.jsx'
@@ -21,12 +20,15 @@ export default function App() {
 
   if (!token) {
     return (
-      <AdminLogin
-        onLoggedIn={(t) => {
-          localStorage.setItem(TOKEN_KEY, t)
-          setToken(t)
-        }}
-      />
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
+        <div className="w-full max-w-sm rounded-card border border-gray-200 bg-white p-6 text-center">
+          <img src="/logo.svg" alt="" className="mx-auto mb-3 h-12 w-12" />
+          <h1 className="mb-2 text-lg font-semibold text-gray-900">권한이 없습니다</h1>
+          <p className="text-sm text-gray-500">
+            관리자 계정으로 로그인해야 볼 수 있는 페이지입니다.
+          </p>
+        </div>
+      </div>
     )
   }
 

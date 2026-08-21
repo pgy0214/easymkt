@@ -180,6 +180,34 @@ def create_member(db: Session, data: schemas.MemberCreateIn) -> models.Reviewer:
     return reviewer
 
 
+TEST_ACCOUNTS = [
+    {"username": "ads1", "password": "1234", "name": "테스트 광고주", "category": "advertiser"},
+    {"username": "review", "password": "1234", "name": "테스트 리뷰어", "category": "reviewer"},
+]
+
+
+def seed_test_accounts(db: Session) -> None:
+    """매 배포마다 동일한 아이디/비밀번호로 로그인해볼 수 있는 광고주/리뷰어 테스트
+    계정을 보장한다(없으면 생성, 있으면 손대지 않음) — 실제 사이트 관리자 계정과
+    달리 이 둘은 그냥 DB의 리뷰어 행이라 여기서 만들어도 안전하다. 승인 절차 없이
+    바로 테스트할 수 있도록 is_active=True로 시작한다."""
+    for account in TEST_ACCOUNTS:
+        existing = get_reviewer_by_username(db, account["username"])
+        if existing:
+            continue
+        db.add(
+            models.Reviewer(
+                name=account["name"],
+                category=account["category"],
+                username=account["username"],
+                password_hash=auth.hash_password(account["password"]),
+                is_active=True,
+                privacy_consent_at=datetime.datetime.utcnow(),
+            )
+        )
+    db.commit()
+
+
 def update_reviewer(
     db: Session, reviewer: models.Reviewer, data: schemas.ReviewerUpdate
 ) -> models.Reviewer:
