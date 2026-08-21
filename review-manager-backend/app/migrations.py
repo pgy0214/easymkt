@@ -1,16 +1,38 @@
-from sqlalchemy import text
+import re
+
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import NoSuchTableError
 
 from app import receipt_generator
 
-# Lightweight ad-hoc migrations for the SQLite dev DB (no Alembic setup at this
-# scale). Base.metadata.create_all only creates missing tables, not columns
-# added to existing tables, so new columns need an explicit ALTER TABLE here.
+# Lightweight ad-hoc migrations (no Alembic setup at this scale). Base.metadata.
+# create_all only creates missing tables, not columns added to existing tables,
+# so new columns need an explicit ALTER TABLE here. Runs against both the local
+# SQLite dev DB and the production Postgres DB, so column introspection goes
+# through SQLAlchemy's dialect-agnostic inspector rather than raw PRAGMA, and
+# DDL that isn't portable (DATETIME type, integer booleans) gets translated.
+
+
+def _table_column_info(conn, table: str):
+    try:
+        return inspect(conn).get_columns(table)
+    except NoSuchTableError:
+        return []
+
+
+def _portable_ddl(conn, ddl: str) -> str:
+    if conn.engine.dialect.name != "postgresql":
+        return ddl
+    ddl = re.sub(r"\bDATETIME\b", "TIMESTAMP", ddl)
+    ddl = ddl.replace("BOOLEAN NOT NULL DEFAULT 0", "BOOLEAN NOT NULL DEFAULT false")
+    ddl = ddl.replace("BOOLEAN NOT NULL DEFAULT 1", "BOOLEAN NOT NULL DEFAULT true")
+    return ddl
 
 
 def _add_column_if_missing(conn, table: str, column: str, ddl: str) -> None:
-    columns = {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
+    columns = {c["name"] for c in _table_column_info(conn, table)}
     if column not in columns:
-        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
+        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {_portable_ddl(conn, ddl)}"))
 
 
 def run_migrations(engine) -> None:
@@ -75,7 +97,7 @@ def run_migrations(engine) -> None:
         # the new columns, copy over converted values, then drop the old ones —
         # settings only ever has one row and it's worth preserving in place
         # rather than reaching for the rebuild-if-empty trick used below.
-        settings_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(settings)"))}
+        settings_columns = {c["name"] for c in _table_column_info(conn, "settings")}
         if settings_columns:
             if "naver_default_claim_minutes" not in settings_columns:
                 conn.execute(
@@ -126,7 +148,7 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "stores", "representative_name", "representative_name TEXT")
         _add_column_if_missing(conn, "stores", "phone", "phone TEXT")
 
-        store_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(stores)"))}
+        store_columns = {c["name"] for c in _table_column_info(conn, "stores")}
         if "representative_hours" not in store_columns:
             conn.execute(text("ALTER TABLE stores ADD COLUMN representative_hours TEXT"))
             if "business_hours" in store_columns:
@@ -201,9 +223,9 @@ def run_migrations(engine) -> None:
         # to the new stores table (stores are now a reusable list, not re-typed
         # per campaign), and claim_time_limit_hours renamed to _minutes. Same
         # SQLite rebuild-if-empty approach as below.
-        target_columns = list(conn.execute(text("PRAGMA table_info(review_targets)")))
+        target_columns = _table_column_info(conn, "review_targets")
         if target_columns:
-            col_names = {c[1] for c in target_columns}
+            col_names = {c["name"] for c in target_columns}
             if "store_id" not in col_names or "claim_time_limit_minutes" not in col_names:
                 targets_count = conn.execute(
                     text("SELECT COUNT(*) FROM review_targets")
@@ -220,13 +242,13 @@ def run_migrations(engine) -> None:
         # can't ALTER a column's NOT NULL constraint, so if the old shape is
         # detected we rebuild the table — safe here since this app has no real
         # task history yet; if it ever does, this skips rather than risk data loss.
-        task_columns = list(conn.execute(text("PRAGMA table_info(tasks)")))
+        task_columns = _table_column_info(conn, "tasks")
         if task_columns:
-            col_names = {c[1] for c in task_columns}
+            col_names = {c["name"] for c in task_columns}
             review_account_col = next(
-                (c for c in task_columns if c[1] == "review_account_id"), None
+                (c for c in task_columns if c["name"] == "review_account_id"), None
             )
-            old_shape = review_account_col is not None and review_account_col[3] == 1
+            old_shape = review_account_col is not None and review_account_col["nullable"] is False
             if old_shape or "claimed_at" not in col_names:
                 existing_count = conn.execute(text("SELECT COUNT(*) FROM tasks")).scalar()
                 if existing_count == 0:
@@ -280,6 +302,13 @@ def run_migrations(engine) -> None:
         # 정보 수신 동의 시각(선택, privacy_consent_at과 별도)
         _add_column_if_missing(
             conn, "reviewers", "marketing_consent_at", "marketing_consent_at DATETIME"
+        )
+
+        # reviewers: business_registration_image_path — 광고주 회원가입 시 첨부하는
+        # 사업자등록증 이미지. 관리자가 회원관리에서 확인 후 is_active를 켜줘야
+        # 매장등록/캠페인생성이 가능해진다.
+        _add_column_if_missing(
+            conn, "reviewers", "business_registration_image_path", "business_registration_image_path TEXT"
         )
 
         # experience_campaigns: image_path — 캠페인 카드 대표 이미지(선택)

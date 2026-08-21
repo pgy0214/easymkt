@@ -2,11 +2,14 @@ import datetime
 import re
 import time as time_module
 
+import requests
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 
 from app import models
-from app.crawlers.base import chrome_driver, logger
+from app.crawlers.base import chrome_driver, human_scroll_and_click, logger
+from app.crawlers.base import human_delay as _human_delay
+from app.crawlers.base import raise_if_captcha as _raise_if_captcha
 from app.crawlers.blind_check_common import apply_scrape_result
 
 REVIEW_WINDOW_DAYS = 30
@@ -16,12 +19,28 @@ PROFILE_ID_RE = re.compile(r"/my/([a-f0-9]+)")
 PLACE_ID_RE = re.compile(r"/(?:place|restaurant|accommodation|hairshop|hospital)/(\d+)")
 
 
+def _resolve_short_link(url: str) -> str:
+    """naver.me 단축링크는 /my/{id} 패턴이 없어 extract_profile_id가 못 읽는다.
+    실제 목적지로 리다이렉트를 따라가 전체 URL로 바꿔준다 (Selenium 없이 가벼운
+    HTTP 요청만으로 충분 — 브라우저를 띄울 필요가 없다)."""
+    if "naver.me" not in url:
+        return url
+    try:
+        resp = requests.get(url, allow_redirects=True, timeout=10, stream=True)
+        resp.close()
+        return resp.url
+    except requests.RequestException:
+        logger.warning("naver.me 단축링크 해석 실패: %s", url)
+        return url
+
+
 def extract_profile_id(url: str) -> str | None:
     """네이버 마이플레이스 링크(예: https://m.place.naver.com/my/{id}/review)에서
     고유 사용자 id를 뽑아낸다 — 닉네임은 언제든 바뀔 수 있지만 이 id는 안 바뀌므로,
     리뷰 목록에 걸린 작성자 프로필 링크와 이 id를 직접 비교해 매칭한다."""
     if not url:
         return None
+    url = _resolve_short_link(url)
     match = PROFILE_ID_RE.search(url)
     return match.group(1) if match else None
 
@@ -40,32 +59,45 @@ def _normalize_review_list_url(store_url: str) -> str:
     return store_url.rstrip("/") + "/review/visitor?reviewSort=recent"
 
 
-def scrape_store_review_profile_ids(store_url: str, window_days: int = REVIEW_WINDOW_DAYS) -> set[str]:
-    """매장 리뷰 목록을 스크롤하며 현재 노출 중인 리뷰 작성자들의 프로필 id 집합을 모은다.
-    개별 리뷰엔 직접 링크가 없어 이 방식으로만 "이 사람 리뷰가 지금 보이는가"를 판정할 수 있다."""
+def scrape_store_review_profile_ids(
+    store_url: str,
+    window_days: int = REVIEW_WINDOW_DAYS,
+    cancel_event=None,
+    headless: bool | None = None,
+    browser: str = "chrome",
+) -> dict[str, datetime.date]:
+    """매장 리뷰 목록을 스크롤하며 현재 노출 중인 리뷰 작성자들의 프로필 id → 게시일자
+    맵을 모은다. 개별 리뷰엔 직접 링크가 없어 이 방식으로만 "이 사람 리뷰가 지금
+    보이는가"를 판정할 수 있다. cancel_event가 set되면 "더보기" 반복 중간에 즉시
+    멈춘다(대량 작업 중단용). headless=False면 실제 브라우저 창을 띄워 확인 과정을
+    눈으로 볼 수 있다. browser="edge"로 크롬 대신 엣지를 쓸 수 있다."""
     url = _normalize_review_list_url(store_url)
 
-    profile_ids: set[str] = set()
-    with chrome_driver() as driver:
+    wait_for_human = headless is False
+    profile_dates: dict[str, datetime.date] = {}
+    with chrome_driver(headless=headless, profile="blind_check", browser=browser) as driver:
         driver.get(url)
-        time_module.sleep(2)
+        _human_delay(2.0, 3.5)
+        _raise_if_captcha(driver, wait_for_human=wait_for_human, debug_label="blind_check_initial")
 
         cutoff = datetime.date.today() - datetime.timedelta(days=window_days)
         stop = False
         attempts = 0
         while not stop and attempts < MAX_LOAD_MORE_ATTEMPTS:
+            if cancel_event is not None and cancel_event.is_set():
+                break
             attempts += 1
             soup = BeautifulSoup(driver.page_source, "html.parser")
             items = soup.select("li.place_apply_pui")
-            profile_ids = set()
+            profile_dates = {}
             oldest_on_page = None
             for item in items:
                 a_prof = item.select_one('a[data-pui-click-code="profile"]')
                 pid = extract_profile_id(a_prof.get("href")) if a_prof else None
-                if pid:
-                    profile_ids.add(pid)
                 date_el = item.select_one("time")
                 posted_date = _parse_date_text(date_el.get_text(strip=True)) if date_el else None
+                if pid:
+                    profile_dates[pid] = posted_date
                 if posted_date and (oldest_on_page is None or posted_date < oldest_on_page):
                     oldest_on_page = posted_date
 
@@ -75,12 +107,15 @@ def scrape_store_review_profile_ids(store_url: str, window_days: int = REVIEW_WI
 
             try:
                 more_button = driver.find_element(By.CSS_SELECTOR, "a.fvwqf")
-                driver.execute_script("arguments[0].click()", more_button)
-                time_module.sleep(1.5)
+                human_scroll_and_click(driver, more_button)
+                _human_delay(3.0, 6.0)
+                _raise_if_captcha(driver, wait_for_human=wait_for_human, debug_label="blind_check_loadmore")
+            except RuntimeError:
+                raise
             except Exception:
                 stop = True
 
-    return profile_ids
+    return profile_dates
 
 
 def scrape_store_reviews(store_url: str) -> list[dict]:
@@ -92,9 +127,10 @@ def scrape_store_reviews(store_url: str) -> list[dict]:
     if "/review/" not in url:
         url = url.rstrip("/") + "/review/visitor?reviewSort=recent"
 
-    with chrome_driver() as driver:
+    with chrome_driver(profile="blind_check") as driver:
         driver.get(url)
-        time_module.sleep(2)
+        _human_delay(2.0, 3.5)
+        _raise_if_captcha(driver, debug_label="scrape_reviews_initial")
 
         cutoff = datetime.date.today() - datetime.timedelta(days=REVIEW_WINDOW_DAYS)
         stop = False
@@ -130,8 +166,11 @@ def scrape_store_reviews(store_url: str) -> list[dict]:
 
             try:
                 more_button = driver.find_element(By.CSS_SELECTOR, "a.fvwqf")
-                driver.execute_script("arguments[0].click()", more_button)
-                time_module.sleep(1.5)
+                human_scroll_and_click(driver, more_button)
+                _human_delay(3.0, 6.0)
+                _raise_if_captcha(driver, debug_label="scrape_reviews_loadmore")
+            except RuntimeError:
+                raise
             except Exception:
                 stop = True
 

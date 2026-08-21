@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
+import Button from './ui/Button.jsx'
+import Modal from './ui/Modal.jsx'
 
 /**
  * 일괄 작업 배분 모달 — 선택 단위가 호출부마다 다르다(관리자계정: 1행=1계정,
@@ -83,82 +85,70 @@ export default function BulkAssignModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg space-y-4 rounded-lg bg-white p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="font-semibold text-slate-800">
-          선택 일괄 작업 배분 ({entities.length}{unitLabel} 선택됨)
-        </h3>
+    <Modal open onClose={onClose} size="lg">
+      <h3 className="font-semibold text-gray-800">
+        선택 일괄 작업 배분 ({entities.length}{unitLabel} 선택됨)
+      </h3>
 
-        <div>
-          <label className="block text-xs text-slate-500">배정할 매장</label>
-          <select
-            value={storeFilter}
-            onChange={(e) => {
-              setStoreFilter(e.target.value)
-              setResult(null)
-            }}
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-          >
-            <option value="">매장을 선택하세요</option>
-            {stores.map((s) => (
-              <option key={s.id} value={s.id}>
-                [{s.platform === 'naver' ? '네이버' : '카카오'}] {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedStore && (
-          <div className="space-y-1 rounded border border-slate-100 bg-slate-50 p-3 text-sm text-slate-600">
-            <p>선택 중 이 매장 플랫폼과 일치: {matchingPairs.length}{unitLabel}</p>
-            <p>{loadingTasks ? '오픈풀 작업 수 확인 중...' : `이 매장의 오픈풀 잔여 작업: ${openTasks.length}건`}</p>
-            <p className="font-medium text-slate-800">
-              → 최대 {assignableCount}건 배정 시도 (쿨다운 등으로 서버가 개별 거부할 수 있음)
-            </p>
-          </div>
-        )}
-
-        {result && (
-          <div className="space-y-1 rounded border border-blue-100 bg-blue-50 p-3 text-sm">
-            <p className="font-medium text-blue-800">배정 완료: 성공 {result.success}건 · 실패 {result.failed.length}건</p>
-            {result.failed.length > 0 && (
-              <ul className="max-h-32 space-y-0.5 overflow-y-auto text-xs text-slate-600">
-                {result.failed.map((f, i) => (
-                  <li key={i}>
-                    {f.name} — {f.reason}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {error && <p className="text-xs text-red-600">{error}</p>}
-
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100"
-          >
-            닫기
-          </button>
-          <button
-            type="button"
-            onClick={handleAssign}
-            disabled={!selectedStore || assignableCount === 0 || assigning}
-            className="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {assigning ? '배정 중...' : `${assignableCount}건 배정`}
-          </button>
-        </div>
+      <div>
+        <label className="block text-xs text-gray-500">배정할 매장</label>
+        <select
+          value={storeFilter}
+          onChange={(e) => {
+            setStoreFilter(e.target.value)
+            setResult(null)
+          }}
+          className="w-full rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
+        >
+          <option value="">매장을 선택하세요</option>
+          {stores.map((s) => (
+            <option key={s.id} value={s.id}>
+              [{s.platform === 'naver' ? '네이버' : '카카오'}] {s.name}
+            </option>
+          ))}
+        </select>
       </div>
-    </div>
+
+      {selectedStore && (
+        <div className="space-y-1 rounded-card border border-gray-100 bg-gray-50 p-3 text-sm text-gray-600">
+          <p>선택 중 이 매장 플랫폼과 일치: {matchingPairs.length}{unitLabel}</p>
+          <p>{loadingTasks ? '오픈풀 작업 수 확인 중...' : `이 매장의 오픈풀 잔여 작업: ${openTasks.length}건`}</p>
+          <p className="font-medium text-gray-800">
+            → 최대 {assignableCount}건 배정 시도 (쿨다운 등으로 서버가 개별 거부할 수 있음)
+          </p>
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-1 rounded-card border border-brand-100 bg-brand-50 p-3 text-sm">
+          <p className="font-medium text-brand-700">배정 완료: 성공 {result.success}건 · 실패 {result.failed.length}건</p>
+          {result.failed.length > 0 && (
+            <ul className="max-h-32 space-y-0.5 overflow-y-auto text-xs text-gray-600">
+              {result.failed.map((f, i) => (
+                <li key={i}>
+                  {f.name} — {f.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onClose}>
+          닫기
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleAssign}
+          disabled={!selectedStore || assignableCount === 0 || assigning}
+        >
+          {assigning ? '배정 중...' : `${assignableCount}건 배정`}
+        </Button>
+      </div>
+    </Modal>
   )
 }

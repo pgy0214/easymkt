@@ -198,14 +198,14 @@ def parse_card_rule_rows(content: bytes, filename: str) -> list[dict]:
 
 REVIEW_TEXT_HEADERS = {"리뷰내용", "리뷰 내용", "원고", "내용"}
 
-STORE_URL_HEADERS = {"매장URL", "매장 URL", "매장링크", "매장 링크"}
 PROFILE_URL_HEADERS = {"마이플레이스링크", "마이플레이스 링크", "마이플레이스URL", "마이플레이스 URL", "프로필링크", "프로필 링크"}
 BLIND_CHECK_NOTE_HEADERS = {"비고", "메모"}
 
 
 def parse_blind_check_rows(content: bytes, filename: str) -> list[dict]:
-    """블라인드 일괄확인 엑셀 파서 — {매장URL, 마이플레이스링크} 값이 모두 있는 행만
-    대상으로 삼는다(둘 중 하나라도 없으면 그 리뷰를 특정할 수 없어 건너뜀)."""
+    """블라인드 일괄확인 엑셀 파서 — 매장은 화면에서 드롭다운으로 한 번만 고르므로
+    파일에는 마이플레이스링크만 있으면 된다(값이 없는 행은 그 리뷰를 특정할 수
+    없어 건너뜀)."""
     if filename.lower().endswith(".csv"):
         rows = _parse_csv(content)
     else:
@@ -213,12 +213,10 @@ def parse_blind_check_rows(content: bytes, filename: str) -> list[dict]:
 
     results = []
     for row in rows:
-        store_url = _first_matching(row, STORE_URL_HEADERS)
         profile_url = _first_matching(row, PROFILE_URL_HEADERS)
-        if store_url and profile_url:
+        if profile_url:
             results.append(
                 {
-                    "store_url": store_url,
                     "profile_url": profile_url,
                     "note": _first_matching(row, BLIND_CHECK_NOTE_HEADERS),
                 }

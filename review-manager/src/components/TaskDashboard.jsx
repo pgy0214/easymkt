@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
+import BlindBulkCheckPanel from './BlindBulkCheckPanel.jsx'
 import DateRangePicker from './DateRangePicker.jsx'
 import TaskFilters from './TaskFilters.jsx'
 import TaskTable from './TaskTable.jsx'
+import Button from './ui/Button.jsx'
 
 function todayInput() {
   const now = new Date()
@@ -140,47 +142,43 @@ export default function TaskDashboard() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-slate-800 bg-slate-900 px-6 py-4 text-white">
-        <p className="text-xs text-slate-400">선택한 기간 기준 ({dateRange.from || '전체'} ~ {dateRange.to || '전체'})</p>
+      <div className="rounded-card border border-gray-200 bg-white p-4">
+        <p className="text-xs text-gray-500">선택한 기간 기준 ({dateRange.from || '전체'} ~ {dateRange.to || '전체'})</p>
         <div className="mt-1 flex items-center gap-8">
           <div>
-            <p className="text-2xl font-bold tabular-nums">{totalCount}</p>
-            <p className="text-xs text-slate-400">총 작업</p>
+            <p className="text-2xl font-bold tabular-nums text-gray-900">{totalCount}</p>
+            <p className="text-xs text-gray-500">총 작업</p>
           </div>
           <div>
-            <p className="text-2xl font-bold tabular-nums text-amber-400">{remainingCount}</p>
-            <p className="text-xs text-slate-400">잔여(오픈풀)</p>
+            <p className="text-2xl font-bold tabular-nums text-brand-600">{remainingCount}</p>
+            <p className="text-xs text-gray-500">잔여(오픈풀)</p>
           </div>
         </div>
       </div>
 
       {recentlyExpiredCount > 0 && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <div className="rounded-card border border-amber-200 bg-warning-bg px-3 py-2 text-sm text-warning-text">
           최근 24시간 내 {recentlyExpiredCount}건이 클레임 기한을 넘겨 오픈풀로 복귀했습니다.
         </div>
       )}
 
-      <div className="rounded-lg border border-slate-200 bg-white p-3">
-        <p className="mb-2 text-xs text-slate-500">기간별 조회 (등록일 기준)</p>
+      <div className="rounded-card border border-gray-200 bg-white p-3">
+        <p className="mb-2 text-xs text-gray-500">기간별 조회 (등록일 기준)</p>
         <DateRangePicker from={dateRange.from} to={dateRange.to} onChange={setDateRange} />
       </div>
 
       <TaskFilters filters={filters} onChange={setFilters} reviewers={reviewers} />
 
-      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
-        <button
-          onClick={handleRecheckSelected}
-          disabled={selectedIds.size === 0 || rechecking}
-          className="rounded bg-slate-800 px-3 py-1 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
-        >
+      <div className="flex items-center gap-3 rounded-card border border-gray-200 bg-white px-3 py-2">
+        <Button onClick={handleRecheckSelected} disabled={selectedIds.size === 0 || rechecking} variant="secondary">
           {rechecking ? '확인 중...' : `선택 항목 블라인드 재확인 (${selectedIds.size})`}
-        </button>
-        <span className="text-xs text-slate-400">
+        </Button>
+        <span className="text-xs text-gray-400">
           완료된 작업만 선택 가능합니다. 자동 확인 주기는 "설정" 탭에서 조정할 수 있어요.
         </span>
       </div>
 
-      {loading && <p className="text-sm text-slate-400">불러오는 중...</p>}
+      {loading && <p className="text-sm text-gray-400">불러오는 중...</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <TaskTable
         tasks={tasks}
@@ -192,6 +190,8 @@ export default function TaskDashboard() {
         onSubmitResult={handleSubmitResult}
         onUpdateSettlement={handleUpdateSettlement}
       />
+
+      <BlindBulkCheckPanel />
     </div>
   )
 }

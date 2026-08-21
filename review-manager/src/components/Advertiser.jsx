@@ -537,16 +537,19 @@ function AdvertiserHome({ token, onLogout }) {
   async function refresh() {
     setLoading(true)
     try {
-      const [meInfo, storeList, campaignList, reviewTargetList] = await Promise.all([
+      // Promise.all이면 넷 중 하나(예: 아직 배포되지 않은 캠페인 종류)가 실패할 때
+      // me/stores/campaigns까지 통째로 안 채워져서 "내 정보 수정" 등 나머지 화면이
+      // 멈춰버린다 — allSettled로 각자 독립적으로 반영한다.
+      const [meResult, storesResult, campaignsResult, reviewTargetsResult] = await Promise.allSettled([
         advertiserApi.me(token),
         advertiserApi.getStores(token),
         advertiserApi.getCampaigns(token),
         advertiserApi.getReviewTargets(token),
       ])
-      setMe(meInfo)
-      setStores(storeList)
-      setCampaigns(campaignList)
-      setReviewTargets(reviewTargetList)
+      if (meResult.status === 'fulfilled') setMe(meResult.value)
+      if (storesResult.status === 'fulfilled') setStores(storesResult.value)
+      if (campaignsResult.status === 'fulfilled') setCampaigns(campaignsResult.value)
+      if (reviewTargetsResult.status === 'fulfilled') setReviewTargets(reviewTargetsResult.value)
     } finally {
       setLoading(false)
     }

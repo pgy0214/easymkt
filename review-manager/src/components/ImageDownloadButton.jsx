@@ -38,10 +38,10 @@ export default function ImageDownloadButton({ src, filename, label, size = 'sm' 
         type="button"
         onClick={handleClick}
         disabled={state === 'saving'}
-        className={`inline-flex items-center gap-1.5 rounded-lg border-2 px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+        className={`inline-flex items-center gap-1.5 rounded-card border-2 px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
           state === 'saved'
-            ? 'border-green-300 bg-green-50 text-green-700'
-            : 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100'
+            ? 'border-success-bg bg-success-bg text-success-text'
+            : 'border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100'
         }`}
       >
         {state === 'saved' ? <Check size={16} /> : <Download size={16} />}
@@ -55,10 +55,10 @@ export default function ImageDownloadButton({ src, filename, label, size = 'sm' 
       type="button"
       onClick={handleClick}
       disabled={state === 'saving'}
-      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs disabled:opacity-50 ${
+      className={`inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 text-xs disabled:opacity-50 ${
         state === 'saved'
-          ? 'border-green-300 text-green-600'
-          : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+          ? 'border-success-bg text-success-text'
+          : 'border-gray-300 text-gray-600 hover:bg-gray-50'
       }`}
       title={label ? `${label} 다운로드` : '이미지 다운로드'}
     >

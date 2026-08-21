@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { formatDate, formatDateTime, formatKRW, PLATFORM_LABEL, STATUS_LABEL } from '../lib/format.js'
+import Badge from './ui/Badge.jsx'
 
-const BLIND_BADGE = {
-  unknown: 'bg-slate-100 text-slate-500',
-  visible: 'bg-green-100 text-green-700',
-  blinded: 'bg-red-100 text-red-700',
+const BLIND_VARIANT = {
+  unknown: 'neutral',
+  visible: 'success',
+  blinded: 'danger',
 }
 const BLIND_TEXT = {
   unknown: '미확인',
@@ -35,7 +36,7 @@ export default function TaskRow({
     Date.now() - new Date(task.last_expired_at).getTime() < RECENTLY_EXPIRED_MS
 
   return (
-    <tr className={`align-top ${recentlyExpired ? 'bg-amber-50' : ''}`}>
+    <tr className={`align-top ${recentlyExpired ? 'bg-warning-bg' : ''}`}>
       <td className="px-3 py-2">
         {isCompleted && (
           <input
@@ -47,25 +48,25 @@ export default function TaskRow({
       </td>
       <td className="px-3 py-2">
         {isOpen ? (
-          <div className="text-sm text-slate-400">미배정 (오픈풀)</div>
+          <div className="text-sm text-gray-400">미배정 (오픈풀)</div>
         ) : (
           <>
-            <div className="font-medium text-slate-800">{task.reviewer_name ?? '-'}</div>
+            <div className="font-medium text-gray-800">{task.reviewer_name ?? '-'}</div>
             {task.reviewer_contact_info && (
-              <div className="text-xs text-slate-500">{task.reviewer_contact_info}</div>
+              <div className="text-xs text-gray-500">{task.reviewer_contact_info}</div>
             )}
-            <div className="text-xs text-slate-400">{task.account_label}</div>
+            <div className="text-xs text-gray-400">{task.account_label}</div>
           </>
         )}
         {task.claim_deadline && !isCompleted && (
-          <div className="text-xs text-slate-400">기한: {formatDateTime(task.claim_deadline)}</div>
+          <div className="text-xs text-gray-400">기한: {formatDateTime(task.claim_deadline)}</div>
         )}
         {recentlyExpired && (
-          <div className="mt-1 text-xs font-medium text-amber-700">기한초과로 오픈풀 복귀됨</div>
+          <div className="mt-1 text-xs font-medium text-warning-text">기한초과로 오픈풀 복귀됨</div>
         )}
       </td>
-      <td className="px-3 py-2 text-slate-600">{PLATFORM_LABEL[task.platform]}</td>
-      <td className="px-3 py-2 text-slate-600">{STATUS_LABEL[task.status] ?? task.status}</td>
+      <td className="px-3 py-2 text-gray-600">{PLATFORM_LABEL[task.platform]}</td>
+      <td className="px-3 py-2 text-gray-600">{STATUS_LABEL[task.status] ?? task.status}</td>
       <td className="px-3 py-2 text-xs">
         {task.platform === 'naver' && (
           <>
@@ -81,7 +82,7 @@ export default function TaskRow({
             href={task.result_link}
             target="_blank"
             rel="noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-brand-600 hover:underline"
           >
             결과 보기
           </a>
@@ -91,31 +92,29 @@ export default function TaskRow({
               value={linkInput}
               onChange={(e) => setLinkInput(e.target.value)}
               placeholder="결과 링크"
-              className="w-32 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+              className="w-32 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
             />
             <button
               onClick={() => linkInput.trim() && onSubmitResult(task.id, linkInput.trim())}
-              className="rounded bg-slate-800 px-2 py-0.5 text-xs text-white hover:bg-slate-700"
+              className="rounded bg-gray-800 px-2 py-0.5 text-xs text-white hover:bg-gray-700"
             >
               완료
             </button>
           </div>
         ) : (
-          <span className="text-xs text-slate-400">대기중</span>
+          <span className="text-xs text-gray-400">대기중</span>
         )}
       </td>
       <td className="px-3 py-2">
-        <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${BLIND_BADGE[task.blind_status]}`}>
-          {BLIND_TEXT[task.blind_status]}
-        </span>
+        <Badge variant={BLIND_VARIANT[task.blind_status]}>{BLIND_TEXT[task.blind_status]}</Badge>
         {task.check_expired && (
-          <div className="mt-1 text-xs text-amber-600">확인기간 만료</div>
+          <div className="mt-1 text-xs text-warning-text">확인기간 만료</div>
         )}
         {isCompleted && (
           <button
             onClick={() => onRecheckOne(task.id)}
             disabled={rechecking}
-            className="mt-1 block text-xs text-blue-600 hover:underline disabled:opacity-50"
+            className="mt-1 block text-xs text-brand-600 hover:underline disabled:opacity-50"
           >
             지금 재확인
           </button>
@@ -127,7 +126,7 @@ export default function TaskRow({
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
-            className="w-20 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+            className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
           />
           <button
             onClick={() =>
@@ -136,16 +135,16 @@ export default function TaskRow({
                 settlement_amount: amount,
               })
             }
-            className={`rounded px-2 py-0.5 text-xs font-medium ${
+            className={`rounded-pill px-2 py-0.5 text-xs font-semibold ${
               task.settlement_status === 'paid'
-                ? 'bg-green-100 text-green-700'
-                : 'bg-slate-100 text-slate-600'
+                ? 'bg-success-bg text-success-text'
+                : 'bg-gray-100 text-gray-600'
             }`}
           >
             {task.settlement_status === 'paid' ? '정산완료' : '미정산'}
           </button>
         </div>
-        <div className="mt-1 text-xs text-slate-400">{formatKRW(amount)}</div>
+        <div className="mt-1 text-xs text-gray-400">{formatKRW(amount)}</div>
       </td>
     </tr>
   )

@@ -22,10 +22,10 @@ export default function CopyButton({ value, label, size = 'sm' }) {
       <button
         type="button"
         onClick={handleCopy}
-        className={`inline-flex items-center gap-1.5 rounded-lg border-2 px-4 py-2 text-sm font-semibold ${
+        className={`inline-flex items-center gap-1.5 rounded-card border-2 px-4 py-2 text-sm font-semibold ${
           copied
-            ? 'border-green-300 bg-green-50 text-green-700'
-            : 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100'
+            ? 'border-success-bg bg-success-bg text-success-text'
+            : 'border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100'
         }`}
       >
         {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -38,8 +38,8 @@ export default function CopyButton({ value, label, size = 'sm' }) {
     <button
       type="button"
       onClick={handleCopy}
-      className={`inline-flex items-center rounded p-0.5 ${
-        copied ? 'text-green-600' : 'text-slate-400 hover:text-slate-700'
+      className={`inline-flex items-center rounded-pill p-0.5 ${
+        copied ? 'text-success-text' : 'text-gray-400 hover:text-gray-700'
       }`}
       title={label ? `${label} 복사` : '복사'}
     >

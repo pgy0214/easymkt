@@ -1,5 +1,7 @@
 import { Clipboard, ExternalLink, Plus } from 'lucide-react'
 import { useState } from 'react'
+import Button from './ui/Button.jsx'
+import Input from './ui/Input.jsx'
 
 const EMPTY = { platform: 'naver', label: '', profile_url: '', ip_address: '' }
 
@@ -40,11 +42,11 @@ export default function AccountForm({ onCreate, showIp = false }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2 pt-2">
       <div>
-        <label className="block text-xs text-slate-500">플랫폼</label>
+        <label className="block text-xs text-gray-500">플랫폼</label>
         <select
           value={form.platform}
           onChange={(e) => setForm({ ...form, platform: e.target.value })}
-          className="rounded border border-slate-300 px-2 py-1 text-sm"
+          className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
         >
           <option value="naver">네이버</option>
           <option value="kakao">카카오</option>
@@ -52,29 +54,29 @@ export default function AccountForm({ onCreate, showIp = false }) {
       </div>
 
       <div>
-        <label className="block text-xs text-slate-500">계정 아이디</label>
-        <input
+        <label className="block text-xs text-gray-500">계정 아이디</label>
+        <Input
           value={form.label}
           onChange={(e) => setForm({ ...form, label: e.target.value })}
           placeholder="계정 닉네임"
-          className="w-32 rounded border border-slate-300 px-2 py-1 text-sm"
+          className="w-32"
         />
       </div>
 
       {form.platform === 'naver' && (
         <div>
-          <label className="block text-xs text-slate-500">네이버 마이플레이스 URL</label>
+          <label className="block text-xs text-gray-500">네이버 마이플레이스 URL</label>
           <div className="flex items-center gap-1">
-            <input
+            <Input
               value={form.profile_url}
               onChange={(e) => setForm({ ...form, profile_url: e.target.value })}
               placeholder="https://m.place.naver.com/my/..."
-              className="w-64 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="w-64"
             />
             <button
               type="button"
               onClick={handlePasteUrl}
-              className="rounded border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-50"
+              className="rounded-btn border border-gray-300 p-1.5 text-gray-500 hover:bg-gray-50"
               title="클립보드에서 붙여넣기"
             >
               <Clipboard size={14} />
@@ -85,27 +87,23 @@ export default function AccountForm({ onCreate, showIp = false }) {
 
       {showIp && (
         <div>
-          <label className="block text-xs text-slate-500">IP</label>
-          <input
+          <label className="block text-xs text-gray-500">IP</label>
+          <Input
             value={form.ip_address}
             onChange={(e) => setForm({ ...form, ip_address: e.target.value })}
             placeholder="예: 123.45.67.89"
-            className="w-36 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-36"
           />
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
-      >
+      <Button type="submit" disabled={submitting} variant="secondary" size="sm">
         <Plus size={14} />
         계정 추가
-      </button>
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      </Button>
+      {error && <span className="text-xs text-danger-text">{error}</span>}
 
-      <div className="w-full space-y-0.5 text-xs text-slate-400">
+      <div className="w-full space-y-0.5 text-xs text-gray-400">
         <p>· 계정 아이디는 여러 리뷰 계정을 구분하기 편하도록 적어두는 용도입니다.</p>
         {form.platform === 'naver' && (
           <p>
@@ -114,7 +112,7 @@ export default function AccountForm({ onCreate, showIp = false }) {
               href="https://m.place.naver.com/my"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-0.5 text-blue-600 hover:underline"
+              className="inline-flex items-center gap-0.5 text-brand-600 hover:underline"
             >
               마이플레이스 열기
               <ExternalLink size={11} />

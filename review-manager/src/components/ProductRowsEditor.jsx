@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { MAX_PRODUCT_NAME_LENGTH, enforceProductNameLength, parseProductString } from '../lib/format.js'
+import Input from './ui/Input.jsx'
 
 // "대표상품" 문자열("아메리카노 4,500원, 카페라떼 5000원")을 행 배열로 파싱/직렬화한다.
 // 저장 형식은 그대로 콤마구분 문자열로 유지 — 백엔드 필드(Store.representative_product)가
@@ -41,24 +42,24 @@ export default function ProductRowsEditor({ value, onChange }) {
     <div className="space-y-1">
       {rows.map((row, i) => (
         <div key={i} className="flex items-center gap-1">
-          <input
+          <Input
             value={row.name}
             onChange={(e) => update(i, 'name', enforceProductNameLength(e.target.value))}
             placeholder={`메뉴명 ${i + 1} (최대 ${MAX_PRODUCT_NAME_LENGTH}자)`}
-            className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="flex-1"
           />
-          <input
+          <Input
             value={row.price}
             onChange={(e) => update(i, 'price', e.target.value.replace(/[^\d]/g, ''))}
             placeholder="금액"
             inputMode="numeric"
-            className="w-24 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-24"
           />
-          <span className="text-xs text-slate-400">원</span>
+          <span className="text-xs text-gray-400">원</span>
           <button
             type="button"
             onClick={() => removeRow(i)}
-            className="text-slate-400 hover:text-red-600"
+            className="text-gray-400 hover:text-danger-text"
             title="행 삭제"
           >
             <Trash2 size={14} />
@@ -68,7 +69,7 @@ export default function ProductRowsEditor({ value, onChange }) {
       <button
         type="button"
         onClick={addRow}
-        className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+        className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
       >
         <Plus size={12} />
         상품 추가

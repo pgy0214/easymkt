@@ -3,7 +3,14 @@
     "allow": [
       "Bash(npm create *)",
       "Bash(npm install *)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "mcp__visualize__show_widget",
+      "Bash(curl -s -o /dev/null -w \"root: %{http_code}\\\\n\" \"https://review-managing.vercel.app/\")",
+      "Bash(curl -s -o /dev/null -w \"ads: %{http_code}\\\\n\" \"https://review-managing.vercel.app/ads\")",
+      "Bash(curl -s -o /dev/null -w \"admin: %{http_code}\\\\n\" \"https://review-managing.vercel.app/admin\")",
+      "Bash(curl -s \"https://review-managing-production.up.railway.app/api/health\")",
+      "Bash(rm -rf /tmp/clean_check2)",
+      "Bash(git worktree *)"
     ]
   }
 }

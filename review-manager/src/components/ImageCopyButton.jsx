@@ -52,10 +52,10 @@ export default function ImageCopyButton({ src, label, size = 'sm' }) {
         type="button"
         onClick={handleClick}
         disabled={state === 'copying'}
-        className={`inline-flex items-center gap-1.5 rounded-lg border-2 px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+        className={`inline-flex items-center gap-1.5 rounded-card border-2 px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
           state === 'copied'
-            ? 'border-green-300 bg-green-50 text-green-700'
-            : 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100'
+            ? 'border-success-bg bg-success-bg text-success-text'
+            : 'border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100'
         }`}
       >
         {state === 'copied' ? <Check size={16} /> : <Copy size={16} />}
@@ -69,10 +69,10 @@ export default function ImageCopyButton({ src, label, size = 'sm' }) {
       type="button"
       onClick={handleClick}
       disabled={state === 'copying'}
-      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs disabled:opacity-50 ${
+      className={`inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 text-xs disabled:opacity-50 ${
         state === 'copied'
-          ? 'border-green-300 text-green-600'
-          : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+          ? 'border-success-bg text-success-text'
+          : 'border-gray-300 text-gray-600 hover:bg-gray-50'
       }`}
       title={label ? `${label} 복사` : '이미지 복사'}
     >

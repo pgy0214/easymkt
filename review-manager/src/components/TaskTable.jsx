@@ -15,7 +15,7 @@ export default function TaskTable({
   const [collapsed, setCollapsed] = useState(() => new Set())
 
   if (tasks.length === 0) {
-    return <p className="text-sm text-slate-400">조건에 맞는 작업이 없습니다</p>
+    return <p className="text-sm text-gray-400">조건에 맞는 작업이 없습니다</p>
   }
 
   const groups = new Map()
@@ -43,24 +43,24 @@ export default function TaskTable({
         const isCollapsed = collapsed.has(storeName)
 
         return (
-          <div key={storeName} className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div key={storeName} className="overflow-hidden rounded-card border border-gray-200 bg-white">
             <button
               type="button"
               onClick={() => toggleCollapsed(storeName)}
-              className="flex w-full items-center justify-between gap-2 bg-slate-50 px-3 py-2 text-left hover:bg-slate-100"
+              className="flex w-full items-center justify-between gap-2 bg-gray-50 px-3 py-2 text-left hover:bg-gray-100"
             >
-              <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                 {storeName}
               </span>
-              <span className="text-xs font-normal text-slate-500">
+              <span className="text-xs font-normal text-gray-500">
                 진행 {remaining}/{total} · 남음
               </span>
             </button>
             {!isCollapsed && (
               <div className="max-h-[420px] overflow-auto">
                 <table className="w-full min-w-[800px] text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs text-slate-500">
+                  <thead className="sticky top-0 z-10 bg-gray-50 text-left text-xs text-gray-500">
                     <tr>
                       <th className="px-3 py-2">
                         <input
@@ -82,7 +82,7 @@ export default function TaskTable({
                       <th className="px-3 py-2">정산</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-gray-100">
                     {storeTasks.map((task) => (
                       <TaskRow
                         key={task.id}

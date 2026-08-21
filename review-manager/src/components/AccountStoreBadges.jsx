@@ -39,7 +39,7 @@ export default function AccountStoreBadges({ account }) {
           return (
             <span
               key={store.id}
-              className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-400"
+              className="rounded-pill bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-400"
             >
               {store.name} -
             </span>
@@ -51,8 +51,8 @@ export default function AccountStoreBadges({ account }) {
             title={`${store.name}: ${shortDate(item.last_completed_at)} 완료${
               item.is_eligible_now ? ' · 재작업 가능' : ` · ${shortDate(item.eligible_at)}부터 가능`
             }`}
-            className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-              item.is_eligible_now ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+            className={`rounded-pill px-1.5 py-0.5 text-[11px] font-medium ${
+              item.is_eligible_now ? 'bg-success-bg text-success-text' : 'bg-warning-bg text-warning-text'
             }`}
           >
             {store.name} {shortDate(item.last_completed_at)}

@@ -1,4 +1,7 @@
 import { AlertTriangle } from 'lucide-react'
+import Badge from './ui/Badge.jsx'
+import Button from './ui/Button.jsx'
+import Modal from './ui/Modal.jsx'
 
 const RULES = [
   {
@@ -35,13 +38,9 @@ const RULES = [
 
 export default function WorkRulesModal({ onClose, onAcknowledge }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-5 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-bold text-slate-900">작업 필수 수칙</h3>
-        <p className="mt-0.5 text-xs text-slate-500">
+    <Modal open onClose={onClose} size="md">
+        <h3 className="text-lg font-bold text-gray-900">작업 필수 수칙</h3>
+        <p className="mt-0.5 text-xs text-gray-500">
           아래 수칙을 꼭 확인하고 작업해주세요. 위반 시 작업이 무효 처리될 수 있습니다.
         </p>
 
@@ -49,33 +48,28 @@ export default function WorkRulesModal({ onClose, onAcknowledge }) {
           {RULES.map((rule, i) => (
             <div
               key={rule.title}
-              className={`rounded-lg border p-3 ${
-                rule.important ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'
+              className={`rounded-card border p-3 ${
+                rule.important ? 'border-amber-200 bg-warning-bg' : 'border-gray-200 bg-gray-50'
               }`}
             >
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-slate-400">{i + 1}</span>
-                <span className="text-sm font-semibold text-slate-800">{rule.title}</span>
+                <span className="text-xs font-semibold text-gray-400">{i + 1}</span>
+                <span className="text-sm font-semibold text-gray-800">{rule.title}</span>
                 {rule.important && (
-                  <span className="ml-auto flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                  <Badge variant="warning" className="ml-auto flex items-center gap-0.5">
                     <AlertTriangle size={10} />
                     매우중요
-                  </span>
+                  </Badge>
                 )}
               </div>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600">{rule.body}</p>
+              <p className="mt-1 text-xs leading-relaxed text-gray-600">{rule.body}</p>
             </div>
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={onAcknowledge}
-          className="mt-4 w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-        >
+        <Button type="button" onClick={onAcknowledge} className="mt-4 w-full py-2.5">
           확인했습니다
-        </button>
-      </div>
-    </div>
+        </Button>
+    </Modal>
   )
 }

@@ -2,6 +2,9 @@ import { Download, Receipt } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { API_ORIGIN, api } from '../lib/api.js'
 import { PLATFORM_LABEL } from '../lib/format.js'
+import Button from './ui/Button.jsx'
+import Card from './ui/Card.jsx'
+import Input from './ui/Input.jsx'
 
 const MAX_COUNT = 50
 
@@ -60,14 +63,14 @@ export default function ReceiptGenerator() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-gray-500">
         매장 관리에 등록된 사업자 정보와 대표상품을 기준으로 영수증 이미지를 즉석에서
         만들어볼 수 있어요. 대표상품이 등록되지 않은 매장은 만들 수 없습니다.
       </p>
 
-      <div className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-gray-200 bg-white p-4">
         <div>
-          <label className="block text-xs text-slate-500">매장</label>
+          <label className="block text-xs text-gray-500">매장</label>
           <select
             value={storeId}
             onChange={(e) => {
@@ -75,7 +78,7 @@ export default function ReceiptGenerator() {
               setReceiptUrls([])
               setError(null)
             }}
-            className="w-64 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-64 rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
           >
             <option value="">매장 선택</option>
             {stores.map((s) => (
@@ -86,36 +89,27 @@ export default function ReceiptGenerator() {
           </select>
         </div>
         <div>
-          <label className="block text-xs text-slate-500">생성할 날짜</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
-          />
+          <label className="block text-xs text-gray-500">생성할 날짜</label>
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-slate-500">개수 (최대 {MAX_COUNT})</label>
-          <input
+          <label className="block text-xs text-gray-500">개수 (최대 {MAX_COUNT})</label>
+          <Input
             type="number"
             min="1"
             max={MAX_COUNT}
             value={count}
             onChange={(e) => setCount(Math.max(1, Math.min(MAX_COUNT, Number(e.target.value) || 1)))}
-            className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-20"
           />
         </div>
-        <button
-          onClick={handleGenerate}
-          disabled={!store || generating}
-          className="flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-        >
+        <Button onClick={handleGenerate} disabled={!store || generating}>
           <Receipt size={14} />
           {generating ? '생성 중...' : '영수증 생성'}
-        </button>
+        </Button>
       </div>
 
-      {loading && <p className="text-sm text-slate-400">불러오는 중...</p>}
+      {loading && <p className="text-sm text-gray-400">불러오는 중...</p>}
 
       {store && !store.representative_product && (
         <p className="text-sm text-amber-600">
@@ -123,21 +117,21 @@ export default function ReceiptGenerator() {
         </p>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger-text">{error}</p>}
 
       {receiptUrls.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {receiptUrls.map((url, i) => (
-            <div key={url} className="rounded-lg border border-slate-200 bg-white p-3">
+            <Card key={url} padding="sm">
               <img
                 src={`${API_ORIGIN}${url}`}
                 alt="생성된 영수증"
-                className="w-full rounded border border-slate-200"
+                className="w-full rounded border border-gray-200"
               />
               <div className="mt-2 flex items-center gap-3 text-xs">
                 <button
                   onClick={() => handleDownload(url, i)}
-                  className="flex items-center gap-1 text-blue-600 hover:underline"
+                  className="flex items-center gap-1 text-brand-600 hover:underline"
                 >
                   <Download size={12} />
                   JPG 다운로드
@@ -146,12 +140,12 @@ export default function ReceiptGenerator() {
                   href={`${API_ORIGIN}${url}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-brand-600 hover:underline"
                 >
                   새 탭에서 원본 보기
                 </a>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

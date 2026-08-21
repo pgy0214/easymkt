@@ -82,7 +82,9 @@ def verify_otp(data: schemas.OtpVerifyIn, db: Session = Depends(get_db)):
 def login(data: schemas.PortalLoginIn, db: Session = Depends(get_db)):
     """가입 완료 이후의 일반 로그인 — 아이디+비밀번호."""
     reviewer = crud.get_reviewer_by_username(db, data.username)
-    if not reviewer or not reviewer.password_hash:
+    # 관리자 대시보드 계정(admin)과 자체보유 플랫폼 계정(own)은 리뷰어 포털 로그인 대상이
+    # 아니다 — 없는 아이디와 동일하게 처리해야 프론트의 관리자 로그인 폴백이 이어서 시도된다.
+    if not reviewer or not reviewer.password_hash or reviewer.category in ("admin", "own"):
         raise HTTPException(
             status_code=404, detail="등록되지 않은 아이디입니다 — 인증번호로 먼저 가입해주세요"
         )

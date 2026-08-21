@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import { enforceProductNameLength, MAX_PRODUCT_NAME_LENGTH, WEEKDAY_LABELS, parseProductString } from '../lib/format.js'
 import TargetList from './TargetList.jsx'
+import Button from './ui/Button.jsx'
+import Input from './ui/Input.jsx'
 
 const REVIEW_TEXT_TEMPLATE_HEADERS = ['번호', '리뷰내용']
 
@@ -258,18 +260,14 @@ export default function TargetForm() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-800">캠페인 목록</h2>
-        <button
-          type="button"
-          onClick={openRegisterModal}
-          className="flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-        >
+        <h2 className="text-base font-semibold text-gray-800">캠페인 목록</h2>
+        <Button variant="primary" onClick={openRegisterModal}>
           <Plus size={14} />
           캠페인 등록
-        </button>
+        </Button>
       </div>
 
-      {message && <p className="text-sm text-green-700">{message}</p>}
+      {message && <p className="text-sm text-success-text">{message}</p>}
 
       <TargetList targets={targets} onDelete={handleDelete} onUpdated={refreshTargets} />
 
@@ -279,33 +277,33 @@ export default function TargetForm() {
           onClick={closeRegisterModal}
         >
           <div
-            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg bg-white p-4"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-card bg-white p-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="font-semibold text-slate-800">캠페인 등록</h3>
-              <button type="button" onClick={closeRegisterModal} className="text-slate-400 hover:text-slate-600">
+              <h3 className="font-semibold text-gray-800">캠페인 등록</h3>
+              <button type="button" onClick={closeRegisterModal} className="text-gray-400 hover:text-brand-600">
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <div>
-                <label className="block text-xs text-slate-500">플랫폼</label>
+                <label className="block text-xs text-gray-500">플랫폼</label>
                 <select
                   value={form.platform}
                   onChange={(e) => handlePlatformChange(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="w-full rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
                 >
                   <option value="naver">네이버영수증</option>
                   <option value="kakao">카카오맵</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-500">매장</label>
+                <label className="block text-xs text-gray-500">매장</label>
                 <select
                   value={form.store_id}
                   onChange={(e) => handleStoreChange(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="w-full rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
                 >
                   {stores.length === 0 && <option value="">등록된 매장 없음</option>}
                   {stores.map((store) => (
@@ -317,52 +315,50 @@ export default function TargetForm() {
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs text-slate-500">리뷰어 단가 (원)</label>
-                  <input
+                  <label className="block text-xs text-gray-500">리뷰어 단가 (원)</label>
+                  <Input
                     type="number"
                     min="0"
                     value={form.unit_price}
                     onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                    className="w-full"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs text-slate-500">판매단가 (원, 선택)</label>
-                  <input
+                  <label className="block text-xs text-gray-500">판매단가 (원, 선택)</label>
+                  <Input
                     type="number"
                     min="0"
                     value={form.sale_price}
                     onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
                     placeholder="비워두면 매출 집계에서 제외"
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                    className="w-full"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-slate-500">
+                <label className="block text-xs text-gray-500">
                   작업 기간 (총 건수 계산에 사용됩니다)
                 </label>
                 <div className="mt-1 flex items-center gap-2">
-                  <input
+                  <Input
                     type="date"
                     value={form.start_date}
                     onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                    className="rounded border border-slate-300 px-2 py-1 text-sm"
                   />
-                  <span className="text-xs text-slate-400">~</span>
-                  <input
+                  <span className="text-xs text-gray-400">~</span>
+                  <Input
                     type="date"
                     value={form.end_date}
                     onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                    className="rounded border border-slate-300 px-2 py-1 text-sm"
                   />
                   {dayCount != null && (
-                    <span className="text-xs font-medium text-slate-500">{dayCount}일간</span>
+                    <span className="text-xs font-medium text-gray-500">{dayCount}일간</span>
                   )}
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-slate-500">작업요일 (선택한 요일에만 오픈풀에 노출)</label>
+                <label className="block text-xs text-gray-500">작업요일 (선택한 요일에만 오픈풀에 노출)</label>
                 <div className="mt-1 flex gap-1">
                   {WEEKDAY_LABELS.map((label, day) => (
                     <button
@@ -371,8 +367,8 @@ export default function TargetForm() {
                       onClick={() => toggleWorkDay(day)}
                       className={`h-7 w-7 rounded text-xs font-medium ${
                         form.work_days.includes(day)
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 text-slate-400'
+                          ? 'bg-brand-500 text-white'
+                          : 'bg-gray-100 text-gray-400'
                       }`}
                     >
                       {label}
@@ -381,31 +377,31 @@ export default function TargetForm() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-slate-500">1일 작업 갯수 (하루에 이만큼만 오픈풀에서 클레임 가능)</label>
-                <input
+                <label className="block text-xs text-gray-500">1일 작업 갯수 (하루에 이만큼만 오픈풀에서 클레임 가능)</label>
+                <Input
                   type="number"
                   min="1"
                   value={form.daily_limit}
                   onChange={(e) => setForm({ ...form, daily_limit: e.target.value })}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="w-full"
                 />
               </div>
-              <div className="rounded border border-blue-100 bg-blue-50 p-2">
-                <label className="block text-xs text-slate-500">건수 (작업기간 × 작업요일 × 1일 작업 갯수로 자동 계산)</label>
+              <div className="rounded-card border border-brand-100 bg-brand-50 p-2">
+                <label className="block text-xs text-gray-500">건수 (작업기간 × 작업요일 × 1일 작업 갯수로 자동 계산)</label>
                 <input
                   type="number"
                   value={totalCount}
                   disabled
-                  className="w-full rounded border border-slate-200 bg-slate-100 px-2 py-1 text-sm text-slate-500"
+                  className="w-full rounded-btn border border-gray-200 bg-gray-100 px-2 py-1 text-sm text-gray-500"
                 />
               </div>
-              <div className="space-y-3 border-t border-slate-100 pt-3">
-                <p className="text-xs font-medium text-slate-500">
+              <div className="space-y-3 border-t border-gray-100 pt-3">
+                <p className="text-xs font-medium text-gray-500">
                   리뷰 원고 자료 (리뷰어가 포털에서 "리뷰 자료 보기"로 확인)
                 </p>
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="block text-xs text-slate-500">
+                    <label className="block text-xs text-gray-500">
                       리뷰원고 엑셀 업로드 (원하시는 원고 직접 등록하세요, 부족한 수량은 아래 가이드라인으로 AI가 자동 생성합니다.)
                     </label>
                     <div className="flex items-center gap-1">
@@ -416,26 +412,23 @@ export default function TargetForm() {
                         onChange={(e) => setReviewTextFile(e.target.files[0] || null)}
                         className="hidden"
                       />
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => reviewTextInputRef.current?.click()}
-                        className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
                       >
                         <Upload size={12} />
                         엑셀 선택
-                      </button>
-                      <button
-                        type="button"
-                        onClick={downloadReviewTextTemplate}
-                        className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
-                      >
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={downloadReviewTextTemplate}>
                         <Download size={12} />
                         샘플 양식
-                      </button>
+                      </Button>
                     </div>
                   </div>
                   {reviewTextFile && (
-                    <span className="mt-1 flex w-fit items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                    <span className="mt-1 flex w-fit items-center gap-1 rounded-btn bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                       {reviewTextFile.name}
                       <button
                         type="button"
@@ -443,7 +436,7 @@ export default function TargetForm() {
                           setReviewTextFile(null)
                           if (reviewTextInputRef.current) reviewTextInputRef.current.value = ''
                         }}
-                        className="text-slate-400 hover:text-red-600"
+                        className="text-gray-400 hover:text-danger-text"
                       >
                         <X size={10} />
                       </button>
@@ -451,30 +444,30 @@ export default function TargetForm() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500">
+                  <label className="block text-xs text-gray-500">
                     원고 가이드라인 (엑셀 업로드분이 부족할 때 AI가 참고하는 예시 — 자유롭게 고쳐서 쓰세요)
                   </label>
-                  <div className="mt-1 rounded border border-slate-200 bg-slate-50 p-2">
+                  <div className="mt-1 rounded-card border border-gray-200 bg-gray-50 p-2">
                     <textarea
                       value={form.guideline}
                       onChange={(e) => setForm({ ...form, guideline: e.target.value })}
                       rows={6}
-                      className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+                      className="w-full rounded-btn border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500">지역적 특징</label>
+                  <label className="block text-xs text-gray-500">지역적 특징</label>
                   <textarea
                     value={form.regional_features}
                     onChange={(e) => setForm({ ...form, regional_features: e.target.value })}
                     rows={2}
                     placeholder="예: 근처 관광지, 교통 접근성 등 리뷰에 녹일 수 있는 지역 특징"
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                    className="w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500">리뷰 글자수</label>
+                  <label className="block text-xs text-gray-500">리뷰 글자수</label>
                   <div className="mt-1 flex items-center gap-1">
                     {REVIEW_LENGTH_OPTIONS.map((len) => (
                       <button
@@ -483,61 +476,63 @@ export default function TargetForm() {
                         onClick={() => setForm({ ...form, review_length: len })}
                         className={`rounded px-2 py-1 text-xs font-medium ${
                           Number(form.review_length) === len
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-100 text-slate-500'
+                            ? 'bg-brand-500 text-white'
+                            : 'bg-gray-100 text-gray-500'
                         }`}
                       >
                         {len}자
                       </button>
                     ))}
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={handlePreviewReviewText}
                       disabled={previewing}
-                      className="ml-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                      className="ml-1"
                     >
                       {previewing ? '생성 중...' : '예시 보기'}
-                    </button>
+                    </Button>
                   </div>
                   {previewText && (
-                    <p className="mt-1 whitespace-pre-wrap rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                    <p className="mt-1 whitespace-pre-wrap rounded-card border border-gray-200 bg-gray-50 p-2 text-xs text-gray-600">
                       {previewText}
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500">
+                  <label className="block text-xs text-gray-500">
                     메뉴 3개 (매장정보의 대표상품에서 자동으로 채워집니다 — 이 캠페인만 다르게
                     쓰려면 직접 수정하세요. 영수증 이미지 생성에도 사용됩니다)
                   </label>
                   {selectedStore && !selectedStore.representative_product && (
-                    <p className="mt-1 text-xs text-amber-600">
+                    <p className="mt-1 text-xs text-warning-text">
                       이 매장은 대표상품이 등록되어 있지 않아요. "매장정보"에서 먼저 등록해주세요.
                     </p>
                   )}
                   <div className="space-y-1">
                     {form.menu_items.map((item, i) => (
                       <div key={i} className="flex gap-1">
-                        <input
+                        <Input
                           value={item.name}
                           onChange={(e) => updateMenuItem(i, 'name', enforceProductNameLength(e.target.value))}
                           placeholder={`메뉴명 ${i + 1} (최대 ${MAX_PRODUCT_NAME_LENGTH}자)`}
-                          className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+                          className="flex-1"
                         />
-                        <input
+                        <Input
                           type="number"
                           min="0"
                           value={item.price}
                           onChange={(e) => updateMenuItem(i, 'price', e.target.value)}
                           placeholder="가격"
-                          className="w-28 rounded border border-slate-300 px-2 py-1 text-sm"
+                          className="w-28"
                         />
                       </div>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="flex items-center gap-2 text-xs text-slate-500">
+                  <label className="flex items-center gap-2 text-xs text-gray-500">
                     <input
                       type="checkbox"
                       checked={usePhotos}
@@ -546,7 +541,7 @@ export default function TargetForm() {
                     사진을 리뷰에 사용
                   </label>
                   {usePhotos && (
-                    <div className="mt-2 space-y-2 rounded border border-slate-200 bg-slate-50 p-2">
+                    <div className="mt-2 space-y-2 rounded-card border border-gray-200 bg-gray-50 p-2">
                       <div>
                         <input
                           ref={photoInputRef}
@@ -558,26 +553,28 @@ export default function TargetForm() {
                           }
                           className="hidden"
                         />
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => photoInputRef.current?.click()}
-                          className="flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                          className="bg-white"
                         >
                           <Upload size={12} />
                           사진 업로드하기
-                        </button>
+                        </Button>
                         {photoFiles.length > 0 && (
                           <div className="mt-1 flex flex-wrap gap-1">
                             {photoFiles.map((f, i) => (
                               <span
                                 key={`${f.name}-${i}`}
-                                className="flex items-center gap-1 rounded bg-white px-2 py-0.5 text-xs text-slate-600"
+                                className="flex items-center gap-1 rounded-btn bg-white px-2 py-0.5 text-xs text-gray-600"
                               >
                                 {f.name}
                                 <button
                                   type="button"
                                   onClick={() => setPhotoFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                                  className="text-slate-400 hover:text-red-600"
+                                  className="text-gray-400 hover:text-danger-text"
                                 >
                                   <X size={10} />
                                 </button>
@@ -585,18 +582,18 @@ export default function TargetForm() {
                             ))}
                           </div>
                         )}
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-1 text-xs text-gray-400">
                           업로드한 사진은 저장 전 EXIF(촬영정보)가 자동으로 랜덤 처리됩니다.
                         </p>
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500">리뷰당 사진 갯수</label>
-                        <input
+                        <label className="block text-xs text-gray-500">리뷰당 사진 갯수</label>
+                        <Input
                           type="number"
                           min="1"
                           value={form.photos_per_review}
                           onChange={(e) => setForm((prev) => ({ ...prev, photos_per_review: e.target.value }))}
-                          className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+                          className="w-20"
                         />
                       </div>
                     </div>
@@ -604,21 +601,17 @@ export default function TargetForm() {
                 </div>
               </div>
               <div>
-                <button
-                  type="submit"
-                  disabled={submitting || !form.store_id}
-                  className="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-                >
+                <Button type="submit" variant="primary" disabled={submitting || !form.store_id}>
                   등록 (오픈풀에 공개)
-                </button>
+                </Button>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-gray-400">
                 매장 목록에 없다면 먼저 "매장정보" 탭에서 등록해주세요. 등록된 작업은 자동
                 배정되지 않고 오픈풀에 공개되며, 리뷰어가 셀프서비스 포털의 "가능한 작업 (오픈풀)"
                 목록에서 직접 "할게요"를 눌러 클레임합니다. 작업 제한시간(리뷰어가 클레임 후 결과
                 링크를 제출해야 하는 시간)은 "설정" 탭에서 관리합니다.
               </p>
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-danger-text">{error}</p>}
             </form>
           </div>
         </div>
