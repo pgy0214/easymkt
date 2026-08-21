@@ -1,6 +1,6 @@
 import { ExternalLink, LogOut, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { API_ORIGIN, portalApi } from '../lib/api.js'
+import { api, API_ORIGIN, portalApi } from '../lib/api.js'
 import {
   AGE_GROUP_OPTIONS,
   BLOG_INDEX_OPTIONS,
@@ -176,7 +176,16 @@ function LoginFlow({ onLoggedIn }) {
       const result = await portalApi.login(username.trim(), password)
       onLoggedIn(result.token)
     } catch (err) {
-      setError(err.message)
+      // 리뷰어 계정이 아니면, 관리자 계정으로 들어온 건 아닌지 한 번 더 확인 —
+      // 관리자가 메인 도메인으로 들어와도 헤매지 않고 바로 /admin으로 넘어가게 한다.
+      try {
+        const adminResult = await api.login(username.trim(), password)
+        localStorage.setItem('admin_token', adminResult.token)
+        window.location.href = '/admin'
+        return
+      } catch {
+        setError(err.message)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -704,8 +713,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
 
       {!reviewer.is_active && (
         <div className="rounded-card border border-amber-200 bg-warning-bg px-3 py-2 text-sm text-warning-text">
-          관리자 승인 대기 중입니다. 계정 정보는 미리 등록해두실 수 있지만, 승인 후에 작업을
-          가져갈 수 있어요.
+          계정 등록 후 캠페인을 확인할 수 있습니다.
         </div>
       )}
 
@@ -1030,7 +1038,7 @@ function ExperienceProfileCard({ token, reviewer, onUpdated }) {
   }
 
   return (
-    <Card padding="md" className="space-y-2">
+    <Card padding="md" className="mx-auto space-y-2 md:max-w-[60%]">
       <h2 className="font-medium text-gray-800">내 계정</h2>
       <form onSubmit={handleSave} className="space-y-2">
         <div className="flex items-end gap-2">
@@ -1259,50 +1267,51 @@ function ExperienceCampaignDetailModal({ campaign: c, applying, onApply, onClose
         />
       )}
 
-      <div className="mt-3 space-y-3 text-sm">
-        <div className="rounded-btn border border-gray-100 bg-gray-50 p-2.5">
-          <p className="text-xs font-medium text-gray-500">캠페인 상품</p>
-          <p className="text-gray-800">
+      <div className="mt-4 space-y-4 text-sm">
+        <div className="rounded-btn border border-gray-100 bg-gray-50 p-3">
+          <p className="text-base font-bold text-gray-900">캠페인 상품</p>
+          <p className="mt-0.5 text-gray-700">
             {c.product_name}
             {c.product_price ? ` · ${formatKRW(c.product_price)}` : ''}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+        <div className="grid grid-cols-3 gap-3">
           <div>
-            <span className="text-gray-400">모집 기간</span>
-            <br />
-            {formatCampaignDate(c.recruit_start)} ~ {formatCampaignDate(c.recruit_end)}
+            <p className="text-sm font-bold text-gray-900">모집 기간</p>
+            <p className="mt-0.5 text-xs text-gray-600">
+              {formatCampaignDate(c.recruit_start)} ~ {formatCampaignDate(c.recruit_end)}
+            </p>
           </div>
           <div>
-            <span className="text-gray-400">제출마감일</span>
-            <br />
-            {c.review_deadline || '-'}
+            <p className="text-sm font-bold text-gray-900">제출마감일</p>
+            <p className="mt-0.5 text-xs text-gray-600">{c.review_deadline || '-'}</p>
           </div>
           <div>
-            <span className="text-gray-400">모집 인원</span>
-            <br />
-            신청 {c.applicant_count}명 / {c.capacity}명
+            <p className="text-sm font-bold text-gray-900">모집 인원</p>
+            <p className="mt-0.5 text-xs text-gray-600">
+              신청 {c.applicant_count}명 / {c.capacity}명
+            </p>
           </div>
         </div>
 
         {(c.main_keyword || c.sub_keyword) && (
           <div>
-            <p className="text-xs font-medium text-gray-500">키워드</p>
-            <p className="text-gray-700">{[c.main_keyword, c.sub_keyword].filter(Boolean).join(' / ')}</p>
+            <p className="text-base font-bold text-gray-900">키워드</p>
+            <p className="mt-0.5 text-gray-700">{[c.main_keyword, c.sub_keyword].filter(Boolean).join(' / ')}</p>
           </div>
         )}
 
         {c.content_guide && (
           <div>
-            <p className="text-xs font-medium text-gray-500">가이드라인</p>
-            <p className="whitespace-pre-wrap text-gray-700">{c.content_guide}</p>
+            <p className="text-base font-bold text-gray-900">가이드라인</p>
+            <p className="mt-0.5 whitespace-pre-wrap text-gray-700">{c.content_guide}</p>
           </div>
         )}
 
         <div>
-          <p className="text-xs font-medium text-gray-500">방문 정보</p>
-          <p className="text-gray-700">
+          <p className="text-base font-bold text-gray-900">방문 정보</p>
+          <p className="mt-0.5 text-gray-700">
             {c.reservation_required ? '예약 필요' : '예약 없이 방문 가능'}
             {c.contact_name && ` · 담당자 ${c.contact_name}`}
             {c.contact_method && c.contact_info && ` · ${c.contact_method} ${c.contact_info}`}
@@ -1319,7 +1328,7 @@ function ExperienceCampaignDetailModal({ campaign: c, applying, onApply, onClose
             rel="noopener noreferrer"
             className="flex items-center gap-1 rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
           >
-            구경하기
+            상품구경하기
             <ExternalLink size={14} />
           </a>
         )}
