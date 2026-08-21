@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         crud.migrate_self_owned_admin_category(db)
+        crud.fix_test_admin_categories(db)
         crud.seed_test_accounts(db)
     finally:
         db.close()

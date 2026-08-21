@@ -203,6 +203,21 @@ TEST_ACCOUNTS = [
 ]
 
 
+def fix_test_admin_categories(db: Session) -> None:
+    """예전(카테고리 재정의 이전) 버전의 코드나 수동 테스트로 인해 admin/kingsas
+    계정이 'admin'이 아닌 다른 category로 남아있을 수 있어 바로잡는다 —
+    seed_test_accounts는 계정이 이미 있으면 손대지 않기 때문에 이 값은 저절로
+    고쳐지지 않는다."""
+    changed = False
+    for username in ("admin", "kingsas"):
+        reviewer = get_reviewer_by_username(db, username)
+        if reviewer and reviewer.category != "admin":
+            reviewer.category = "admin"
+            changed = True
+    if changed:
+        db.commit()
+
+
 def seed_test_accounts(db: Session) -> None:
     """매 배포마다 동일한 아이디/비밀번호로 로그인해볼 수 있는 기본 계정들을
     보장한다(없으면 생성, 있으면 손대지 않음) — 실제 오픈 전 테스트 편의용이라

@@ -149,7 +149,7 @@ export default function ReviewerManager() {
   }
 
   const nonAdminReviewers = useMemo(
-    () => reviewers.filter((r) => r.category !== 'own' && r.category !== 'admin'),
+    () => reviewers.filter((r) => r.category !== 'own' && r.category !== 'admin' && r.category !== 'advertiser'),
     [reviewers],
   )
 
@@ -159,8 +159,8 @@ export default function ReviewerManager() {
   const baseFiltered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return reviewers.filter((r) => {
-      // 자체보유계정은 별도의 "관리자 계정" 탭에서, 대시보드 관리자는 회원관리에서 관리
-      if (r.category === 'own' || r.category === 'admin') return false
+      // 자체보유계정은 별도의 "관리자 계정" 탭에서, 대시보드 관리자는 회원관리에서, 광고주는 광고주 포털에서 관리
+      if (r.category === 'own' || r.category === 'admin' || r.category === 'advertiser') return false
       if (statusFilter === 'active' && !r.is_active) return false
       if (statusFilter === 'inactive' && r.is_active) return false
       if (categoryFilter && r.category !== categoryFilter) return false
