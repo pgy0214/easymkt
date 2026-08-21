@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 
 from app import crud, models, receipt_generator
-from app.crawlers.base import chrome_driver, logger
+from app.crawlers.base import chrome_driver, human_delay, logger, raise_if_captcha
 
 CHECK_WINDOW_DAYS = 7
 
@@ -15,22 +15,33 @@ def find_next_available_date(profile_url: str) -> datetime.date | None:
     """Adapted from legacy `04. 영수증 가능날짜 체크.py`: open the reviewer's own
     Naver Place profile, read the dates they've already posted a review on, and
     pick the nearest of the last CHECK_WINDOW_DAYS days that isn't already used."""
-    with chrome_driver() as driver:
+    with chrome_driver(profile="date_check") as driver:
         driver.get(profile_url)
-        time_module.sleep(2)
+        human_delay(2.0, 3.5)
+        raise_if_captcha(driver, debug_label="date_check_initial")
 
         try:
             tab_button = driver.find_element(
                 By.CSS_SELECTOR, "ul.YUXlEx > li:first-child button"
             )
             tab_button.click()
-            time_module.sleep(1)
+            human_delay(0.8, 1.6)
         except Exception:
             logger.warning("리뷰 탭 버튼을 찾지 못했습니다: %s", profile_url)
 
+        # 한 번에 바닥까지 순간이동하는 대신, 사람이 스크롤 휠을 굴리는 것처럼
+        # 여러 단계로 나눠 무작위 간격을 두고 내려간다.
         for _ in range(2):
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-            time_module.sleep(1)
+            current_height = driver.execute_script("return document.body.scrollHeight")
+            steps = random.randint(3, 6)
+            for i in range(1, steps + 1):
+                driver.execute_script(
+                    "window.scrollTo(0, arguments[0])", current_height * i / steps
+                )
+                time_module.sleep(random.uniform(0.15, 0.45))
+            human_delay(0.6, 1.4)
+
+        raise_if_captcha(driver, debug_label="date_check_scrolled")
 
         soup = BeautifulSoup(driver.page_source, "html.parser")
         used_dates = set()
@@ -106,7 +117,7 @@ def _generate_receipt_if_possible(db, task: models.Task) -> None:
     account = task.review_account
     if not account:
         return
-    is_admin_account = bool(account.reviewer and account.reviewer.category == "admin")
+    is_admin_account = bool(account.reviewer and account.reviewer.category == "own")
 
     if is_admin_account:
         # 관리자(자체보유) 계정 — 우리가 영수증을 직접 만들기 때문에 오전/오후/밤을

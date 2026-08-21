@@ -6,11 +6,9 @@ import AccountTaskModal from './AccountTaskModal.jsx'
 import BulkAssignModal from './BulkAssignModal.jsx'
 import CopyButton from './CopyButton.jsx'
 import Pagination from './Pagination.jsx'
-
-const GENDER_BADGE = {
-  male: 'bg-sky-100 text-sky-700',
-  female: 'bg-rose-100 text-rose-700',
-}
+import Badge from './ui/Badge.jsx'
+import Button from './ui/Button.jsx'
+import Input from './ui/Input.jsx'
 
 const GENDER_SHORT = {
   male: '남',
@@ -127,7 +125,7 @@ export default function AdminAccountManager() {
     setLoading(true)
     try {
       const all = await api.getReviewers()
-      setRows(toRows(all.filter((r) => r.category === 'admin')))
+      setRows(toRows(all.filter((r) => r.category === 'own')))
       setError(null)
     } catch (err) {
       setError(err.message)
@@ -179,7 +177,7 @@ export default function AdminAccountManager() {
     setSubmitting(true)
     try {
       const reviewer = await api.createReviewer({
-        category: 'admin',
+        category: 'own',
         name: form.name.trim(),
         gender: form.gender || null,
         birth_date: form.birth_date || null,
@@ -339,40 +337,40 @@ export default function AdminAccountManager() {
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-gray-500">
         여기 등록된 계정은 리뷰어가 아니라 우리(회사)가 직접 소유한 계정입니다. "리뷰어 관리"
         목록에는 나타나지 않습니다.
       </p>
 
       <form
         onSubmit={handleSubmit}
-        className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-white p-4"
+        className="flex flex-wrap items-end gap-2 rounded-card border border-gray-200 bg-white p-4"
       >
         <div>
-          <label className="block text-xs text-slate-500">플랫폼</label>
+          <label className="block text-xs text-gray-500">플랫폼</label>
           <select
             value={form.platform}
             onChange={(e) => setForm({ ...form, platform: e.target.value })}
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
+            className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
           >
             <option value="naver">네이버</option>
             <option value="kakao">카카오</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs text-slate-500">이름</label>
-          <input
+          <label className="block text-xs text-gray-500">이름</label>
+          <Input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-24 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-24"
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-500">성별</label>
+          <label className="block text-xs text-gray-500">성별</label>
           <select
             value={form.gender}
             onChange={(e) => setForm({ ...form, gender: e.target.value })}
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
+            className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
           >
             <option value="">선택 안 함</option>
             <option value="male">남성</option>
@@ -380,71 +378,66 @@ export default function AdminAccountManager() {
           </select>
         </div>
         <div>
-          <label className="block text-xs text-slate-500">생년월일</label>
-          <input
+          <label className="block text-xs text-gray-500">생년월일</label>
+          <Input
             type="date"
             value={form.birth_date}
             onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-500">연락처</label>
-          <input
+          <label className="block text-xs text-gray-500">연락처</label>
+          <Input
             value={form.contact_info}
             onChange={(e) => setForm({ ...form, contact_info: e.target.value })}
-            className="w-32 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-32"
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-500">계정 아이디</label>
-          <input
+          <label className="block text-xs text-gray-500">계정 아이디</label>
+          <Input
             value={form.label}
             onChange={(e) => setForm({ ...form, label: e.target.value })}
             placeholder="계정 닉네임"
-            className="w-28 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-28"
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-500">계정 비밀번호</label>
-          <input
+          <label className="block text-xs text-gray-500">계정 비밀번호</label>
+          <Input
             type="password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
-            className="w-28 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-28"
           />
         </div>
         {form.platform === 'naver' && (
           <div>
-            <label className="block text-xs text-slate-500">네이버 마이플레이스 URL</label>
-            <input
+            <label className="block text-xs text-gray-500">네이버 마이플레이스 URL</label>
+            <Input
               value={form.profile_url}
               onChange={(e) => setForm({ ...form, profile_url: e.target.value })}
               placeholder="https://m.place.naver.com/my/..."
-              className="w-56 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="w-56"
             />
           </div>
         )}
         <div>
-          <label className="block text-xs text-slate-500">IP</label>
-          <input
+          <label className="block text-xs text-gray-500">IP</label>
+          <Input
             value={form.ip_address}
             onChange={(e) => setForm({ ...form, ip_address: e.target.value })}
             placeholder="예: 123.45.67.89"
-            className="w-32 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="w-32"
           />
         </div>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={submitting}>
           <Plus size={14} />
           관리자 계정 추가
-        </button>
+        </Button>
       </form>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-card border border-dashed border-gray-300 bg-white p-3">
         <input
           ref={fileInputRef}
           type="file"
@@ -452,57 +445,50 @@ export default function AdminAccountManager() {
           onChange={handleFileSelected}
           className="hidden"
         />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={importing}
-          className="flex items-center gap-1 rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
-        >
+        <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={importing}>
           <Upload size={14} />
           {importing ? '업로드 중...' : '엑셀/CSV로 일괄 등록'}
-        </button>
-        <button
-          onClick={downloadTemplate}
-          className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
-        >
+        </Button>
+        <Button variant="outline" onClick={downloadTemplate}>
           <Download size={14} />
           샘플 양식 다운로드
-        </button>
-        <span className="text-xs text-slate-400">
+        </Button>
+        <span className="text-xs text-gray-400">
           플랫폼/IP/이름/성별/생년월일/연락처/계정아이디/비밀번호/URL 컬럼이 있는 .xlsx 또는
           .csv 파일 (이름과 계정아이디가 둘 다 있는 행만 등록됩니다. 생년월일은 570710처럼
           YYMMDD 6자리로 입력)
         </span>
         {importResult && (
-          <span className="ml-auto text-xs text-slate-600">
+          <span className="ml-auto text-xs text-gray-600">
             신규 {importResult.created}건 · 중복건너뜀 {importResult.skipped_duplicate}건 ·
             필수값없음 {importResult.skipped_invalid}건
           </span>
         )}
       </div>
 
-      {loading && <p className="text-sm text-slate-400">불러오는 중...</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading && <p className="text-sm text-gray-400">불러오는 중...</p>}
+      {error && <p className="text-sm text-danger-text">{error}</p>}
 
       {!loading && rows.length === 0 && (
-        <p className="text-sm text-slate-400">등록된 관리자 계정이 없습니다</p>
+        <p className="text-sm text-gray-400">등록된 관리자 계정이 없습니다</p>
       )}
 
       {!loading && rows.length > 0 && (
         <>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-64">
-              <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
+              <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="이름/연락처/계정아이디/IP 검색"
-                className="w-full rounded border border-slate-300 py-1 pl-7 pr-2 text-sm"
+                className="w-full pl-7 pr-2"
               />
             </div>
             <select
               value={storeFilter}
               onChange={(e) => setStoreFilter(e.target.value)}
-              className="rounded border border-slate-300 px-2 py-1 text-sm"
+              className="rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
             >
               <option value="">작업 매장으로 필터링 안 함</option>
               {stores.map((s) => (
@@ -512,27 +498,24 @@ export default function AdminAccountManager() {
               ))}
             </select>
             {checkingEligibility && (
-              <span className="text-xs text-slate-400">작업가능 여부 확인 중...</span>
+              <span className="text-xs text-gray-400">작업가능 여부 확인 중...</span>
             )}
             {selectedStore && !checkingEligibility && (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-gray-500">
                 {selectedStore.name}에서 지금 작업 가능한 계정만 표시 중
               </span>
             )}
             {selectedKeys.size > 0 && (
               <>
-                <span className="text-xs text-slate-500">선택 {selectedKeys.size}건</span>
-                <button
-                  onClick={() => setBulkAssigning(true)}
-                  className="flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
-                >
+                <span className="text-xs text-gray-500">선택 {selectedKeys.size}건</span>
+                <Button variant="ghost" tone="blue" size="sm" onClick={() => setBulkAssigning(true)}>
                   <Send size={12} />
                   선택 작업 배분
-                </button>
+                </Button>
                 <button
                   onClick={handleBulkAssignTimeSlot}
                   disabled={assigningTimeSlot}
-                  className="flex items-center gap-1 rounded border border-purple-200 bg-purple-50 px-2 py-1 text-xs text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+                  className="flex items-center gap-1 rounded-pill bg-[#F2ECFB] px-2 py-1 text-xs font-semibold text-[#7C4DE0] hover:opacity-80 disabled:opacity-50"
                   title="시간대가 아직 없는 계정에만 오전/오후/밤 중 하나를 랜덤으로 배정합니다"
                 >
                   <Clock size={12} />
@@ -540,7 +523,7 @@ export default function AdminAccountManager() {
                 </button>
                 <button
                   onClick={handleBulkDelete}
-                  className="flex items-center gap-1 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                  className="flex items-center gap-1 rounded-pill bg-danger-bg px-2 py-1 text-xs font-semibold text-danger-text hover:opacity-80"
                 >
                   <Trash2 size={12} />
                   선택 삭제
@@ -550,11 +533,11 @@ export default function AdminAccountManager() {
           </div>
 
           {filteredRows.length === 0 ? (
-            <p className="text-sm text-slate-400">조건에 맞는 계정이 없습니다</p>
+            <p className="text-sm text-gray-400">조건에 맞는 계정이 없습니다</p>
           ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-card border border-gray-200 bg-white">
           <table className="w-full min-w-[1200px] whitespace-nowrap text-sm">
-            <thead className="bg-slate-50 text-left text-xs text-slate-500">
+            <thead className="bg-gray-50 text-left text-xs text-gray-500">
               <tr>
                 <th className="px-1.5 py-0.5">
                   <input
@@ -589,9 +572,9 @@ export default function AdminAccountManager() {
                 <th className="px-1.5 py-0.5" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-gray-100">
               {visibleRows.map((row, index) => (
-                <tr key={rowKey(row)} className={selectedKeys.has(rowKey(row)) ? 'bg-blue-50' : undefined}>
+                <tr key={rowKey(row)} className={selectedKeys.has(rowKey(row)) ? 'bg-brand-50' : undefined}>
                   <td className="px-1.5 py-0.5">
                     <input
                       type="checkbox"
@@ -599,23 +582,21 @@ export default function AdminAccountManager() {
                       onChange={() => toggleSelected(rowKey(row))}
                     />
                   </td>
-                  <td className="px-1.5 py-0.5 text-slate-400">{(page - 1) * pageSize + index + 1}</td>
+                  <td className="px-1.5 py-0.5 text-gray-400">{(page - 1) * pageSize + index + 1}</td>
                   <td className="px-1.5 py-0.5">
                     {row.platform === 'naver' ? '네이버' : row.platform === 'kakao' ? '카카오' : '-'}
                   </td>
-                  <td className="px-1.5 py-0.5 text-slate-500">{row.ip_address || '-'}</td>
+                  <td className="px-1.5 py-0.5 text-gray-500">{row.ip_address || '-'}</td>
                   <td className="px-1.5 py-0.5">{row.name}</td>
                   <td className="px-1.5 py-0.5">
                     {row.gender ? (
-                      <span className={`rounded px-1 py-0.5 text-[11px] font-medium ${GENDER_BADGE[row.gender]}`}>
-                        {GENDER_SHORT[row.gender]}
-                      </span>
+                      <Badge color={row.gender === 'male' ? 'sky' : 'rose'}>{GENDER_SHORT[row.gender]}</Badge>
                     ) : (
                       '-'
                     )}
                   </td>
-                  <td className="px-1.5 py-0.5 text-slate-500">{formatBirthDateCompact(row.birth_date)}</td>
-                  <td className="px-1.5 py-0.5 text-slate-500">{row.contact_info || '-'}</td>
+                  <td className="px-1.5 py-0.5 text-gray-500">{formatBirthDateCompact(row.birth_date)}</td>
+                  <td className="px-1.5 py-0.5 text-gray-500">{row.contact_info || '-'}</td>
                   <td className="px-1.5 py-0.5">
                     <span className="inline-flex items-center gap-1">
                       {row.label || '-'}
@@ -625,7 +606,7 @@ export default function AdminAccountManager() {
                   <td className="px-1.5 py-0.5">
                     {row.password ? (
                       <span className="inline-flex items-center gap-1">
-                        <span className="text-slate-600">{row.password}</span>
+                        <span className="text-gray-600">{row.password}</span>
                         <CopyButton value={row.password} label="비밀번호" />
                       </span>
                     ) : (
@@ -639,7 +620,7 @@ export default function AdminAccountManager() {
                         target="_blank"
                         rel="noreferrer"
                         title={row.profile_url}
-                        className="inline-flex items-center justify-center rounded border border-slate-200 p-1 text-blue-600 hover:bg-blue-50"
+                        className="inline-flex items-center justify-center rounded-btn border border-gray-200 p-1 text-brand-600 hover:bg-brand-50"
                       >
                         <ExternalLink size={13} />
                       </a>
@@ -647,12 +628,12 @@ export default function AdminAccountManager() {
                       '-'
                     )}
                   </td>
-                  <td className="px-1.5 py-0.5 text-slate-500">
+                  <td className="px-1.5 py-0.5 text-gray-500">
                     {row.id != null ? (
                       row.time_slot ? (
                         TIME_SLOT_LABEL[row.time_slot]
                       ) : (
-                        <span className="text-amber-600">미배정</span>
+                        <span className="text-warning-text">미배정</span>
                       )
                     ) : (
                       '-'
@@ -667,7 +648,7 @@ export default function AdminAccountManager() {
                       >
                         <span
                           className={`block h-2.5 w-2.5 rounded-full ${
-                            row.has_login_issue ? 'bg-red-500' : 'bg-green-500'
+                            row.has_login_issue ? 'bg-danger-text' : 'bg-success-text'
                           }`}
                         />
                       </button>
@@ -679,14 +660,14 @@ export default function AdminAccountManager() {
                         <>
                           <button
                             onClick={() => setEditingRow(row)}
-                            className="text-slate-400 hover:text-blue-600"
+                            className="text-gray-400 hover:text-brand-600"
                             title="정보 수정"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             onClick={() => setTaskRow(row)}
-                            className="text-slate-400 hover:text-blue-600"
+                            className="text-gray-400 hover:text-brand-600"
                             title="작업 관리"
                           >
                             <Send size={14} />
@@ -695,7 +676,7 @@ export default function AdminAccountManager() {
                             <button
                               onClick={() => handleLaunch(row)}
                               disabled={launchingId === row.id}
-                              className="text-slate-400 hover:text-green-600 disabled:opacity-50"
+                              className="text-gray-400 hover:text-success-text disabled:opacity-50"
                               title="AdsPower 브라우저 실행"
                             >
                               <Play size={14} />
@@ -705,7 +686,7 @@ export default function AdminAccountManager() {
                       )}
                       <button
                         onClick={() => handleDelete(row)}
-                        className="text-slate-400 hover:text-red-600"
+                        className="text-gray-400 hover:text-danger-text"
                         title="삭제"
                       >
                         <Trash2 size={14} />

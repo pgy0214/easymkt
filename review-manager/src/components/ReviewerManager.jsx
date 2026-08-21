@@ -148,7 +148,10 @@ export default function ReviewerManager() {
     }
   }
 
-  const nonAdminReviewers = useMemo(() => reviewers.filter((r) => r.category !== 'admin'), [reviewers])
+  const nonAdminReviewers = useMemo(
+    () => reviewers.filter((r) => r.category !== 'own' && r.category !== 'admin'),
+    [reviewers],
+  )
 
   // 카테고리/성별/지역/연령대/검색까지 먼저 적용한 결과 — 매장 필터는 이 결과 위에 마지막으로
   // 얹는다("체험단+여성+20대"까지 고른 다음 매장을 고르면 그 조건의 리뷰어 중 작업 가능한
@@ -156,8 +159,8 @@ export default function ReviewerManager() {
   const baseFiltered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return reviewers.filter((r) => {
-      // 관리자(자체보유계정)는 별도의 "관리자 계정" 탭에서 관리
-      if (r.category === 'admin') return false
+      // 자체보유계정은 별도의 "관리자 계정" 탭에서, 대시보드 관리자는 회원관리에서 관리
+      if (r.category === 'own' || r.category === 'admin') return false
       if (statusFilter === 'active' && !r.is_active) return false
       if (statusFilter === 'inactive' && r.is_active) return false
       if (categoryFilter && r.category !== categoryFilter) return false
@@ -311,7 +314,7 @@ export default function ReviewerManager() {
         >
           <option value="">전체 카테고리</option>
           {Object.entries(REVIEWER_CATEGORY_LABEL)
-            .filter(([value]) => value !== 'admin')
+            .filter(([value]) => value !== 'admin' && value !== 'own')
             .map(([value, label]) => (
               <option key={value} value={value}>
                 {label}

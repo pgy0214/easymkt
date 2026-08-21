@@ -26,7 +26,9 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
     setPreparingSmsId(target.id)
     try {
       const allReviewers = await api.getReviewers()
-      const candidates = allReviewers.filter((r) => r.category !== 'admin' && r.is_active)
+      const candidates = allReviewers.filter(
+        (r) => r.category !== 'own' && r.category !== 'admin' && r.is_active,
+      )
       const accountRefs = []
       candidates.forEach((r) => {
         r.accounts

@@ -24,7 +24,7 @@ class Reviewer(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    category = Column(String, nullable=False, default="reviewer")  # admin|reviewer|experience|press
+    category = Column(String, nullable=False, default="reviewer")  # admin(대시보드 관리자)|own(자체보유계정)|reviewer|experience|press|advertiser
     memo = Column(String, nullable=True)
     contact_info = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)  # 연락가능(작업배정 대상) 여부
@@ -45,6 +45,7 @@ class Reviewer(Base):
     username = Column(String, nullable=True)  # 포털 로그인 아이디 — 회원가입 시 직접 지정, 소문자로 정규화해서 저장
     password_hash = Column(String, nullable=True)  # 포털 로그인용 — 아이디+비밀번호로 로그인, 분실 시 OTP로 임시 비밀번호 재발급
     topics = Column(String, nullable=True)  # 체험단 전용, 관심 주제(콤마 구분 — 맛집,여행,뷰티 등)
+    business_registration_image_path = Column(String, nullable=True)  # 광고주 전용, 사업자등록증 이미지 — 관리자 승인(is_active) 전 필요
     created_at = Column(DateTime, default=utcnow)
 
     accounts = relationship(

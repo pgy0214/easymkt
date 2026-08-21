@@ -43,6 +43,7 @@ export const PLATFORM_LABEL = {
 
 export const CATEGORY_LABEL = {
   admin: '관리자',
+  own: '자체계정',
   advertiser: '광고주',
   reviewer: '리뷰어',
   experience: '체험단',
@@ -88,6 +89,7 @@ export function formatWorkDays(days) {
 
 export const REVIEWER_CATEGORY_LABEL = {
   admin: '관리자',
+  own: '자체계정',
   reviewer: '리뷰어',
   experience: '체험단',
   press: '기자단',

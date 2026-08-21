@@ -12,6 +12,8 @@ import Pagination from './Pagination.jsx'
 // 아직 자체 페이지가 없어 데이터는 없지만 범례로만 안내). 관리자가 엑셀로
 // 미리 올려둔 category 값(체험단/기자단 등)은 여기서는 전부 "리뷰어"로 보여준다 —
 // 그 구분은 "계정 > 리뷰어 관리" 쪽 CRM 분류이지 회원 종류가 아니기 때문.
+// 'admin'은 자체보유(리뷰포스팅용) 계정이 아니라 /admin 대시보드에 로그인 가능한
+// 사람을 뜻한다 — 비활성화하면 그 계정은 대시보드 로그인이 막힌다.
 const MEMBER_TYPES = [
   { value: 'admin', label: '관리자', color: 'purple' },
   { value: 'advertiser', label: '광고주', color: 'yellow' },
@@ -233,16 +235,14 @@ export default function MemberManager() {
                     </td>
                     <td className="px-3 py-2 align-top">
                       <div className="flex flex-col items-start gap-1">
-                        {r.category !== 'admin' && (
-                          <button
-                            onClick={() => handleToggleActive(r)}
-                            className={`whitespace-nowrap text-xs hover:underline ${
-                              r.is_active ? 'text-gray-500' : 'text-brand-600 font-medium'
-                            }`}
-                          >
-                            {r.is_active ? '비활성화' : '활성화'}
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleToggleActive(r)}
+                          className={`whitespace-nowrap text-xs hover:underline ${
+                            r.is_active ? 'text-gray-500' : 'text-brand-600 font-medium'
+                          }`}
+                        >
+                          {r.is_active ? '비활성화' : '활성화'}
+                        </button>
                         {r.category !== 'advertiser' && r.category !== 'admin' && r.category !== 'reviewer' && (
                           <button
                             onClick={() => handleGrantAdvertiser(r)}

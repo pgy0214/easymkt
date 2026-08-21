@@ -127,7 +127,7 @@ def _normalize_phone(raw: str | None) -> str | None:
 
 def create_reviewer(db: Session, data: schemas.ReviewerCreate) -> models.Reviewer:
     contact_info = data.contact_info
-    if data.category == "admin":
+    if data.category == "own":
         contact_info = _normalize_phone(contact_info)
     applied_at = data.applied_at
     application_status = data.application_status
@@ -163,7 +163,7 @@ def create_member(db: Session, data: schemas.MemberCreateIn) -> models.Reviewer:
     가입과 동일하게 사업자등록증 승인 전까지 is_active=False로 시작한다 — 관리자가
     직접 추가했다고 승인 절차를 건너뛰면 안 된다."""
     contact_info = data.contact_info
-    if data.category == "admin":
+    if data.category == "own":
         contact_info = _normalize_phone(contact_info)
     reviewer = models.Reviewer(
         name=data.name,
@@ -180,17 +180,35 @@ def create_member(db: Session, data: schemas.MemberCreateIn) -> models.Reviewer:
     return reviewer
 
 
+def migrate_self_owned_admin_category(db: Session) -> None:
+    """category='admin'의 의미가 "회사 자체보유(리뷰포스팅용) 계정"에서 "대시보드
+    관리자"로 바뀌면서, 예전 뜻으로 쓰이던 기존 행들을 새 이름 'own'으로 옮겨준다.
+    반드시 seed_test_accounts()보다 먼저 호출해야 한다 — 그래야 이 함수가 새로
+    만든 category='admin' 행(관리자/개발자)까지 'own'으로 잘못 바꿔버리는 걸
+    막을 수 있다. username='admin'이 아직 없다는 건 이 마이그레이션이 아직
+    한 번도 안 돌았다는 뜻이라, 그때만 실행한다(그 이후엔 매번 조용히 건너뜀)."""
+    if get_reviewer_by_username(db, "admin"):
+        return
+    db.query(models.Reviewer).filter(models.Reviewer.category == "admin").update(
+        {"category": "own"}
+    )
+    db.commit()
+
+
 TEST_ACCOUNTS = [
+    {"username": "kingsas", "password": "chlrkd12!@", "name": "개발자", "category": "admin"},
+    {"username": "admin", "password": "1234", "name": "관리자", "category": "admin"},
     {"username": "ads1", "password": "1234", "name": "테스트 광고주", "category": "advertiser"},
     {"username": "review", "password": "1234", "name": "테스트 리뷰어", "category": "reviewer"},
 ]
 
 
 def seed_test_accounts(db: Session) -> None:
-    """매 배포마다 동일한 아이디/비밀번호로 로그인해볼 수 있는 광고주/리뷰어 테스트
-    계정을 보장한다(없으면 생성, 있으면 손대지 않음) — 실제 사이트 관리자 계정과
-    달리 이 둘은 그냥 DB의 리뷰어 행이라 여기서 만들어도 안전하다. 승인 절차 없이
-    바로 테스트할 수 있도록 is_active=True로 시작한다."""
+    """매 배포마다 동일한 아이디/비밀번호로 로그인해볼 수 있는 기본 계정들을
+    보장한다(없으면 생성, 있으면 손대지 않음) — 실제 오픈 전 테스트 편의용이라
+    관리자/개발자 계정도 일부러 단순한 비밀번호로 시작한다. 실제 정보(비밀번호
+    등)는 나중에 회원관리 화면에서 직접 바꾸면 된다. 반드시
+    migrate_self_owned_admin_category() 다음에 호출해야 한다."""
     for account in TEST_ACCOUNTS:
         existing = get_reviewer_by_username(db, account["username"])
         if existing:
@@ -220,7 +238,7 @@ def update_reviewer(
     if data.contact_info is not None:
         category = data.category if data.category is not None else reviewer.category
         reviewer.contact_info = (
-            _normalize_phone(data.contact_info) if category == "admin" else data.contact_info
+            _normalize_phone(data.contact_info) if category == "own" else data.contact_info
         )
     if data.is_active is not None:
         reviewer.is_active = data.is_active
@@ -345,7 +363,7 @@ def import_reviewers(
 
 
 def import_admin_accounts(db: Session, rows: list[dict]) -> schemas.ReviewerImportResult:
-    """관리자 계정 일괄등록 — 이름/계정아이디가 둘 다 있는 행마다 Reviewer(category='admin')
+    """관리자 계정(자체보유) 일괄등록 — 이름/계정아이디가 둘 다 있는 행마다 Reviewer(category='own')
     와 그 계정을 한 번에 만든다(화면의 "관리자 계정 추가" 폼 1회 제출과 동일한 동작).
     기존 리뷰어 일괄등록(import_reviewers)과 달리 계정까지 같이 생기므로 여기서만 쓰는
     별도 함수로 분리했다."""
@@ -378,7 +396,7 @@ def import_admin_accounts(db: Session, rows: list[dict]) -> schemas.ReviewerImpo
 
         reviewer = models.Reviewer(
             name=name,
-            category="admin",
+            category="own",
             contact_info=_normalize_phone(contact_info),
             is_active=True,
             gender=row.get("gender"),
@@ -1296,8 +1314,8 @@ def run_claim_expiry_job(db: Session) -> int:
 
 
 def settlement_summary(db: Session) -> list[schemas.SettlementSummaryItem]:
-    # 관리자(자체보유계정)는 우리 소유라 정산할 필요가 없어 미정산 목록에서 제외
-    reviewers = [r for r in get_reviewers(db) if r.category != "admin"]
+    # 자체보유계정(own)은 우리 소유라 정산할 필요가 없어 미정산 목록에서 제외
+    reviewers = [r for r in get_reviewers(db) if r.category != "own"]
     results = []
     for reviewer in reviewers:
         account_ids = [a.id for a in reviewer.accounts]

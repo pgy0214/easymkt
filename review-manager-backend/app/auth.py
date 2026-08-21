@@ -51,11 +51,15 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode(), password_hash.encode())
 
 
-def issue_admin_token() -> str:
+def issue_admin_token(admin_id: int | None = None, username: str | None = None) -> str:
     payload = {
         "admin": True,
         "exp": datetime.datetime.utcnow() + datetime.timedelta(days=ADMIN_TOKEN_TTL_DAYS),
     }
+    if admin_id is not None:
+        payload["admin_id"] = admin_id
+    if username is not None:
+        payload["username"] = username
     return jwt.encode(payload, _admin_secret(), algorithm=ALGORITHM)
 
 

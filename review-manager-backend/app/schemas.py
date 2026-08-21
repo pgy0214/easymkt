@@ -4,7 +4,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict
 
 Platform = Literal["naver", "kakao"]
-ReviewerCategory = Literal["admin", "reviewer", "experience", "press", "advertiser"]
+ReviewerCategory = Literal["admin", "own", "reviewer", "experience", "press", "advertiser"]
 Gender = Literal["male", "female"]
 TimeSlot = Literal["morning", "afternoon", "night"]
 ApplicationStatus = Literal["pending", "approved", "rejected"]

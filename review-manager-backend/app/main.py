@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)  # recreate tables migrations may have dropped
     db = SessionLocal()
     try:
+        crud.migrate_self_owned_admin_category(db)
         crud.seed_test_accounts(db)
     finally:
         db.close()
