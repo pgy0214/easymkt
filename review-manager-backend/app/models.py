@@ -66,6 +66,7 @@ class ReviewAccount(Base):
     time_slot = Column(String, nullable=True)  # 'morning'|'afternoon'|'night' — 영수증 시간 배정 밴드. 미설정이면 영수증 생성 보류
     has_login_issue = Column(Boolean, nullable=False, default=False)  # 로그인 불가 등 문제 발생 시 관리자 체크용
     password_encrypted = Column(String, nullable=True)  # Fernet 암호화된 계정 비밀번호 (app/crypto.py)
+    naver_no_date_until = Column(Date, nullable=True)  # 이 날짜(KST)까지는 "최근 7일 다 써서 리뷰 가능한 날짜 없음"으로 이미 확인됨 — 그날은 오픈풀 신청 대상에서 제외
     created_at = Column(DateTime, default=utcnow)
 
     reviewer = relationship("Reviewer", back_populates="accounts")

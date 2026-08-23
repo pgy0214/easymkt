@@ -714,6 +714,9 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
     setAvailability(null)
     try {
       setAvailability(await portalApi.checkAvailability(token))
+      // 방금 확인한 결과(날짜 없는 계정 제외 등)가 "가능한 작업" 신청 계정
+      // 목록에도 바로 반영되도록 오픈풀을 다시 불러온다.
+      await refresh(true)
     } catch (err) {
       alert(err.message)
     } finally {
@@ -1442,8 +1445,8 @@ function PoolTaskRow({ group, myAccounts, onClaim, disabled, claiming }) {
         </div>
         {eligibleAccounts.length === 0 && (
           <div className="text-xs text-warning-text">
-            지금 신청 가능한 계정이 없어요 (재작업 가능 기간이거나, 이 매장은 하루 최대 3개
-            계정까지만 신청할 수 있어요)
+            지금 신청 가능한 계정이 없어요 (재작업 가능 기간이거나, 오늘 리뷰 가능한 날짜가
+            없거나, 이 매장은 하루 최대 3개 계정까지만 신청할 수 있어요)
           </div>
         )}
       </div>

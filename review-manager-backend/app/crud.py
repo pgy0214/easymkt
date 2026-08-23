@@ -1102,14 +1102,32 @@ def get_accounts_used_today_for_store(db: Session, reviewer_id: int, store_id: i
     return {r[0] for r in rows}
 
 
+def mark_account_no_date_today(db: Session, account: models.ReviewAccount) -> None:
+    """이 계정은 오늘(KST) 리뷰 가능한 날짜가 없다고 확인됨 — 같은 날 다시 크롤링
+    해봐야 결과가 똑같으니, 오늘 하루는 오픈풀 신청 대상에서 뺀다."""
+    account.naver_no_date_until = _kst_today_date()
+    db.commit()
+
+
+def clear_account_no_date(db: Session, account: models.ReviewAccount) -> None:
+    if account.naver_no_date_until is not None:
+        account.naver_no_date_until = None
+        db.commit()
+
+
 def get_eligible_account_ids(
     db: Session, accounts: list[models.ReviewAccount], store_id: int, reviewer_id: int
 ) -> list[int]:
     used_today = get_accounts_used_today_for_store(db, reviewer_id, store_id)
     if len(used_today) >= MAX_ACCOUNTS_PER_STORE_PER_DAY:
         return []
+    today = _kst_today_date()
     now = datetime.datetime.utcnow()
-    return [a.id for a in accounts if is_account_eligible_for_store(db, a.id, store_id, now)]
+    return [
+        a.id
+        for a in accounts
+        if a.naver_no_date_until != today and is_account_eligible_for_store(db, a.id, store_id, now)
+    ]
 
 
 def get_account_store_history(db: Session, account_id: int) -> list[schemas.AccountStoreHistoryItem]:

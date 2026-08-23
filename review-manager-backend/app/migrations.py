@@ -93,6 +93,12 @@ def run_migrations(engine) -> None:
             conn, "review_accounts", "adspower_profile_id", "adspower_profile_id TEXT"
         )
 
+        # review_accounts: naver_no_date_until — 최근 7일 리뷰 가능 날짜가 없다고
+        # 이미 확인된 날짜(KST). 오픈풀 신청 대상에서 그날 하루만 제외하는 데 쓴다.
+        _add_column_if_missing(
+            conn, "review_accounts", "naver_no_date_until", "naver_no_date_until DATE"
+        )
+
         # settings: default claim-time presets, now in minutes (was hours). Add
         # the new columns, copy over converted values, then drop the old ones —
         # settings only ever has one row and it's worth preserving in place

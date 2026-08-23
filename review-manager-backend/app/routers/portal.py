@@ -356,6 +356,10 @@ def check_availability(
                 schemas.AccountAvailabilityOut(account_id=account.id, label=account.label, error=str(e))
             )
             continue
+        if date:
+            crud.clear_account_no_date(db, account)
+        else:
+            crud.mark_account_no_date_today(db, account)
         results.append(
             schemas.AccountAvailabilityOut(account_id=account.id, label=account.label, available_date=date)
         )
@@ -399,6 +403,11 @@ def claim_task(
         ok = naver_date_check.check_task_date(db, task)
         if not ok:
             no_date = task.naver_available_date is None
+            if no_date:
+                # 지금 시도한 매장뿐 아니라 이 계정은 오늘 어떤 매장이든 똑같이
+                # 막히므로(계정 자체의 최근 7일 게시 이력 문제), 오늘 하루는
+                # 오픈풀 신청 대상에서 아예 뺀다.
+                crud.mark_account_no_date_today(db, account)
             task.status = "open"
             task.review_account_id = None
             task.claimed_at = None
