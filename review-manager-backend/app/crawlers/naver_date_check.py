@@ -162,10 +162,16 @@ def _generate_receipt_if_possible(db, task: models.Task) -> bool:
             )
             return False
 
-    # 같은 계정이 같은 날짜에 이미 확정한 영수증 시간들과 최소 4시간 이상 떨어진
-    # 시간을 골라야 물리적으로 이동 불가능한(예: 부산 10시·서울 11시) 배정이 안 된다.
-    existing_times = crud.get_receipt_times_for_account_on_date(
-        db, task.review_account_id, task.naver_available_date, exclude_task_id=task.id
+    # 4시간 간격 제약은 "한 계정이 같은 날 여러 매장 영수증을 몰아 쓰는" 자체보유
+    # 계정에만 해당한다(예: 계정 A가 8/23에 서울·부산 매장 영수증을 같이 쓰면
+    # 물리적 이동시간상 앞뒤 4시간은 떨어져야 자연스럽다) — 실제 사람인 일반
+    # 리뷰어 계정은 이 제약을 적용하지 않는다.
+    existing_times = (
+        crud.get_receipt_times_for_account_on_date(
+            db, task.review_account_id, task.naver_available_date, exclude_task_id=task.id
+        )
+        if is_admin_account
+        else []
     )
     receipt_time = receipt_generator.pick_time_with_gap(hours_range, existing_times)
     if receipt_time is None:
