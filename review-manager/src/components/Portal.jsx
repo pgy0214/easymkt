@@ -179,6 +179,11 @@ function LoginFlow({ onLoggedIn }) {
     setError(null)
     try {
       const result = await portalApi.login(username.trim(), password)
+      if (result.reviewer.category === 'advertiser') {
+        localStorage.setItem('advertiser_token', result.token)
+        window.location.href = '/ads'
+        return
+      }
       onLoggedIn(result.token)
     } catch (err) {
       // 리뷰어 계정이 아니면, 관리자 계정으로 들어온 건 아닌지 한 번 더 확인 —
