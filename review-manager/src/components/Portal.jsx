@@ -1,4 +1,4 @@
-import { ExternalLink, LogOut, Trash2, X } from 'lucide-react'
+import { ExternalLink, Loader2, LogOut, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api, API_ORIGIN, portalApi } from '../lib/api.js'
 import {
@@ -648,8 +648,8 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
     setShowRules(false)
   }
 
-  async function refresh() {
-    setLoading(true)
+  async function refresh(silent = false) {
+    if (!silent) setLoading(true)
     try {
       const [me, poolTasks, mine] = await Promise.all([
         portalApi.me(token),
@@ -661,9 +661,9 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
       setMyTasks(mine)
       setError(null)
     } catch (err) {
-      setError(err.message)
+      if (!silent) setError(err.message)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -671,6 +671,16 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
     refresh()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // 날짜 확인(claimed/checking_date)이 백그라운드에서 끝나면 새로고침 없이도
+  // 바로 보이도록, 대기 중인 작업이 있는 동안만 조용히 주기적으로 다시 불러온다.
+  useEffect(() => {
+    const hasPending = myTasks.some((t) => t.status === 'claimed' || t.status === 'checking_date')
+    if (!hasPending) return
+    const id = setInterval(() => refresh(true), 2000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myTasks])
 
   async function handleAddAccount(data) {
     await portalApi.addAccount(token, data)
@@ -839,8 +849,9 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
                 type="button"
                 onClick={handleCheckAvailability}
                 disabled={checkingAvailability}
-                className="rounded-btn border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-btn border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
               >
+                {checkingAvailability && <Loader2 size={12} className="animate-spin" />}
                 {checkingAvailability ? '확인 중...' : '가능한 계정 확인하기'}
               </button>
             </div>

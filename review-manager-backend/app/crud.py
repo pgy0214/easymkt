@@ -9,7 +9,7 @@ import secrets
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app import auth, crypto, models, photo_washer, review_writer, schemas
+from app import auth, crypto, models, photo_washer, receipt_generator, review_writer, schemas
 
 logger = logging.getLogger(__name__)
 
@@ -1173,6 +1173,16 @@ def _kst_today_utc_range() -> tuple[datetime.datetime, datetime.datetime]:
     return start_utc, start_utc + datetime.timedelta(days=1)
 
 
+def is_naver_receipt_possible_for_pool(
+    target: models.ReviewTarget, store: models.Store | None
+) -> bool:
+    if not target.menu_items_json:
+        return False
+    if not store:
+        return False
+    return receipt_generator.clip_band_to_store_hours("night", store.representative_hours) is not None
+
+
 def get_open_pool_tasks(db: Session, platforms: list[str]) -> list[models.Task]:
     tasks = (
         db.query(models.Task)
@@ -1201,6 +1211,17 @@ def get_open_pool_tasks(db: Session, platforms: list[str]) -> list[models.Task]:
         return True
 
     tasks = [t for t in tasks if within_campaign_period(t)]
+
+    # 네이버 영수증 생성이 애초에 불가능한 캠페인(메뉴 미등록/매장 영업시간이 밤
+    # 시간대와 안 겹침)은 신청해도 영수증을 못 받으니 오픈풀에 노출하지 않는다.
+    # 계정마다 달라지는 "4시간 간격" 조건은 여기서 알 수 없어 신청(claim) 시점에
+    # 확인한다 — is_naver_receipt_possible_for_pool 참고.
+    tasks = [
+        t
+        for t in tasks
+        if t.platform != "naver"
+        or is_naver_receipt_possible_for_pool(t.review_target, t.review_target.store)
+    ]
 
     # daily_limit: once N tasks from a campaign have been claimed today
     # (KST), hide the rest of that campaign's open tasks from the pool until

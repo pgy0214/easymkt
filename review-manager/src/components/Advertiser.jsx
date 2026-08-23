@@ -1,4 +1,4 @@
-import { Loader2, LogOut, Plus, Upload, X } from 'lucide-react'
+import { ExternalLink, Loader2, LogOut, Plus, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { advertiserApi, api, API_ORIGIN, portalApi } from '../lib/api.js'
 import {
@@ -719,6 +719,13 @@ function AdvertiserHome({ token, onLogout }) {
       setError('매장을 선택해주세요.')
       return
     }
+    const menuItems = reviewTargetForm.menu_items
+      .filter((item) => item.name.trim() && item.price !== '')
+      .map((item) => ({ name: item.name.trim(), price: Number(item.price) }))
+    if (menuItems.length === 0) {
+      setError('메뉴를 1개 이상 등록해주세요 — 영수증 생성에 꼭 필요합니다.')
+      return
+    }
     if (reviewTargetForm.work_days.length === 0) {
       setError('작업요일을 최소 하루 이상 선택해주세요.')
       return
@@ -734,9 +741,6 @@ function AdvertiserHome({ token, onLogout }) {
     setSubmitting(true)
     setError(null)
     try {
-      const menuItems = reviewTargetForm.menu_items
-        .filter((item) => item.name.trim() && item.price !== '')
-        .map((item) => ({ name: item.name.trim(), price: Number(item.price) }))
       const target = await advertiserApi.createReviewTarget(token, {
         store_id: Number(reviewTargetForm.store_id),
         required_count: reviewTargetTotalCount,
@@ -838,15 +842,21 @@ function AdvertiserHome({ token, onLogout }) {
           <div className="space-y-2">
             {stores.map((s) => (
               <div key={s.id} className="flex items-center justify-between rounded-btn border border-gray-200 p-3">
-                <div>
-                  <div className="font-medium text-gray-800">{s.name}</div>
-                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">
-                    {s.url}
+                <div className="font-medium text-gray-800">{s.name}</div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-btn border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                  >
+                    스마트플레이스 바로가기
+                    <ExternalLink size={12} />
                   </a>
+                  <Button size="sm" variant="outline" onClick={() => setEditingStore(s)}>
+                    매장정보 수정하기
+                  </Button>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setEditingStore(s)}>
-                  매장정보 수정하기
-                </Button>
               </div>
             ))}
           </div>
@@ -1360,8 +1370,8 @@ function AdvertiserHome({ token, onLogout }) {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500">
-                      메뉴 3개 (매장의 대표상품에서 자동으로 채워집니다 — 이 캠페인만 다르게 쓰려면
-                      직접 수정하세요. 영수증 이미지 생성에도 사용됩니다)
+                      메뉴 (필수, 최소 1개) — 매장의 대표상품에서 자동으로 채워집니다. 이 캠페인만
+                      다르게 쓰려면 직접 수정하세요. 영수증 이미지 생성에 꼭 필요합니다.
                     </label>
                     {selectedReviewTargetStore && !selectedReviewTargetStore.representative_product && (
                       <p className="mt-1 text-xs text-warning-text">

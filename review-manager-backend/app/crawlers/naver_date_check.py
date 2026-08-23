@@ -68,9 +68,40 @@ def _parse_date_text(text: str) -> datetime.date | None:
     return None
 
 
+def check_task_date(db, task: models.Task) -> bool:
+    """작업 하나의 네이버 리뷰 가능 날짜를 지금 바로 확인하고(브라우저를 띄우므로
+    몇 초 걸릴 수 있음), 찾으면 ready로 전환 + 영수증 생성까지 처리한다. 신청
+    직후(포털 claim) 동기 호출과 2분 주기 run_job 양쪽에서 재사용한다.
+    반환값은 "ready 전환 + 영수증 생성까지 성공"했는지 여부 — 날짜를 못 찾아
+    다음 주기에 재시도해야 하는 경우와, 날짜는 찾았지만 영수증을 못 만든 경우
+    모두 False다(호출부에서 구분하려면 task.naver_available_date를 같이 본다)."""
+    account = task.review_account
+    if not account or not account.profile_url:
+        logger.warning("Task %s: 프로필 URL이 없어 날짜 확인을 건너뜁니다", task.id)
+        task.status = "claimed"
+        db.commit()
+        return False
+
+    try:
+        date = find_next_available_date(account.profile_url)
+    except Exception:
+        logger.exception("Task %s 날짜 확인 실패", task.id)
+        date = None
+
+    task.naver_available_date = date
+    task.status = "ready" if date else "claimed"
+    db.commit()
+
+    if not date:
+        return False
+    return _generate_receipt_if_possible(db, task)
+
+
 def run_job(db) -> None:
     # 'claimed' = a reviewer just picked this up via the open pool; this job
     # runs the one-time date pre-check before it becomes 'ready' to work on
+    # (포털에서 직접 신청한 건은 claim 시점에 이미 동기로 처리되므로 보통
+    # 여기 안 걸림 — 그 처리가 실패했거나 관리자 수동배정 등으로 남은 것만 재시도)
     tasks = (
         db.query(models.Task)
         .filter(models.Task.status == "claimed", models.Task.platform == "naver")
@@ -82,41 +113,24 @@ def run_job(db) -> None:
     db.commit()
 
     for task in tasks:
-        account = task.review_account
-        if not account or not account.profile_url:
-            logger.warning("Task %s: 프로필 URL이 없어 날짜 확인을 건너뜁니다", task.id)
-            task.status = "claimed"
-            db.commit()
-            continue
-
-        try:
-            date = find_next_available_date(account.profile_url)
-        except Exception:
-            logger.exception("Task %s 날짜 확인 실패", task.id)
-            date = None
-
-        task.naver_available_date = date
-        task.status = "ready" if date else "claimed"
-        db.commit()
-
-        if date:
-            _generate_receipt_if_possible(db, task)
+        check_task_date(db, task)
 
 
-def _generate_receipt_if_possible(db, task: models.Task) -> None:
-    """네이버 영수증 날짜가 정해지면(=ready) 영수증 이미지를 만들어둔다. 캠페인에
-    메뉴가 등록 안 됐으면 조용히 건너뛴다 — 관리자가 나중에 메뉴를 채우고
-    수동으로 다시 시도할 수 있다(현재는 별도 재시도 버튼 없음, 알려진 제약)."""
+def _generate_receipt_if_possible(db, task: models.Task) -> bool:
+    """네이버 영수증 날짜가 정해지면(=ready) 영수증 이미지를 만들어둔다. 오픈풀
+    단계에서 이미 메뉴/영업시간 조건은 걸러졌으므로(crud.is_naver_receipt_possible_for_pool)
+    여기서 더 실패할 수 있는 건 사실상 계정별 4시간 간격 조건뿐이다 — 그래도 방어적으로
+    모든 실패 케이스에서 False를 반환해, 호출부(포털 claim)가 신청 자체를 되돌릴 수 있게 한다."""
     target = task.review_target
     store = target.store if target else None
     if not store:
-        return
+        return False
     menu_items = crud.decode_menu_items(target.menu_items_json)
     card_rules = crud.card_rules_as_dicts(db)
 
     account = task.review_account
     if not account:
-        return
+        return False
     is_admin_account = bool(account.reviewer and account.reviewer.category == "own")
 
     if is_admin_account:
@@ -132,7 +146,7 @@ def _generate_receipt_if_possible(db, task: models.Task) -> None:
                 task.id,
                 store.representative_hours,
             )
-            return
+            return False
         if account.time_slot in available_bands:
             hours_range = available_bands[account.time_slot]
         else:
@@ -146,7 +160,7 @@ def _generate_receipt_if_possible(db, task: models.Task) -> None:
                 "Task %s: 매장이 밤 시간대(18~21시)에 영업하지 않아 영수증 생성을 건너뜁니다",
                 task.id,
             )
-            return
+            return False
 
     # 같은 계정이 같은 날짜에 이미 확정한 영수증 시간들과 최소 4시간 이상 떨어진
     # 시간을 골라야 물리적으로 이동 불가능한(예: 부산 10시·서울 11시) 배정이 안 된다.
@@ -160,7 +174,7 @@ def _generate_receipt_if_possible(db, task: models.Task) -> None:
             task.id,
             task.naver_available_date,
         )
-        return
+        return False
 
     try:
         path = receipt_generator.generate_receipt_for_task(
@@ -168,8 +182,10 @@ def _generate_receipt_if_possible(db, task: models.Task) -> None:
         )
     except Exception:
         logger.exception("Task %s 영수증 생성 실패", task.id)
-        return
-    if path:
-        task.receipt_image_path = path
-        task.receipt_time = receipt_time
-        db.commit()
+        return False
+    if not path:
+        return False
+    task.receipt_image_path = path
+    task.receipt_time = receipt_time
+    db.commit()
+    return True

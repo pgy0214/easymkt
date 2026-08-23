@@ -150,6 +150,8 @@ def create_my_review_target(
     store = crud.get_store(db, data.store_id)
     if not store or store.owner_reviewer_id != reviewer.id:
         raise HTTPException(status_code=404, detail="본인 소유 매장이 아닙니다")
+    if not data.menu_items:
+        raise HTTPException(status_code=400, detail="메뉴를 1개 이상 등록해야 캠페인을 개설할 수 있습니다")
     try:
         return crud.target_to_out(crud.create_review_target(db, data))
     except ValueError as e:

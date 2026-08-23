@@ -385,9 +385,30 @@ def claim_task(
     if not account or account.reviewer_id != reviewer.id:
         raise HTTPException(status_code=400, detail="본인 소유 계정이 아닙니다")
     try:
-        return crud.task_to_out(db, crud.claim_task(db, task, account))
+        task = crud.claim_task(db, task, account)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    if task.platform == "naver":
+        # "가능한 계정 확인하기"가 어차피 같은 크롤링을 미리 해봤을 수도 있지만,
+        # 신청 시점의 최신 상태를 다시 한번 확인해 바로 ready로 넘긴다 — 2분 주기
+        # 백그라운드 작업을 기다리지 않아도 되게 한다. 날짜는 찾았는데 영수증을
+        # 못 만드는 경우(계정별 4시간 간격 등)는 이 계정으로는 애초에 안 되는
+        # 것이므로 신청 자체를 오픈풀로 되돌린다.
+        ok = naver_date_check.check_task_date(db, task)
+        if not ok and task.naver_available_date is not None:
+            task.status = "open"
+            task.review_account_id = None
+            task.claimed_at = None
+            task.claim_deadline = None
+            task.naver_available_date = None
+            db.commit()
+            raise HTTPException(
+                status_code=400,
+                detail="이 계정으로는 지금 영수증을 만들 수 있는 시간대가 없어요. 다른 계정으로 시도해주세요",
+            )
+
+    return crud.task_to_out(db, task)
 
 
 @router.patch("/tasks/{task_id}/result", response_model=schemas.TaskOut)
