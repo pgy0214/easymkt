@@ -58,7 +58,6 @@ export default function AccountForm({ onCreate, showIp = false }) {
         <Input
           value={form.label}
           onChange={(e) => setForm({ ...form, label: e.target.value })}
-          placeholder="계정 닉네임"
           className="w-32"
         />
       </div>

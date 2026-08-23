@@ -1078,9 +1078,36 @@ def is_account_eligible_for_store(
     return now >= eligible_at
 
 
+# 한 리뷰어가 하루에 한 매장에 쓸 수 있는 서로 다른 계정 수 상한 — 매장 재작업
+# 쿨다운과는 별개로, 같은 사람이 여러 계정으로 몰아서 하루에 한 매장을 도배하는
+# 것을 막기 위한 제한(계정별 쿨다운 통과 여부와 무관하게 적용).
+MAX_ACCOUNTS_PER_STORE_PER_DAY = 3
+
+
+def get_accounts_used_today_for_store(db: Session, reviewer_id: int, store_id: int) -> set[int]:
+    start_utc, end_utc = _kst_today_utc_range()
+    rows = (
+        db.query(models.Task.review_account_id)
+        .join(models.ReviewAccount, models.Task.review_account_id == models.ReviewAccount.id)
+        .join(models.ReviewTarget, models.Task.review_target_id == models.ReviewTarget.id)
+        .filter(
+            models.ReviewAccount.reviewer_id == reviewer_id,
+            models.ReviewTarget.store_id == store_id,
+            models.Task.claimed_at >= start_utc,
+            models.Task.claimed_at < end_utc,
+        )
+        .distinct()
+        .all()
+    )
+    return {r[0] for r in rows}
+
+
 def get_eligible_account_ids(
-    db: Session, accounts: list[models.ReviewAccount], store_id: int
+    db: Session, accounts: list[models.ReviewAccount], store_id: int, reviewer_id: int
 ) -> list[int]:
+    used_today = get_accounts_used_today_for_store(db, reviewer_id, store_id)
+    if len(used_today) >= MAX_ACCOUNTS_PER_STORE_PER_DAY:
+        return []
     now = datetime.datetime.utcnow()
     return [a.id for a in accounts if is_account_eligible_for_store(db, a.id, store_id, now)]
 
@@ -1245,7 +1272,9 @@ def get_open_pool_summary(
                 remaining_today=remaining_today,
                 total_today=total_today,
                 sample_task_id=min(t.id for t in target_tasks),
-                eligible_account_ids=get_eligible_account_ids(db, my_accounts, target.store_id),
+                eligible_account_ids=get_eligible_account_ids(
+                    db, my_accounts, target.store_id, reviewer.id
+                ),
             )
         )
     return groups
@@ -1268,6 +1297,13 @@ def claim_task(db: Session, task: models.Task, account: models.ReviewAccount) ->
         raise ValueError("플랫폼이 일치하지 않는 계정입니다")
     if not is_account_eligible_for_store(db, account.id, task.review_target.store_id):
         raise ValueError("이 계정은 해당 매장의 재작업 가능 기간이 아직 지나지 않았습니다")
+    used_today = get_accounts_used_today_for_store(
+        db, account.reviewer_id, task.review_target.store_id
+    )
+    if account.id not in used_today and len(used_today) >= MAX_ACCOUNTS_PER_STORE_PER_DAY:
+        raise ValueError(
+            f"이 매장은 하루에 최대 {MAX_ACCOUNTS_PER_STORE_PER_DAY}개 계정까지만 신청할 수 있습니다"
+        )
 
     now = datetime.datetime.utcnow()
     task.review_account_id = account.id

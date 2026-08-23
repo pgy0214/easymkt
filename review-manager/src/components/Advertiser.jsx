@@ -14,6 +14,7 @@ import {
 } from '../lib/format.js'
 import ProductRowsEditor from './ProductRowsEditor.jsx'
 import CopyButton from './CopyButton.jsx'
+import StoreEditModal from './StoreEditModal.jsx'
 import Badge from './ui/Badge.jsx'
 import Button from './ui/Button.jsx'
 import Card from './ui/Card.jsx'
@@ -506,6 +507,7 @@ function AdvertiserHome({ token, onLogout }) {
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [storeModalOpen, setStoreModalOpen] = useState(false)
+  const [editingStore, setEditingStore] = useState(null)
   const [campaignModalOpen, setCampaignModalOpen] = useState(false)
   const [storeForm, setStoreForm] = useState(EMPTY_STORE)
   const [fetching, setFetching] = useState(false)
@@ -738,8 +740,9 @@ function AdvertiserHome({ token, onLogout }) {
       const target = await advertiserApi.createReviewTarget(token, {
         store_id: Number(reviewTargetForm.store_id),
         required_count: reviewTargetTotalCount,
-        unit_price: Number(reviewTargetForm.unit_price),
-        sale_price: reviewTargetForm.sale_price === '' ? null : Number(reviewTargetForm.sale_price),
+        // 단가는 관리자가 캠페인관리에서 확인 후 정하는 값이라 광고주 개설 화면에는 없음
+        unit_price: 0,
+        sale_price: null,
         work_days: reviewTargetForm.work_days,
         daily_limit: Number(reviewTargetForm.daily_limit),
         start_date: reviewTargetForm.start_date || null,
@@ -834,11 +837,16 @@ function AdvertiserHome({ token, onLogout }) {
         {stores.length > 0 && (
           <div className="space-y-2">
             {stores.map((s) => (
-              <div key={s.id} className="rounded-btn border border-gray-200 p-3">
-                <div className="font-medium text-gray-800">{s.name}</div>
-                <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">
-                  {s.url}
-                </a>
+              <div key={s.id} className="flex items-center justify-between rounded-btn border border-gray-200 p-3">
+                <div>
+                  <div className="font-medium text-gray-800">{s.name}</div>
+                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">
+                    {s.url}
+                  </a>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setEditingStore(s)}>
+                  매장정보 수정하기
+                </Button>
               </div>
             ))}
           </div>
@@ -923,6 +931,19 @@ function AdvertiserHome({ token, onLogout }) {
           </div>
         )}
       </Card>
+
+      {editingStore && (
+        <StoreEditModal
+          store={editingStore}
+          onClose={() => setEditingStore(null)}
+          onSaved={(updated) => {
+            setStores((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
+            setEditingStore(null)
+          }}
+          showCooldown={false}
+          updateFn={(id, data) => advertiserApi.updateStore(token, id, data)}
+        />
+      )}
 
       {storeModalOpen && (
         <Modal open onClose={() => setStoreModalOpen(false)}>
@@ -1182,29 +1203,6 @@ function AdvertiserHome({ token, onLogout }) {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-500">리뷰어 단가 (원)</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={reviewTargetForm.unit_price}
-                      onChange={(e) => setReviewTargetForm({ ...reviewTargetForm, unit_price: e.target.value })}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-500">판매단가 (원, 선택)</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={reviewTargetForm.sale_price}
-                      onChange={(e) => setReviewTargetForm({ ...reviewTargetForm, sale_price: e.target.value })}
-                      placeholder="비워두면 매출 집계에서 제외"
-                      className="w-full"
-                    />
-                  </div>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500">작업 기간 (총 건수 계산에 사용됩니다)</label>

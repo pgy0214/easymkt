@@ -634,6 +634,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const [claimingTaskId, setClaimingTaskId] = useState(null)
   const [availability, setAvailability] = useState(null)
   const [rulesAcknowledged, setRulesAcknowledged] = useState(
     () => localStorage.getItem(WORK_RULES_KEY) === 'true',
@@ -687,11 +688,14 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   }
 
   async function handleClaim(taskId, accountId) {
+    setClaimingTaskId(taskId)
     try {
       await portalApi.claimTask(token, taskId, accountId)
       await refresh()
     } catch (err) {
       alert(err.message)
+    } finally {
+      setClaimingTaskId(null)
     }
   }
 
@@ -788,9 +792,14 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
       ) : (
         <>
           <Card padding="md" className="space-y-2">
+            <h2 className="font-medium text-gray-800">계정 등록</h2>
+            <AccountForm onCreate={handleAddAccount} />
+          </Card>
+
+          <Card padding="md" className="space-y-2">
             <h2 className="font-medium text-gray-800">내 계정</h2>
             {reviewer.accounts.length === 0 && (
-              <p className="text-sm text-gray-400">등록된 계정이 없습니다. 아래에서 추가해주세요.</p>
+              <p className="text-sm text-gray-400">등록된 계정이 없습니다. 위에서 추가해주세요.</p>
             )}
             {reviewer.accounts.map((account) => (
               <div
@@ -821,7 +830,6 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
                 </div>
               </div>
             ))}
-            <AccountForm onCreate={handleAddAccount} />
           </Card>
 
           <Card padding="md" className="space-y-2">
@@ -868,6 +876,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
                 myAccounts={reviewer.accounts.filter((a) => a.platform === group.platform)}
                 onClaim={handleClaim}
                 disabled={checkingAvailability}
+                claiming={claimingTaskId === group.sample_task_id}
               />
             ))}
           </Card>
@@ -1407,7 +1416,7 @@ function ExperienceCampaignDetailModal({ campaign: c, applying, onApply, onClose
   )
 }
 
-function PoolTaskRow({ group, myAccounts, onClaim, disabled }) {
+function PoolTaskRow({ group, myAccounts, onClaim, disabled, claiming }) {
   const eligibleIds = new Set(group.eligible_account_ids ?? myAccounts.map((a) => a.id))
   const eligibleAccounts = myAccounts.filter((a) => eligibleIds.has(a.id))
   const [accountId, setAccountId] = useState(eligibleAccounts[0]?.id ?? '')
@@ -1422,13 +1431,14 @@ function PoolTaskRow({ group, myAccounts, onClaim, disabled }) {
         </div>
         {eligibleAccounts.length === 0 && (
           <div className="text-xs text-warning-text">
-            보유 계정이 모두 이 매장의 재작업 가능 기간이 지나지 않았어요
+            지금 신청 가능한 계정이 없어요 (재작업 가능 기간이거나, 이 매장은 하루 최대 3개
+            계정까지만 신청할 수 있어요)
           </div>
         )}
       </div>
       {eligibleAccounts.length > 0 && (
         <div className="flex items-center gap-2">
-          {eligibleAccounts.length > 1 && (
+          {eligibleAccounts.length > 1 ? (
             <select
               value={accountId}
               onChange={(e) => setAccountId(Number(e.target.value))}
@@ -1440,14 +1450,16 @@ function PoolTaskRow({ group, myAccounts, onClaim, disabled }) {
                 </option>
               ))}
             </select>
+          ) : (
+            <span className="text-xs text-gray-500">{eligibleAccounts[0].label} 계정으로</span>
           )}
           <Button
             variant="primary"
             size="sm"
             onClick={() => onClaim(group.sample_task_id, accountId)}
-            disabled={!accountId || disabled}
+            disabled={!accountId || disabled || claiming}
           >
-            작업신청
+            {claiming ? '신청중입니다...' : '작업신청'}
           </Button>
         </div>
       )}
@@ -1462,9 +1474,9 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
 
   return (
     <div className="rounded-btn border border-gray-100 px-3 py-2 text-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div className="font-medium text-gray-700">{task.store_name}</div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-1">
           <span className="text-xs text-gray-500">{PLATFORM_LABEL[task.platform]}</span>
           <button
             type="button"
@@ -1475,25 +1487,20 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
           >
             리뷰 자료 보기
           </button>
-        </div>
-      </div>
-      {(task.account_label || task.account_profile_url) && (
-        <div className="mt-0.5 text-xs text-gray-500">
-          작업 계정: {task.account_label || '-'}
           {task.account_profile_url && (
-            <>
-              {' · '}
-              <a
-                href={task.account_profile_url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-brand-600 hover:underline"
-              >
-                플레이스 주소 열기
-              </a>
-            </>
+            <a
+              href={task.account_profile_url}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
+            >
+              작업하러가기
+            </a>
           )}
         </div>
+      </div>
+      {task.account_label && (
+        <div className="mt-0.5 text-xs text-gray-500">작업 계정: {task.account_label}</div>
       )}
       {task.claim_deadline && task.status !== 'completed' && (
         <div className="text-xs text-gray-500">기한: {formatDateTime(task.claim_deadline)}</div>

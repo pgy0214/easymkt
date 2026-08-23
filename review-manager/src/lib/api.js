@@ -305,6 +305,8 @@ export const advertiserApi = {
   getStores: (token) => authedRequest('/advertiser/stores', token),
   createStore: (token, data) =>
     authedRequest('/advertiser/stores', token, { method: 'POST', body: JSON.stringify(data) }),
+  updateStore: (token, id, data) =>
+    authedRequest(`/advertiser/stores/${id}`, token, { method: 'PATCH', body: JSON.stringify(data) }),
   getCampaigns: (token) => authedRequest('/advertiser/campaigns', token),
   createCampaign: (token, data) =>
     authedRequest('/advertiser/campaigns', token, { method: 'POST', body: JSON.stringify(data) }),

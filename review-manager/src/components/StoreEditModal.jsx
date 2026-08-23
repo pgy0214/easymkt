@@ -6,7 +6,7 @@ import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
 import Modal from './ui/Modal.jsx'
 
-export default function StoreEditModal({ store, onClose, onSaved }) {
+export default function StoreEditModal({ store, onClose, onSaved, showCooldown = true, updateFn }) {
   const [url, setUrl] = useState(store.url)
   const [representativeProduct, setRepresentativeProduct] = useState(
     store.representative_product || '',
@@ -24,10 +24,11 @@ export default function StoreEditModal({ store, onClose, onSaved }) {
     setSaving(true)
     setError(null)
     try {
-      const updated = await api.updateStore(store.id, {
+      const save = updateFn || api.updateStore
+      const updated = await save(store.id, {
         url: url.trim(),
         representative_product: representativeProduct.trim() || null,
-        cooldown_days: Number(cooldownDays),
+        ...(showCooldown ? { cooldown_days: Number(cooldownDays) } : {}),
         business_registration_number: businessRegistrationNumber.trim() || null,
         representative_name: representativeName.trim() || null,
         phone: phone.trim() || null,
@@ -57,13 +58,15 @@ export default function StoreEditModal({ store, onClose, onSaved }) {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
       />
-      <Input
-        label="재작업 가능 주기 (일)"
-        type="number"
-        min="1"
-        value={cooldownDays}
-        onChange={(e) => setCooldownDays(e.target.value)}
-      />
+      {showCooldown && (
+        <Input
+          label="재작업 가능 주기 (일)"
+          type="number"
+          min="1"
+          value={cooldownDays}
+          onChange={(e) => setCooldownDays(e.target.value)}
+        />
+      )}
       <div>
         <label className="block text-xs text-gray-500">대표상품</label>
         <ProductRowsEditor value={representativeProduct} onChange={setRepresentativeProduct} />

@@ -64,6 +64,19 @@ def create_my_store(
     return crud.create_store(db, data, owner_reviewer_id=reviewer.id)
 
 
+@router.patch("/stores/{store_id}", response_model=schemas.StoreOut)
+def update_my_store(
+    store_id: int,
+    data: schemas.StoreUpdate,
+    reviewer: models.Reviewer = Depends(get_current_advertiser),
+    db: Session = Depends(get_db),
+):
+    store = crud.get_store(db, store_id)
+    if not store or store.owner_reviewer_id != reviewer.id:
+        raise HTTPException(status_code=404, detail="매장을 찾을 수 없습니다")
+    return crud.update_store(db, store, data)
+
+
 @router.get("/campaigns", response_model=list[schemas.ExperienceCampaignOut])
 def list_my_campaigns(
     reviewer: models.Reviewer = Depends(get_current_advertiser), db: Session = Depends(get_db)
