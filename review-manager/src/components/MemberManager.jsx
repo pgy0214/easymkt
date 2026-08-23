@@ -38,6 +38,11 @@ export default function MemberManager() {
   const [addSubmitting, setAddSubmitting] = useState(false)
   const [addError, setAddError] = useState(null)
 
+  const [editTarget, setEditTarget] = useState(null)
+  const [editForm, setEditForm] = useState(null)
+  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [editError, setEditError] = useState(null)
+
   useEffect(() => {
     api
       .getReviewers()
@@ -59,6 +64,32 @@ export default function MemberManager() {
       setAddError(err.message)
     } finally {
       setAddSubmitting(false)
+    }
+  }
+
+  function openEdit(reviewer) {
+    setEditTarget(reviewer)
+    setEditForm({
+      name: reviewer.name || '',
+      contact_info: reviewer.contact_info || '',
+      region: reviewer.region || '',
+      bank_account: reviewer.bank_account || '',
+    })
+    setEditError(null)
+  }
+
+  async function handleEditMember(e) {
+    e.preventDefault()
+    setEditSubmitting(true)
+    setEditError(null)
+    try {
+      const updated = await api.updateReviewer(editTarget.id, editForm)
+      setReviewers((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+      setEditTarget(null)
+    } catch (err) {
+      setEditError(err.message)
+    } finally {
+      setEditSubmitting(false)
     }
   }
 
@@ -163,6 +194,7 @@ export default function MemberManager() {
                 <th className="px-3 py-2">카테고리</th>
                 <th className="px-3 py-2">이름</th>
                 <th className="px-3 py-2">연락처</th>
+                <th className="px-3 py-2">계좌번호</th>
                 <th className="px-3 py-2">지역</th>
                 <th className="px-3 py-2">활동</th>
                 <th className="px-3 py-2">사업자등록증</th>
@@ -192,6 +224,7 @@ export default function MemberManager() {
                       </div>
                     </td>
                     <td className="px-3 py-2 align-top text-gray-600">{r.contact_info || '-'}</td>
+                    <td className="px-3 py-2 align-top text-gray-600">{r.bank_account || '-'}</td>
                     <td className="px-3 py-2 align-top text-gray-600">{r.region || '-'}</td>
                     <td className="px-3 py-2 align-top">
                       <div className="flex flex-wrap gap-1">
@@ -235,6 +268,12 @@ export default function MemberManager() {
                     </td>
                     <td className="px-3 py-2 align-top">
                       <div className="flex flex-col items-start gap-1">
+                        <button
+                          onClick={() => openEdit(r)}
+                          className="whitespace-nowrap text-xs text-brand-600 hover:underline"
+                        >
+                          수정
+                        </button>
                         <button
                           onClick={() => handleToggleActive(r)}
                           className={`whitespace-nowrap text-xs hover:underline ${
@@ -331,6 +370,54 @@ export default function MemberManager() {
             {addSubmitting ? '추가 중...' : '추가'}
           </Button>
         </form>
+      </Modal>
+
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)}>
+        <h3 className="mb-3 font-semibold text-gray-800">
+          회원 정보 수정 {editTarget && <span className="text-gray-400">(@{editTarget.username})</span>}
+        </h3>
+        {editForm && (
+          <form onSubmit={handleEditMember} className="space-y-3">
+            <div>
+              <label className="block text-xs text-gray-500">이름</label>
+              <Input
+                value={editForm.name}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                className="w-full"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500">연락처</label>
+              <Input
+                value={editForm.contact_info}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, contact_info: e.target.value }))}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500">계좌번호</label>
+              <Input
+                value={editForm.bank_account}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, bank_account: e.target.value }))}
+                placeholder="은행명 계좌번호"
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500">지역</label>
+              <Input
+                value={editForm.region}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, region: e.target.value }))}
+                className="w-full"
+              />
+            </div>
+            {editError && <p className="text-sm text-danger-text">{editError}</p>}
+            <Button type="submit" variant="primary" disabled={editSubmitting} className="w-full">
+              {editSubmitting ? '저장 중...' : '저장'}
+            </Button>
+          </form>
+        )}
       </Modal>
     </div>
   )

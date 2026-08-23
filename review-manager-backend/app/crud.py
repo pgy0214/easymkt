@@ -257,6 +257,8 @@ def update_reviewer(
         )
     if data.is_active is not None:
         reviewer.is_active = data.is_active
+    if data.bank_account is not None:
+        reviewer.bank_account = data.bank_account
     if data.region is not None:
         reviewer.region = data.region
     if data.blog_url is not None:

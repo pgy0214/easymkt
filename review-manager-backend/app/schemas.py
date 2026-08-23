@@ -121,6 +121,7 @@ class ReviewerUpdate(BaseModel):
     memo: Optional[str] = None
     contact_info: Optional[str] = None
     is_active: Optional[bool] = None
+    bank_account: Optional[str] = None
     region: Optional[str] = None
     blog_url: Optional[str] = None
     blog_index: Optional[str] = None
