@@ -28,6 +28,7 @@ class Reviewer(Base):
     memo = Column(String, nullable=True)
     contact_info = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)  # 연락가능(작업배정 대상) 여부
+    bank_account = Column(String, nullable=True)  # 정산용 계좌번호 (은행명 포함해서 자유 표기), 회원가입 시 입력
     region = Column(String, nullable=True)  # 체험단 전용
     blog_url = Column(String, nullable=True)  # 체험단 전용
     blog_index = Column(String, nullable=True)  # 체험단 전용, 블로그 지수(등급/점수 등 자유 표기)
@@ -177,17 +178,23 @@ class Task(Base):
     review_target_id = Column(Integer, ForeignKey("review_targets.id"), nullable=False)
     review_account_id = Column(Integer, ForeignKey("review_accounts.id"), nullable=True)
     platform = Column(String, nullable=False)
+    sequence_no = Column(Integer, nullable=True)  # 캠페인 내 순번(1부터) — 작업번호(캠페인ID+순번) 생성과 정렬 기준
 
     status = Column(String, nullable=False, default="open")
     # open (unclaimed, pool) -> claimed (reviewer picked it up)
-    #   -> checking_date (naver only) -> ready -> completed
+    #   -> checking_date (naver only) -> ready -> submitted -> completed
     #   -> claimed/checking_date/ready can expire back to 'open' (claim_deadline passed)
+    # 'submitted': 리뷰어가 포털에서 결과 링크를 제출했지만 관리자가 아직 확인/완료
+    # 처리하지 않은 상태. 자체보유(own/admin) 계정은 관리자가 직접 링크를 입력하며
+    # 바로 completed로 넘어가고(submitted를 거치지 않음).
 
     claimed_at = Column(DateTime, nullable=True)
     claim_deadline = Column(DateTime, nullable=True)
     last_expired_at = Column(DateTime, nullable=True)  # for admin dashboard notice
 
+    reject_reason = Column(String, nullable=True)  # 관리자가 제출 결과를 반려하며 남긴 수정사항 — 리뷰어가 다시 제출하면 비워짐
     naver_available_date = Column(Date, nullable=True)  # "영수증 날짜"
+    scheduled_date = Column(Date, nullable=True)  # 이 작업이 배정된 날짜 몫 — 캠페인 생성 시점에 시작일/작업요일/일일한도로 미리 계산해둔다(관리자 작업현황의 기간 필터가 이 값 기준)
     receipt_time = Column(Time, nullable=True)  # 영수증에 찍힌 실제 시:분:초 (같은 계정·같은 날짜 4시간 간격 체크용)
     result_link = Column(String, nullable=True)
     completed_at = Column(DateTime, nullable=True)

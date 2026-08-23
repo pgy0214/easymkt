@@ -154,11 +154,24 @@ export const api = {
     request('/targets/preview-review-text', { method: 'POST', body: JSON.stringify(data) }),
 
   getTasks: (params = {}) => request(`/tasks${toQueryString(params)}`),
+  exportTasks: async (params = {}) => {
+    const res = await fetch(`${BASE_URL}/tasks/export${toQueryString(params)}`, {
+      headers: adminAuthHeader(),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.detail || `다운로드 실패 (${res.status})`)
+    }
+    return res.blob()
+  },
   updateTaskResult: (id, resultLink) =>
     request(`/tasks/${id}/result`, {
       method: 'PATCH',
       body: JSON.stringify({ result_link: resultLink }),
     }),
+  completeTask: (id) => request(`/tasks/${id}/complete`, { method: 'POST' }),
+  rejectTask: (id, reason) =>
+    request(`/tasks/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
   updateTaskSettlement: (id, data) =>
     request(`/tasks/${id}/settlement`, { method: 'PATCH', body: JSON.stringify(data) }),
   recheckBlind: (id) => request(`/tasks/${id}/recheck-blind`, { method: 'POST' }),

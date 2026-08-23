@@ -1,8 +1,11 @@
+import io
 import threading
 import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
 from sqlalchemy.orm import Session
 
 from app import crud, importers, schemas
@@ -47,6 +50,12 @@ def list_tasks(
     reviewer_category: Optional[str] = None,
     created_from: Optional[str] = None,
     created_to: Optional[str] = None,
+    scheduled_from: Optional[str] = None,
+    scheduled_to: Optional[str] = None,
+    completed_from: Optional[str] = None,
+    completed_to: Optional[str] = None,
+    store_id: Optional[int] = None,
+    search: Optional[str] = None,
     sort: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
@@ -61,9 +70,69 @@ def list_tasks(
         reviewer_category=reviewer_category,
         created_from=created_from,
         created_to=created_to,
+        scheduled_from=scheduled_from,
+        scheduled_to=scheduled_to,
+        completed_from=completed_from,
+        completed_to=completed_to,
+        store_id=store_id,
+        search=search,
         sort=sort,
     )
     return [crud.task_to_out(db, t) for t in tasks]
+
+
+@router.get("/export")
+def export_tasks(
+    reviewer_id: Optional[int] = None,
+    account_id: Optional[int] = None,
+    platform: Optional[str] = None,
+    status: Optional[str] = None,
+    blind_status: Optional[str] = None,
+    settlement_status: Optional[str] = None,
+    reviewer_category: Optional[str] = None,
+    scheduled_from: Optional[str] = None,
+    scheduled_to: Optional[str] = None,
+    store_id: Optional[int] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """조회 조건에 맞는 작업들을 엑셀로 내려받는다 — 작업번호/영수증날짜/작업날짜
+    (=배정된 날짜, claimed_at)/작업링크."""
+    tasks = crud.get_tasks(
+        db,
+        reviewer_id=reviewer_id,
+        account_id=account_id,
+        platform=platform,
+        status=status,
+        blind_status=blind_status,
+        settlement_status=settlement_status,
+        reviewer_category=reviewer_category,
+        scheduled_from=scheduled_from,
+        scheduled_to=scheduled_to,
+        store_id=store_id,
+        search=search,
+    )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "작업현황"
+    ws.append(["작업번호", "영수증날짜", "작업날짜", "작업링크"])
+    for t in tasks:
+        ws.append([
+            f"{t.review_target_id}{(t.sequence_no or 0):03d}",
+            t.naver_available_date.isoformat() if t.naver_available_date else "",
+            t.claimed_at.date().isoformat() if t.claimed_at else "",
+            t.result_link or "",
+        ])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=tasks_export.xlsx"},
+    )
 
 
 @router.get("/{task_id}", response_model=schemas.TaskOut)
@@ -82,6 +151,33 @@ def update_result(
     if not task:
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
     task = crud.update_task_result(db, task, data.result_link)
+    return crud.task_to_out(db, task)
+
+
+@router.post("/{task_id}/complete", response_model=schemas.TaskOut)
+def complete_task(task_id: int, db: Session = Depends(get_db)):
+    """리뷰어가 포털에서 제출한 결과(submitted)를 관리자가 확인 후 완료 처리."""
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
+    try:
+        task = crud.complete_task(db, task)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return crud.task_to_out(db, task)
+
+
+@router.post("/{task_id}/reject", response_model=schemas.TaskOut)
+def reject_task(task_id: int, data: schemas.TaskRejectIn, db: Session = Depends(get_db)):
+    """리뷰어가 포털에서 제출한 결과(submitted)를 관리자가 반려 — 수정사항을
+    남기고 리뷰어가 다시 제출할 수 있는 상태로 되돌린다."""
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
+    try:
+        task = crud.reject_task(db, task, data.reason)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return crud.task_to_out(db, task)
 
 

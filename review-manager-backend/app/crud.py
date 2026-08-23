@@ -923,7 +923,10 @@ def create_review_target(
     db.add(target)
     db.flush()
 
-    for _ in range(data.required_count):
+    scheduled_dates = _compute_scheduled_dates(
+        data.start_date, data.work_days, data.daily_limit, data.required_count
+    )
+    for i in range(data.required_count):
         task = models.Task(
             review_target_id=target.id,
             review_account_id=None,
@@ -931,12 +934,34 @@ def create_review_target(
             status="open",
             settlement_amount=data.unit_price,
             sale_amount=data.sale_price,
+            sequence_no=i + 1,
+            scheduled_date=scheduled_dates[i],
         )
         db.add(task)
 
     db.commit()
     db.refresh(target)
     return target
+
+
+def _compute_scheduled_dates(
+    start_date: "datetime.date | None",
+    work_days: list[int] | None,
+    daily_limit: int | None,
+    count: int,
+) -> list[datetime.date]:
+    """캠페인 생성 시점에 각 Task가 '몇 일자 몫'인지 미리 정해둔다 — 시작일부터
+    작업요일을 따라가며 하루 daily_limit개씩 채운다(daily_limit이 없으면 제한이
+    없다는 뜻이라 전부 시작일 하루치로 본다). 관리자 작업현황의 기간 필터가
+    등록일이 아니라 이 값을 기준으로 조회하기 위한 것."""
+    day = start_date or _kst_today_date()
+    per_day = daily_limit or count
+    dates: list[datetime.date] = []
+    while len(dates) < count:
+        if not work_days or day.weekday() in work_days:
+            dates.extend([day] * min(per_day, count - len(dates)))
+        day = day + datetime.timedelta(days=1)
+    return dates
 
 
 # --- Task ---
@@ -947,11 +972,13 @@ def task_to_out(db: Session, task: models.Task) -> schemas.TaskOut:
     target = task.review_target
 
     out = schemas.TaskOut.model_validate(task)
+    out.task_no = f"{task.review_target_id}{(task.sequence_no or 0):03d}"
     if reviewer is not None:
         out.reviewer_id = reviewer.id
         out.reviewer_name = reviewer.name
         out.reviewer_contact_info = reviewer.contact_info
         out.reviewer_category = reviewer.category
+        out.reviewer_bank_account = reviewer.bank_account
     if account is not None:
         out.account_label = account.label
         out.account_profile_url = account.profile_url
@@ -975,6 +1002,12 @@ def get_tasks(
     reviewer_category: str | None = None,
     created_from: str | None = None,
     created_to: str | None = None,
+    scheduled_from: str | None = None,
+    scheduled_to: str | None = None,
+    completed_from: str | None = None,
+    completed_to: str | None = None,
+    store_id: int | None = None,
+    search: str | None = None,
     sort: str | None = None,
 ) -> list[models.Task]:
     # outerjoin (not join) — 'open' pool tasks have no review_account_id yet and
@@ -983,10 +1016,12 @@ def get_tasks(
         models.ReviewAccount, models.Task.review_account_id == models.ReviewAccount.id
     )
 
+    reviewer_joined = False
     if reviewer_category is not None:
         query = query.outerjoin(
             models.Reviewer, models.ReviewAccount.reviewer_id == models.Reviewer.id
         ).filter(models.Reviewer.category == reviewer_category)
+        reviewer_joined = True
     if reviewer_id is not None:
         query = query.filter(models.ReviewAccount.reviewer_id == reviewer_id)
     if account_id is not None:
@@ -999,6 +1034,10 @@ def get_tasks(
         query = query.filter(models.Task.blind_status == blind_status)
     if settlement_status is not None:
         query = query.filter(models.Task.settlement_status == settlement_status)
+    if store_id is not None:
+        query = query.join(
+            models.ReviewTarget, models.Task.review_target_id == models.ReviewTarget.id
+        ).filter(models.ReviewTarget.store_id == store_id)
     if created_from is not None:
         query = query.filter(
             models.Task.created_at >= datetime.datetime.fromisoformat(created_from)
@@ -1007,6 +1046,25 @@ def get_tasks(
         # inclusive of the whole "to" day
         end = datetime.datetime.fromisoformat(created_to) + datetime.timedelta(days=1)
         query = query.filter(models.Task.created_at < end)
+    if scheduled_from is not None:
+        query = query.filter(
+            models.Task.scheduled_date >= datetime.date.fromisoformat(scheduled_from)
+        )
+    if scheduled_to is not None:
+        query = query.filter(
+            models.Task.scheduled_date <= datetime.date.fromisoformat(scheduled_to)
+        )
+    if completed_from is not None:
+        query = query.filter(
+            models.Task.completed_at >= datetime.datetime.fromisoformat(completed_from)
+        )
+    if completed_to is not None:
+        end = datetime.datetime.fromisoformat(completed_to) + datetime.timedelta(days=1)
+        query = query.filter(models.Task.completed_at < end)
+    if search and not reviewer_joined:
+        query = query.outerjoin(
+            models.Reviewer, models.ReviewAccount.reviewer_id == models.Reviewer.id
+        )
 
     sort_map = {
         "created_at": models.Task.created_at.asc(),
@@ -1014,9 +1072,33 @@ def get_tasks(
         "status": models.Task.status.asc(),
         "settlement_status": models.Task.settlement_status.asc(),
     }
-    query = query.order_by(sort_map.get(sort, models.Task.created_at.desc()))
+    if sort in sort_map:
+        query = query.order_by(sort_map[sort])
+    else:
+        # 작업번호(캠페인 내 순번) 순 — 클레임 여부와 무관하게 항상 같은 순서로 보이도록
+        query = query.order_by(models.Task.sequence_no.asc(), models.Task.created_at.asc())
 
-    return query.all()
+    tasks = query.all()
+
+    if search:
+        needle = search.strip().lower()
+        tasks = [t for t in tasks if needle in _task_search_haystack(t)]
+
+    return tasks
+
+
+def _task_search_haystack(task: models.Task) -> str:
+    account = task.review_account
+    reviewer = account.reviewer if account else None
+    task_no = f"{task.review_target_id}{(task.sequence_no or 0):03d}"
+    parts = [
+        reviewer.name if reviewer else None,
+        reviewer.contact_info if reviewer else None,
+        account.label if account else None,
+        task.result_link,
+        task_no,
+    ]
+    return " ".join(p for p in parts if p).lower()
 
 
 # --- Store cooldown eligibility (재작업 가능 주기) ---
@@ -1361,9 +1443,47 @@ def claim_task(db: Session, task: models.Task, account: models.ReviewAccount) ->
 
 
 def update_task_result(db: Session, task: models.Task, result_link: str) -> models.Task:
+    """관리자가 자체보유(own/admin) 계정의 결과 링크를 직접 입력 — 본인이 곧
+    확인자이므로 submitted를 거치지 않고 바로 완료 처리한다."""
     task.result_link = result_link
     task.completed_at = datetime.datetime.utcnow()
     task.status = "completed"
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def submit_task_result(db: Session, task: models.Task, result_link: str) -> models.Task:
+    """리뷰어가 포털에서 결과 링크를 제출 — 관리자가 결과보기로 확인하고 완료
+    버튼을 눌러야 completed로 넘어간다(complete_task). 반려 이력이 있었다면
+    다시 제출하는 것이므로 지운다."""
+    task.result_link = result_link
+    task.status = "submitted"
+    task.reject_reason = None
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def complete_task(db: Session, task: models.Task) -> models.Task:
+    """관리자가 리뷰어 제출 결과를 확인한 뒤 최종 완료 처리."""
+    if task.status != "submitted":
+        raise ValueError("제출된 결과가 없는 작업은 완료 처리할 수 없습니다")
+    task.status = "completed"
+    task.completed_at = datetime.datetime.utcnow()
+    task.reject_reason = None
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def reject_task(db: Session, task: models.Task, reason: str) -> models.Task:
+    """결재 반려처럼, 관리자가 제출된 결과를 확인했지만 수정이 필요할 때 사유를
+    남기고 리뷰어가 다시 제출할 수 있는 상태로 되돌린다."""
+    if task.status != "submitted":
+        raise ValueError("제출된 결과가 없는 작업은 반려할 수 없습니다")
+    task.status = "claimed" if task.platform == "kakao" else "ready"
+    task.reject_reason = reason
     db.commit()
     db.refresh(task)
     return task

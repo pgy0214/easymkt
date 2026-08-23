@@ -259,7 +259,10 @@ export default function AdminAccountManager() {
   async function handleLaunch(row) {
     setLaunchingId(row.id)
     try {
-      await api.launchAccount(row.id)
+      const result = await api.launchAccount(row.id)
+      setRows((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, has_login_issue: result.has_login_issue } : r)),
+      )
     } catch (err) {
       alert(err.message)
     } finally {

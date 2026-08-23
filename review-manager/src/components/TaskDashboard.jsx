@@ -21,6 +21,8 @@ const EMPTY_FILTERS = {
   blind_status: '',
   settlement_status: '',
   reviewer_category: '',
+  store_id: '',
+  search: '',
 }
 
 const RECENTLY_EXPIRED_MS = 24 * 60 * 60 * 1000
@@ -30,17 +32,23 @@ export default function TaskDashboard() {
   const [dateRange, setDateRange] = useState(() => ({ from: todayInput(), to: todayInput() }))
   const [tasks, setTasks] = useState([])
   const [reviewers, setReviewers] = useState([])
+  const [stores, setStores] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [recentlyExpiredCount, setRecentlyExpiredCount] = useState(0)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [rechecking, setRechecking] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   async function refresh() {
     setLoading(true)
     try {
       setTasks(
-        await api.getTasks({ ...filters, created_from: dateRange.from, created_to: dateRange.to }),
+        await api.getTasks({
+          ...filters,
+          scheduled_from: dateRange.from,
+          scheduled_to: dateRange.to,
+        }),
       )
       setError(null)
     } catch (err) {
@@ -50,8 +58,30 @@ export default function TaskDashboard() {
     }
   }
 
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const blob = await api.exportTasks({
+        ...filters,
+        scheduled_from: dateRange.from,
+        scheduled_to: dateRange.to,
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `작업현황_${dateRange.from || '전체'}_${dateRange.to || '전체'}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   useEffect(() => {
     api.getReviewers().then(setReviewers)
+    api.getStores().then(setStores)
     api.getTasks({}).then((all) => {
       const count = all.filter(
         (t) => t.last_expired_at && Date.now() - new Date(t.last_expired_at).getTime() < RECENTLY_EXPIRED_MS,
@@ -75,9 +105,18 @@ export default function TaskDashboard() {
     }
   }
 
-  async function handleUpdateSettlement(taskId, data) {
+  async function handleCompleteTask(taskId) {
     try {
-      await api.updateTaskSettlement(taskId, data)
+      await api.completeTask(taskId)
+      await refresh()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function handleRejectTask(taskId, reason) {
+    try {
+      await api.rejectTask(taskId, reason)
       await refresh()
     } catch (err) {
       alert(err.message)
@@ -163,11 +202,16 @@ export default function TaskDashboard() {
       )}
 
       <div className="rounded-card border border-gray-200 bg-white p-3">
-        <p className="mb-2 text-xs text-gray-500">기간별 조회 (등록일 기준)</p>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs text-gray-500">기간별 조회 (작업일 기준)</p>
+          <Button onClick={handleExport} disabled={exporting} variant="secondary">
+            {exporting ? '다운로드 중...' : '엑셀 다운로드'}
+          </Button>
+        </div>
         <DateRangePicker from={dateRange.from} to={dateRange.to} onChange={setDateRange} />
       </div>
 
-      <TaskFilters filters={filters} onChange={setFilters} reviewers={reviewers} />
+      <TaskFilters filters={filters} onChange={setFilters} reviewers={reviewers} stores={stores} />
 
       <div className="flex items-center gap-3 rounded-card border border-gray-200 bg-white px-3 py-2">
         <Button onClick={handleRecheckSelected} disabled={selectedIds.size === 0 || rechecking} variant="secondary">
@@ -188,7 +232,8 @@ export default function TaskDashboard() {
         onRecheckOne={handleRecheckOne}
         rechecking={rechecking}
         onSubmitResult={handleSubmitResult}
-        onUpdateSettlement={handleUpdateSettlement}
+        onCompleteTask={handleCompleteTask}
+        onRejectTask={handleRejectTask}
       />
 
       <BlindBulkCheckPanel />

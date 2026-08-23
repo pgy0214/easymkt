@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatDate, formatDateTime, formatKRW, PLATFORM_LABEL, STATUS_LABEL } from '../lib/format.js'
+import { formatDate, formatDateTime, PLATFORM_LABEL, STATUS_LABEL } from '../lib/format.js'
 import Badge from './ui/Badge.jsx'
 
 const BLIND_VARIANT = {
@@ -13,6 +13,8 @@ const BLIND_TEXT = {
   blinded: '블라인드',
 }
 
+const SELF_MANAGED_CATEGORIES = ['own', 'admin']
+
 const RECENTLY_EXPIRED_MS = 24 * 60 * 60 * 1000
 
 export default function TaskRow({
@@ -22,13 +24,19 @@ export default function TaskRow({
   onRecheckOne,
   rechecking,
   onSubmitResult,
-  onUpdateSettlement,
+  onCompleteTask,
+  onRejectTask,
 }) {
   const [linkInput, setLinkInput] = useState('')
-  const [amount, setAmount] = useState(task.settlement_amount)
+  const [rejectReason, setRejectReason] = useState('')
+  const [showReject, setShowReject] = useState(false)
 
+  const isSelfManaged = SELF_MANAGED_CATEGORIES.includes(task.reviewer_category)
+  // 자체보유(own/admin) 계정은 관리자가 곧 확인자라 링크 입력과 동시에 완료 처리한다.
+  // 실제 리뷰어는 포털에서 먼저 제출(submitted)하고, 관리자는 결과보기로 확인한 뒤 완료를 누른다.
   const canEnterResult =
-    task.status === 'ready' || (task.platform === 'kakao' && task.status === 'claimed')
+    isSelfManaged && (task.status === 'ready' || (task.platform === 'kakao' && task.status === 'claimed'))
+  const isSubmitted = task.status === 'submitted'
   const isCompleted = task.status === 'completed'
   const isOpen = task.status === 'open'
   const recentlyExpired =
@@ -46,6 +54,7 @@ export default function TaskRow({
           />
         )}
       </td>
+      <td className="px-3 py-2 text-xs text-gray-500">{task.task_no}</td>
       <td className="px-3 py-2">
         {isOpen ? (
           <div className="text-sm text-gray-400">미배정 (오픈풀)</div>
@@ -58,7 +67,7 @@ export default function TaskRow({
             <div className="text-xs text-gray-400">{task.account_label}</div>
           </>
         )}
-        {task.claim_deadline && !isCompleted && (
+        {task.claim_deadline && !isCompleted && !isSubmitted && (
           <div className="text-xs text-gray-400">기한: {formatDateTime(task.claim_deadline)}</div>
         )}
         {recentlyExpired && (
@@ -86,6 +95,52 @@ export default function TaskRow({
           >
             결과 보기
           </a>
+        ) : isSubmitted ? (
+          <div>
+            <div className="flex items-center gap-1">
+              <a
+                href={task.result_link}
+                target="_blank"
+                rel="noreferrer"
+                className="text-brand-600 hover:underline"
+              >
+                결과 보기
+              </a>
+              <button
+                onClick={() => onCompleteTask(task.id)}
+                className="rounded bg-gray-800 px-2 py-0.5 text-xs text-white hover:bg-gray-700"
+              >
+                완료
+              </button>
+              <button
+                onClick={() => setShowReject((v) => !v)}
+                className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50"
+              >
+                반려
+              </button>
+            </div>
+            {showReject && (
+              <div className="mt-1 flex gap-1">
+                <input
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="수정사항을 입력하세요"
+                  className="w-40 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
+                />
+                <button
+                  onClick={() => {
+                    if (!rejectReason.trim()) return
+                    onRejectTask(task.id, rejectReason.trim())
+                    setRejectReason('')
+                    setShowReject(false)
+                  }}
+                  className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
+                >
+                  반려하기
+                </button>
+              </div>
+            )}
+          </div>
         ) : canEnterResult ? (
           <div className="flex gap-1">
             <input
@@ -119,32 +174,6 @@ export default function TaskRow({
             지금 재확인
           </button>
         )}
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-1">
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
-          />
-          <button
-            onClick={() =>
-              onUpdateSettlement(task.id, {
-                settlement_status: task.settlement_status === 'paid' ? 'unpaid' : 'paid',
-                settlement_amount: amount,
-              })
-            }
-            className={`rounded-pill px-2 py-0.5 text-xs font-semibold ${
-              task.settlement_status === 'paid'
-                ? 'bg-success-bg text-success-text'
-                : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            {task.settlement_status === 'paid' ? '정산완료' : '미정산'}
-          </button>
-        </div>
-        <div className="mt-1 text-xs text-gray-400">{formatKRW(amount)}</div>
       </td>
     </tr>
   )

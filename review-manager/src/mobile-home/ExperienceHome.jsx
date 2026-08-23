@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import Badge from './ui/Badge.jsx'
-import Button from './ui/Button.jsx'
+import Badge from '../components/ui/Badge.jsx'
+import Button from '../components/ui/Button.jsx'
 
 const REGIONS = ['전체지역', '서울', '경기', '부산', '대구', '인천', '광주', '대전']
 

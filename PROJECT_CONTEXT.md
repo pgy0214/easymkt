@@ -1744,3 +1744,21 @@ date_check}/`, `.gitignore` 처리함)를 주면 쿠키·로컬스토리지가 �
   연결(`review-manager-backend/uploads`) — 안 붙이면 재배포 때 업로드 파일 유실.
 - 카페24 도메인을 Vercel(프론트) / Railway(백엔드, 필요시 서브도메인)에 연결.
 - `PORTAL_DEV_BYPASS_REVIEWER_ID`는 반드시 배포 환경에서 비워둘 것(인증 우회 백도어).
+
+## 배포 상태 확인 + 체험단 홈페이지 폴더 분리 (2026-08-23)
+
+**배포 확인**: `https://review-managing.vercel.app`(프론트)와
+`https://review-managing-production.up.railway.app`(백엔드) 실제 라이브 확인함 —
+`/`(리뷰어 포털 로그인), `/experience`(체험단 홈페이지), `/admin`(관리자, 권한 없음
+게이트 정상 표시) 전부 정상 작동. 로그인 버튼이 브랜드 블루(#3182F6)+알약 모양(999px)로
+뜨는 것까지 확인해서, 디자인 시스템 마이그레이션도 실제 배포본에 반영돼 있음을 확인함.
+Railway 배포 로그에 8/23 "Postgres 연결 코드가 프로덕션 다운(502) 일으켜 SQLite로
+긴급 롤백"한 이력이 있었음 — 지금은 정상 복구됐지만 Postgres 이전 작업은 다시 필요.
+
+**체험단 홈페이지 폴더 분리**: 사용자가 "반응형 홈페이지는 mobile 디자인으로서 별도
+폴더로 관리해달라"고 요청 — `src/components/ExperienceHome.jsx`를
+`src/mobile-home/ExperienceHome.jsx`로 이동(내부 `ui/Button`·`ui/Badge` import 경로만
+`../components/ui/...`로 수정, 로직/마크업은 그대로). `main.jsx`의 import 경로도 갱신.
+관리자/포털용 컴포넌트가 모여있는 `src/components/` 플랫 폴더와 분리해서, 이 홈페이지가
+별도 디자인 표면(공개 마케팅 페이지)이라는 걸 폴더 구조로도 드러냄. 빌드/린트 통과,
+로컬에서 `/experience` 재확인함.

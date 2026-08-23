@@ -10,7 +10,8 @@ export default function TaskTable({
   onRecheckOne,
   rechecking,
   onSubmitResult,
-  onUpdateSettlement,
+  onCompleteTask,
+  onRejectTask,
 }) {
   const [collapsed, setCollapsed] = useState(() => new Set())
 
@@ -73,13 +74,13 @@ export default function TaskTable({
                           title="이 매장의 완료된 작업 전체 선택"
                         />
                       </th>
+                      <th className="px-3 py-2">작업번호</th>
                       <th className="px-3 py-2">리뷰어 / 계정</th>
                       <th className="px-3 py-2">플랫폼</th>
                       <th className="px-3 py-2">상태</th>
                       <th className="px-3 py-2">날짜</th>
                       <th className="px-3 py-2">결과</th>
                       <th className="px-3 py-2">블라인드</th>
-                      <th className="px-3 py-2">정산</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -92,7 +93,8 @@ export default function TaskTable({
                         onRecheckOne={onRecheckOne}
                         rechecking={rechecking}
                         onSubmitResult={onSubmitResult}
-                        onUpdateSettlement={onUpdateSettlement}
+                        onCompleteTask={onCompleteTask}
+                        onRejectTask={onRejectTask}
                       />
                     ))}
                   </tbody>

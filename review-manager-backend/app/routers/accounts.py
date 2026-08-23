@@ -57,7 +57,21 @@ def launch_account(account_id: int, db: Session = Depends(get_db)):
         data = adspower.start_browser(account.adspower_profile_id)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"AdsPower 실행 실패: {e}")
-    return schemas.AccountLaunchOut(debug_port=data.get("debug_port"))
+
+    # 실행한 김에 로그인 상태도 같이 확인해서 "상태" 표시를 자동으로 갱신한다 —
+    # 계정 관리 화면을 계속 켜두고 눈으로 지켜볼 필요 없이, 실행할 때마다 저절로
+    # 최신 상태로 맞춰진다. 감지 자체가 실패(네트워크 오류 등)하면 기존 상태를
+    # 건드리지 않는다 — 로그인 문제로 단정할 근거가 없어서다.
+    try:
+        adspower.detect_naver_profile_url(account.adspower_profile_id)
+        account.has_login_issue = False
+    except RuntimeError:
+        account.has_login_issue = True
+    except Exception:
+        pass
+    db.commit()
+
+    return schemas.AccountLaunchOut(debug_port=data.get("debug_port"), has_login_issue=account.has_login_issue)
 
 
 @router.post("/{account_id}/detect-profile-url", response_model=schemas.ReviewAccountOut)

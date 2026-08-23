@@ -51,10 +51,11 @@ export const CATEGORY_LABEL = {
 }
 
 export const STATUS_LABEL = {
-  open: '오픈풀(미배정)',
-  claimed: '클레임됨',
+  open: '미배정',
+  claimed: '배정완료',
   checking_date: '날짜확인중',
   ready: '작업가능',
+  submitted: '확인대기',
   completed: '완료',
 }
 

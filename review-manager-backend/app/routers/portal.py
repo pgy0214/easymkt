@@ -164,6 +164,8 @@ def complete_signup(
         )
     if len(data.password) < 4:
         raise HTTPException(status_code=400, detail="비밀번호는 4자 이상이어야 합니다")
+    if data.category != "advertiser" and not (data.bank_account or "").strip():
+        raise HTTPException(status_code=400, detail="정산용 계좌번호를 입력해주세요")
     existing = crud.get_reviewer_by_username(db, username)
     if existing and existing.id != reviewer.id:
         raise HTTPException(status_code=400, detail="이미 사용 중인 아이디입니다")
@@ -171,6 +173,8 @@ def complete_signup(
     reviewer.username = username
     reviewer.password_hash = auth.hash_password(data.password)
     reviewer.name = data.name
+    if data.bank_account is not None:
+        reviewer.bank_account = data.bank_account.strip()
     reviewer.privacy_consent_at = datetime.datetime.utcnow()
     reviewer.marketing_consent_at = datetime.datetime.utcnow() if data.marketing_consent else None
     if data.gender is not None:
@@ -414,7 +418,7 @@ def submit_my_result(
     task = crud.get_task(db, task_id)
     if not task or not task.review_account or task.review_account.reviewer_id != reviewer.id:
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
-    return crud.task_to_out(db, crud.update_task_result(db, task, data.result_link))
+    return crud.task_to_out(db, crud.submit_task_result(db, task, data.result_link))
 
 
 @router.get("/tasks/{task_id}/brief", response_model=schemas.TaskBriefOut)

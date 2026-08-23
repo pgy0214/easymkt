@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import Advertiser from './components/Advertiser.jsx'
-import ExperienceHome from './components/ExperienceHome.jsx'
 import Portal from './components/Portal.jsx'
+import ExperienceHome from './mobile-home/ExperienceHome.jsx'
 
 const path = window.location.pathname
 const isAdmin = path.startsWith('/admin')

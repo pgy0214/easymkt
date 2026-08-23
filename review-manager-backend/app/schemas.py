@@ -66,6 +66,7 @@ class ReviewAccountOut(BaseModel):
 
 class AccountLaunchOut(BaseModel):
     debug_port: Optional[str] = None
+    has_login_issue: bool = False
 
 
 class AccountAvailabilityOut(BaseModel):
@@ -141,6 +142,7 @@ class ReviewerOut(BaseModel):
     memo: Optional[str] = None
     contact_info: Optional[str] = None
     is_active: bool
+    bank_account: Optional[str] = None
     region: Optional[str] = None
     blog_url: Optional[str] = None
     blog_index: Optional[str] = None
@@ -379,11 +381,14 @@ class TaskOut(BaseModel):
     review_target_id: int
     review_account_id: Optional[int] = None
     platform: Platform
+    sequence_no: Optional[int] = None
     status: str
     claimed_at: Optional[datetime.datetime] = None
     claim_deadline: Optional[datetime.datetime] = None
     last_expired_at: Optional[datetime.datetime] = None
     naver_available_date: Optional[datetime.date] = None
+    scheduled_date: Optional[datetime.date] = None
+    reject_reason: Optional[str] = None
     result_link: Optional[str] = None
     completed_at: Optional[datetime.datetime] = None
     review_posted_date: Optional[datetime.date] = None
@@ -409,11 +414,14 @@ class TaskOut(BaseModel):
     reviewer_name: Optional[str] = None
     reviewer_contact_info: Optional[str] = None
     reviewer_category: Optional[str] = None
+    reviewer_bank_account: Optional[str] = None
     account_label: Optional[str] = None
     account_profile_url: Optional[str] = None
     store_id: Optional[int] = None
     store_name: Optional[str] = None
     store_url: Optional[str] = None
+    # denormalized — 캠페인ID+순번으로 만든 사람이 읽을 작업 고유번호 (crud.task_to_out)
+    task_no: Optional[str] = None
 
     # portal-pool only: which of the requesting reviewer's own accounts (for
     # this task's platform) currently pass the store's cooldown and may claim it
@@ -441,6 +449,10 @@ class TaskResultUpdate(BaseModel):
 class TaskSettlementUpdate(BaseModel):
     settlement_status: Literal["unpaid", "paid"]
     settlement_amount: Optional[int] = None
+
+
+class TaskRejectIn(BaseModel):
+    reason: str
 
 
 class BlindBulkCheckRowOut(BaseModel):
@@ -552,6 +564,7 @@ class PortalCompleteSignupIn(BaseModel):
     username: str
     password: str
     name: str
+    bank_account: Optional[str] = None  # 정산용 계좌번호 — 광고주 가입(category="advertiser")은 정산 대상이 아니라 제외, 그 외는 라우터에서 필수 검증
     privacy_consent: bool
     marketing_consent: bool = False
     # 체험단 활동을 한다면(선택) 채워지는 정보

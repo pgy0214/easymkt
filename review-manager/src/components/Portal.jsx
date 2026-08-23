@@ -129,6 +129,7 @@ function LoginFlow({ onLoggedIn }) {
   const [signupPassword, setSignupPassword] = useState('')
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('')
   const [signupName, setSignupName] = useState('')
+  const [signupBankAccount, setSignupBankAccount] = useState('')
   const [signupConsent, setSignupConsent] = useState(false)
   const [marketingConsent, setMarketingConsent] = useState(false)
   const [showExperienceFields, setShowExperienceFields] = useState(false)
@@ -298,6 +299,10 @@ function LoginFlow({ onLoggedIn }) {
       setError('비밀번호가 서로 달라요.')
       return
     }
+    if (!signupBankAccount.trim()) {
+      setError('정산용 계좌번호를 입력해주세요.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
@@ -305,6 +310,7 @@ function LoginFlow({ onLoggedIn }) {
         username: signupUsername.trim(),
         password: signupPassword,
         name: signupName.trim(),
+        bank_account: signupBankAccount.trim(),
         privacy_consent: signupConsent,
         marketing_consent: marketingConsent,
         gender: gender || undefined,
@@ -475,6 +481,12 @@ function LoginFlow({ onLoggedIn }) {
             onChange={(e) => setSignupPasswordConfirm(e.target.value)}
           />
           <Input label="이름" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
+          <Input
+            label="정산용 계좌번호"
+            value={signupBankAccount}
+            onChange={(e) => setSignupBankAccount(e.target.value)}
+            placeholder="은행명 계좌번호 (예: 국민 123456-01-123456)"
+          />
 
           <button
             type="button"
@@ -882,7 +894,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
                 ))}
               </div>
             )}
-            {pool.length === 0 && <p className="text-sm text-gray-400">작업가능 작업이 없습니다.</p>}
+            {pool.length === 0 && <p className="text-sm text-gray-400">가능 작업이 없습니다.</p>}
             {pool.map((group) => (
               <PoolTaskRow
                 key={group.review_target_id}
@@ -1516,7 +1528,7 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
       {task.account_label && (
         <div className="mt-0.5 text-xs text-gray-500">작업 계정: {task.account_label}</div>
       )}
-      {task.claim_deadline && task.status !== 'completed' && (
+      {task.claim_deadline && task.status !== 'completed' && task.status !== 'submitted' && (
         <div className="text-xs text-gray-500">기한: {formatDateTime(task.claim_deadline)}</div>
       )}
       {showBrief && (
@@ -1527,10 +1539,22 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
           onClose={() => setShowBrief(false)}
         />
       )}
+      {task.reject_reason && (
+        <div className="mt-1 rounded-btn border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+          반려됨 — 수정사항: {task.reject_reason}
+        </div>
+      )}
       {task.status === 'completed' ? (
         <a href={task.result_link} target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline">
           제출한 결과 보기
         </a>
+      ) : task.status === 'submitted' ? (
+        <div className="mt-1 flex flex-col items-start gap-0.5">
+          <a href={task.result_link} target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline">
+            제출한 결과 보기
+          </a>
+          <span className="text-xs text-gray-400">관리자 확인 중이에요</span>
+        </div>
       ) : canSubmit ? (
         <div className="mt-1 flex gap-1">
           <input

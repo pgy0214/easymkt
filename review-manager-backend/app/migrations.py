@@ -223,6 +223,17 @@ def run_migrations(engine) -> None:
         # 리뷰 원고 캐시 (한 번 생성되면 재생성하지 않음)
         _add_column_if_missing(conn, "tasks", "assigned_review_text", "assigned_review_text TEXT")
 
+        # tasks: sequence_no/scheduled_date — 작업번호와 기간별 조회(등록일이 아닌
+        # "배정된 날짜 몫" 기준)를 위해 캠페인 생성 시점에 미리 계산해 저장한다.
+        _add_column_if_missing(conn, "tasks", "sequence_no", "sequence_no INTEGER")
+        _add_column_if_missing(conn, "tasks", "scheduled_date", "scheduled_date DATE")
+
+        # reviewers: bank_account — 정산용 계좌번호, 회원가입 시 입력받는다.
+        _add_column_if_missing(conn, "reviewers", "bank_account", "bank_account TEXT")
+
+        # tasks: reject_reason — 제출된 결과를 관리자가 반려할 때 남기는 수정사항
+        _add_column_if_missing(conn, "tasks", "reject_reason", "reject_reason TEXT")
+
         # review_targets: start_date/end_date — 캠페인이 실제로 작업되는 기간(둘 다
         # null이면 기존과 동일하게 무기한). 오픈풀 노출 필터에도 적용됨.
         _add_column_if_missing(conn, "review_targets", "start_date", "start_date DATE")
