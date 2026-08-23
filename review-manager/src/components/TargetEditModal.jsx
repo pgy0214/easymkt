@@ -25,6 +25,7 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
   const [workDays, setWorkDays] = useState(target.work_days && target.work_days.length > 0 ? target.work_days : [0, 1, 2, 3, 4, 5, 6])
   const [guideline, setGuideline] = useState(target.guideline || '')
   const [regionalFeatures, setRegionalFeatures] = useState(target.regional_features || '')
+  const [tone, setTone] = useState(target.tone || '')
   const [menuItems, setMenuItems] = useState(toMenuItemForm(target.menu_items))
   const [photoFiles, setPhotoFiles] = useState([])
   const [photosPerReview, setPhotosPerReview] = useState(target.photos_per_review ?? 1)
@@ -69,6 +70,7 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
         work_days: workDays,
         guideline: guideline.trim() || null,
         regional_features: regionalFeatures.trim() || null,
+        tone: tone.trim() || null,
         menu_items: cleanMenuItems.length > 0 ? cleanMenuItems : null,
         photos_per_review: Number(photosPerReview) || 1,
       })
@@ -179,6 +181,16 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
             value={regionalFeatures}
             onChange={(e) => setRegionalFeatures(e.target.value)}
             rows={2}
+            className="w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500">말투 (선택)</label>
+          <textarea
+            value={tone}
+            onChange={(e) => setTone(e.target.value)}
+            rows={2}
+            placeholder="예: 친구한테 편하게 말하듯이 — 문장 종결어미는 항상 다양하게 섞어서 씁니다"
             className="w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
         </div>

@@ -97,6 +97,29 @@ def check_task_date(db, task: models.Task) -> bool:
     return _generate_receipt_if_possible(db, task)
 
 
+def resolve_naver_claim(db, task: models.Task, account: models.ReviewAccount) -> str | None:
+    """claim_task 직후 호출 — 신청/배정을 2분 스케줄러 없이 그 자리에서 끝까지
+    처리한다. 성공(=ready+영수증생성)이면 None, 실패면 그 신청 자체를 오픈풀로
+    되돌리고 안내 문구를 반환한다(포털 셀프클레임·관리자 수동배정 양쪽에서 재사용)."""
+    ok = check_task_date(db, task)
+    if ok:
+        return None
+    no_date = task.naver_available_date is None
+    if no_date:
+        # 지금 시도한 매장뿐 아니라 이 계정은 오늘 어떤 매장이든 똑같이 막히므로
+        # (계정 자체의 최근 7일 게시 이력 문제), 오늘 하루는 오픈풀에서 아예 뺀다.
+        crud.mark_account_no_date_today(db, account)
+    task.status = "open"
+    task.review_account_id = None
+    task.claimed_at = None
+    task.claim_deadline = None
+    task.naver_available_date = None
+    db.commit()
+    if no_date:
+        return "이 계정은 작업가능한 날짜가 없습니다"
+    return "이 계정으로는 지금 영수증을 만들 수 없어요. 다른 계정으로 시도해주세요"
+
+
 def run_job(db) -> None:
     # 'claimed' = a reviewer just picked this up via the open pool; this job
     # runs the one-time date pre-check before it becomes 'ready' to work on

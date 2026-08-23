@@ -170,6 +170,9 @@ def run_migrations(engine) -> None:
         if "menu" in store_columns:
             conn.execute(text("ALTER TABLE stores DROP COLUMN menu"))
 
+        # review_targets: tone — AI 원고 생성 시 반영할 말투(문체) 지시
+        _add_column_if_missing(conn, "review_targets", "tone", "tone TEXT")
+
         # review_targets: work_days_raw restricts which weekdays a campaign's
         # tasks show up in the open pool (null = every day)
         _add_column_if_missing(conn, "review_targets", "work_days_raw", "work_days_raw TEXT")

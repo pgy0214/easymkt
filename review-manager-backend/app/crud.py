@@ -808,6 +808,7 @@ def assign_review_text_for_task(db: Session, task: models.Task) -> str | None:
         generated = review_writer.generate_review_text(
             guideline=target.guideline,
             regional_features=target.regional_features,
+            tone=target.tone,
             length=target.review_length,
             menu_items=decode_menu_items(target.menu_items_json),
         )
@@ -870,6 +871,8 @@ def update_target(
         target.guideline = data.guideline
     if data.regional_features is not None:
         target.regional_features = data.regional_features
+    if data.tone is not None:
+        target.tone = data.tone
     if data.menu_items is not None:
         target.menu_items_json = encode_menu_items(data.menu_items)
     if data.photos_per_review is not None:
@@ -912,6 +915,7 @@ def create_review_target(
         end_date=data.end_date,
         guideline=data.guideline,
         regional_features=data.regional_features,
+        tone=data.tone,
         menu_items_json=encode_menu_items(data.menu_items),
         photos_per_review=data.photos_per_review,
         review_length=data.review_length,

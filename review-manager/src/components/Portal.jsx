@@ -882,7 +882,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
                 ))}
               </div>
             )}
-            {pool.length === 0 && <p className="text-sm text-gray-400">지금 가져갈 수 있는 작업이 없습니다.</p>}
+            {pool.length === 0 && <p className="text-sm text-gray-400">작업가능 작업이 없습니다.</p>}
             {pool.map((group) => (
               <PoolTaskRow
                 key={group.review_target_id}
@@ -1519,7 +1519,14 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
       {task.claim_deadline && task.status !== 'completed' && (
         <div className="text-xs text-gray-500">기한: {formatDateTime(task.claim_deadline)}</div>
       )}
-      {showBrief && <TaskBriefModal token={token} taskId={task.id} onClose={() => setShowBrief(false)} />}
+      {showBrief && (
+        <TaskBriefModal
+          token={token}
+          taskId={task.id}
+          accountProfileUrl={task.account_profile_url}
+          onClose={() => setShowBrief(false)}
+        />
+      )}
       {task.status === 'completed' ? (
         <a href={task.result_link} target="_blank" rel="noreferrer" className="text-xs text-brand-600 hover:underline">
           제출한 결과 보기
@@ -1553,7 +1560,7 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
   )
 }
 
-function TaskBriefModal({ token, taskId, onClose }) {
+function TaskBriefModal({ token, taskId, accountProfileUrl, onClose }) {
   const [brief, setBrief] = useState(null)
   const [error, setError] = useState(null)
 
@@ -1576,9 +1583,21 @@ function TaskBriefModal({ token, taskId, onClose }) {
     <Modal open onClose={onClose} size="md">
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-gray-800">리뷰 자료</h3>
-        <button onClick={onClose} className="text-sm text-gray-400 hover:text-gray-700">
-          닫기
-        </button>
+        <div className="flex items-center gap-2">
+          {accountProfileUrl && (
+            <a
+              href={accountProfileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
+            >
+              작업하러가기
+            </a>
+          )}
+          <button onClick={onClose} className="text-sm text-gray-400 hover:text-gray-700">
+            닫기
+          </button>
+        </div>
       </div>
 
       {error && <p className="text-sm text-danger-text">{error}</p>}
@@ -1645,7 +1664,7 @@ function TaskBriefModal({ token, taskId, onClose }) {
               <img
                 src={`${API_ORIGIN}${brief.receipt_image_path}`}
                 alt="영수증 이미지"
-                className="mt-1 w-full max-h-96 rounded border border-gray-200"
+                className="mt-1 max-h-96 max-w-full rounded border border-gray-200"
               />
               <div className="mt-2 flex flex-wrap gap-2">
                 <ImageCopyButton src={`${API_ORIGIN}${brief.receipt_image_path}`} label="영수증" size="lg" />

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, importers, schemas
-from app.crawlers import kakao_blind_check, naver_blind_check
+from app.crawlers import kakao_blind_check, naver_blind_check, naver_date_check
 from app.database import get_db
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -107,9 +107,18 @@ def assign_task(task_id: int, data: schemas.TaskAssignIn, db: Session = Depends(
     if not account:
         raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
     try:
-        return crud.task_to_out(db, crud.claim_task(db, task, account))
+        task = crud.claim_task(db, task, account)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    if task.platform == "naver":
+        # 포털 셀프클레임과 동일하게, 2분 스케줄러를 기다리지 않고 배정 즉시
+        # 날짜확인+영수증생성까지 끝낸다.
+        error = naver_date_check.resolve_naver_claim(db, task, account)
+        if error:
+            raise HTTPException(status_code=400, detail=error)
+
+    return crud.task_to_out(db, task)
 
 
 @router.post("/{task_id}/recheck-blind", response_model=schemas.TaskOut)

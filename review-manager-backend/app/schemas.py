@@ -278,6 +278,7 @@ class ReviewTargetCreate(BaseModel):
     # 리뷰 원고 자료
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
+    tone: Optional[str] = None  # 말투(문체) 지시 — 예: "친구한테 말하듯 편하게"
     menu_items: Optional[list[MenuItemIn]] = None  # 최대 3개, 영수증 생성에도 사용
     photos_per_review: int = 1  # 리뷰 1건당 배정할 사진 갯수
     review_length: int = 80  # 리뷰 원고 목표 글자수 (50/80/100)
@@ -294,6 +295,7 @@ class ReviewTargetUpdate(BaseModel):
     end_date: Optional[datetime.date] = None
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
+    tone: Optional[str] = None
     menu_items: Optional[list[MenuItemIn]] = None
     photos_per_review: Optional[int] = None
     review_length: Optional[int] = None
@@ -316,6 +318,7 @@ class TargetReviewTextOut(BaseModel):
 class ReviewTextGenerateIn(BaseModel):
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
+    tone: Optional[str] = None
     review_length: int = 80
     menu_items: Optional[list[MenuItemIn]] = None
 
@@ -350,6 +353,7 @@ class ReviewTargetOut(BaseModel):
 
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
+    tone: Optional[str] = None
     # parsed from menu_items_json by crud.target_to_out (same reasoning as work_days)
     menu_items: Optional[list[MenuItemIn]] = None
     reference_photo_path: Optional[str] = None

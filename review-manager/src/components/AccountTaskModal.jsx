@@ -89,6 +89,16 @@ function HistoryRow({ task, onSubmitResult, onUploadReceipt }) {
         <tr>
           <td colSpan={4} className="bg-gray-50 px-3 py-2">
             <div className="space-y-2">
+              {task.account_profile_url && (
+                <a
+                  href={task.account_profile_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
+                >
+                  작업하러가기
+                </a>
+              )}
               {task.assigned_review_text && (
                 <div>
                   <div className="flex items-center gap-1">

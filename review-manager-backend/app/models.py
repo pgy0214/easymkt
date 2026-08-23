@@ -113,6 +113,7 @@ class ReviewTarget(Base):
     # 리뷰 원고 자료 — 리뷰어가 포털에서 조회 (v2 "리뷰 자료 보기")
     guideline = Column(String, nullable=True)  # 원고 작성 가이드라인
     regional_features = Column(String, nullable=True)  # 지역적 특징
+    tone = Column(String, nullable=True)  # 말투(문체) 지시 — AI 원고 생성 시 반영
     menu_items_json = Column(String, nullable=True)  # JSON: [{"name":..,"price":..}, ...] 최대 3개
     reference_photo_path = Column(String, nullable=True)  # 참고 이미지 (선택, 구버전 단일사진 — 유지만 함)
     photos_per_review = Column(Integer, nullable=False, default=1)  # 리뷰 1건당 배정할 사진 갯수

@@ -396,30 +396,10 @@ def claim_task(
     if task.platform == "naver":
         # "가능한 계정 확인하기"가 어차피 같은 크롤링을 미리 해봤을 수도 있지만,
         # 신청 시점의 최신 상태를 다시 한번 확인해 바로 ready로 넘긴다 — 2분 주기
-        # 백그라운드 작업을 기다리지 않아도 되게 한다. 여기서 실패하면(날짜를
-        # 못 찾았거나, 날짜는 찾았는데 영수증을 못 만듦) 이 계정으로는 이 캠페인이
-        # 애초에 불가능하다는 뜻이므로, 기다리게 하지 않고 신청 자체를 즉시
-        # 오픈풀로 되돌린다 — 캠페인 잔여 수량도 자연히 원복된다.
-        ok = naver_date_check.check_task_date(db, task)
-        if not ok:
-            no_date = task.naver_available_date is None
-            if no_date:
-                # 지금 시도한 매장뿐 아니라 이 계정은 오늘 어떤 매장이든 똑같이
-                # 막히므로(계정 자체의 최근 7일 게시 이력 문제), 오늘 하루는
-                # 오픈풀 신청 대상에서 아예 뺀다.
-                crud.mark_account_no_date_today(db, account)
-            task.status = "open"
-            task.review_account_id = None
-            task.claimed_at = None
-            task.claim_deadline = None
-            task.naver_available_date = None
-            db.commit()
-            detail = (
-                "이 계정은 작업가능한 날짜가 없습니다"
-                if no_date
-                else "이 계정으로는 지금 영수증을 만들 수 없어요. 다른 계정으로 시도해주세요"
-            )
-            raise HTTPException(status_code=400, detail=detail)
+        # 백그라운드 작업을 기다리지 않아도 되게 한다.
+        error = naver_date_check.resolve_naver_claim(db, task, account)
+        if error:
+            raise HTTPException(status_code=400, detail=error)
 
     return crud.task_to_out(db, task)
 

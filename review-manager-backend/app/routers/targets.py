@@ -37,6 +37,7 @@ def preview_review_text(data: schemas.ReviewTextGenerateIn):
     text = review_writer.generate_review_text(
         guideline=data.guideline,
         regional_features=data.regional_features,
+        tone=data.tone,
         length=data.review_length,
         menu_items=[m.model_dump() for m in data.menu_items] if data.menu_items else None,
     )

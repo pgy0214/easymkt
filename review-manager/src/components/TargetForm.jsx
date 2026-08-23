@@ -50,6 +50,7 @@ const EMPTY = {
   work_days: ALL_DAYS,
   guideline: DEFAULT_GUIDELINE,
   regional_features: '',
+  tone: '',
   menu_items: [{ ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }],
   review_length: 80,
   photos_per_review: 1,
@@ -154,6 +155,7 @@ export default function TargetForm() {
       const result = await api.previewReviewText({
         guideline: form.guideline.trim() || null,
         regional_features: form.regional_features.trim() || null,
+        tone: form.tone.trim() || null,
         review_length: Number(form.review_length),
         menu_items: menuItems.length > 0 ? menuItems : null,
       })
@@ -225,6 +227,7 @@ export default function TargetForm() {
         end_date: form.end_date || null,
         guideline: form.guideline.trim() || null,
         regional_features: form.regional_features.trim() || null,
+        tone: form.tone.trim() || null,
         menu_items: menuItems.length > 0 ? menuItems : null,
         review_length: Number(form.review_length),
         photos_per_review: usePhotos ? Number(form.photos_per_review) || 1 : 0,
@@ -463,6 +466,16 @@ export default function TargetForm() {
                     onChange={(e) => setForm({ ...form, regional_features: e.target.value })}
                     rows={2}
                     placeholder="예: 근처 관광지, 교통 접근성 등 리뷰에 녹일 수 있는 지역 특징"
+                    className="w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500">말투 (선택)</label>
+                  <textarea
+                    value={form.tone}
+                    onChange={(e) => setForm({ ...form, tone: e.target.value })}
+                    rows={2}
+                    placeholder="예: 친구한테 편하게 말하듯이 — 문장 종결어미는 항상 다양하게 섞어서 씁니다"
                     className="w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
                   />
                 </div>

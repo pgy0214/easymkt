@@ -23,6 +23,7 @@ def _client() -> anthropic.Anthropic:
 def _build_prompt(
     guideline: str | None,
     regional_features: str | None,
+    tone: str | None,
     length: int,
     menu_items: list[dict] | None,
 ) -> str:
@@ -31,6 +32,8 @@ def _build_prompt(
         parts.append(f"원고 가이드라인:\n{guideline}")
     if regional_features:
         parts.append(f"지역적 특징:\n{regional_features}")
+    if tone:
+        parts.append(f"말투 지시:\n{tone}")
     if menu_items:
         menu_text = ", ".join(f"{m['name']}({m['price']}원)" for m in menu_items)
         parts.append(f"메뉴: {menu_text}")
@@ -43,6 +46,10 @@ def _build_prompt(
 조건:
 - 글자수는 {length}자 내외 (너무 짧거나 길지 않게)
 - 반말/존댓말 섞지 말고 후기 특유의 편한 구어체로
+- 문장 종결어미는 한 가지로 통일하지 말고 여러 종류를 섞어서 써줘
+  (예: ~함요, ~했네요, ~더라고요, ~했어요, ~대만족ㅋㅋ, ~했습니다 등 중에서
+  자연스럽게 골고루) — 같은 캠페인의 다른 리뷰들과 패턴이 겹치지 않게 매번
+  다르게 조합해줘
 - 과장된 광고 문구, 이모지, 해시태그 없이
 - 결과는 리뷰 본문 텍스트만 출력 (제목, 설명, 따옴표 없이)"""
 
@@ -51,6 +58,7 @@ def generate_review_text(
     guideline: str | None,
     regional_features: str | None,
     length: int,
+    tone: str | None = None,
     menu_items: list[dict] | None = None,
 ) -> str:
     client = _client()
@@ -60,7 +68,7 @@ def generate_review_text(
         messages=[
             {
                 "role": "user",
-                "content": _build_prompt(guideline, regional_features, length, menu_items),
+                "content": _build_prompt(guideline, regional_features, tone, length, menu_items),
             }
         ],
     )
