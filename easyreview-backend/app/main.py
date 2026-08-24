@@ -62,6 +62,8 @@ app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 _frontend_origins = [
     "http://localhost:5173",
     "https://review-managing.vercel.app",
+    "https://easymkt.com",
+    "https://www.easymkt.com",
 ]
 
 app.add_middleware(
