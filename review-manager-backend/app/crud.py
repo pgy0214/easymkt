@@ -1823,6 +1823,142 @@ def delete_experience_campaign(db: Session, campaign: models.ExperienceCampaign)
     db.commit()
 
 
+def get_notices(db: Session, active_only: bool = False) -> list[models.Notice]:
+    query = db.query(models.Notice)
+    if active_only:
+        query = query.filter(models.Notice.is_active.is_(True))
+    return query.order_by(models.Notice.display_order.asc(), models.Notice.id.desc()).all()
+
+
+def get_notice(db: Session, notice_id: int) -> models.Notice | None:
+    return db.query(models.Notice).filter(models.Notice.id == notice_id).first()
+
+
+def create_notice(db: Session, data: schemas.NoticeCreate) -> models.Notice:
+    notice = models.Notice(**data.model_dump())
+    db.add(notice)
+    db.commit()
+    db.refresh(notice)
+    return notice
+
+
+def update_notice(db: Session, notice: models.Notice, data: schemas.NoticeUpdate) -> models.Notice:
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(notice, field, value)
+    db.commit()
+    db.refresh(notice)
+    return notice
+
+
+def delete_notice(db: Session, notice: models.Notice) -> None:
+    db.delete(notice)
+    db.commit()
+
+
+def save_notice_image(db: Session, notice: models.Notice, content: bytes, filename: str) -> models.Notice:
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError(f"지원하지 않는 이미지 형식입니다: {ext or '(확장자 없음)'}")
+    dest_dir = os.path.join(UPLOADS_DIR, "notices")
+    os.makedirs(dest_dir, exist_ok=True)
+    dest = os.path.join(dest_dir, f"notice_{notice.id}{ext}")
+    with open(dest, "wb") as f:
+        f.write(content)
+    notice.image_path = f"/uploads/notices/notice_{notice.id}{ext}"
+    db.commit()
+    db.refresh(notice)
+    return notice
+
+
+def _product_to_out(product: models.Product) -> schemas.ProductOut:
+    out = schemas.ProductOut.model_validate(product)
+    out.detail_image_paths = (
+        json.loads(product.detail_image_paths_json) if product.detail_image_paths_json else []
+    )
+    return out
+
+
+def get_products(db: Session, active_only: bool = False) -> list[schemas.ProductOut]:
+    query = db.query(models.Product)
+    if active_only:
+        query = query.filter(models.Product.is_active.is_(True))
+    products = query.order_by(models.Product.display_order.asc(), models.Product.id.desc()).all()
+    return [_product_to_out(p) for p in products]
+
+
+def get_product(db: Session, product_id: int) -> models.Product | None:
+    return db.query(models.Product).filter(models.Product.id == product_id).first()
+
+
+def create_product(db: Session, data: schemas.ProductCreate) -> schemas.ProductOut:
+    product = models.Product(**data.model_dump())
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+    return _product_to_out(product)
+
+
+def update_product(db: Session, product: models.Product, data: schemas.ProductUpdate) -> schemas.ProductOut:
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(product, field, value)
+    db.commit()
+    db.refresh(product)
+    return _product_to_out(product)
+
+
+def delete_product(db: Session, product: models.Product) -> None:
+    db.delete(product)
+    db.commit()
+
+
+def save_product_thumbnail(
+    db: Session, product: models.Product, content: bytes, filename: str
+) -> schemas.ProductOut:
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError(f"지원하지 않는 이미지 형식입니다: {ext or '(확장자 없음)'}")
+    dest_dir = os.path.join(UPLOADS_DIR, "products")
+    os.makedirs(dest_dir, exist_ok=True)
+    dest = os.path.join(dest_dir, f"product_{product.id}_thumb{ext}")
+    with open(dest, "wb") as f:
+        f.write(content)
+    product.thumbnail_path = f"/uploads/products/product_{product.id}_thumb{ext}"
+    db.commit()
+    db.refresh(product)
+    return _product_to_out(product)
+
+
+def add_product_detail_image(
+    db: Session, product: models.Product, content: bytes, filename: str
+) -> schemas.ProductOut:
+    """쇼핑몰 상세페이지처럼, 상세 이미지를 업로드한 순서대로 이어붙여 보여준다."""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError(f"지원하지 않는 이미지 형식입니다: {ext or '(확장자 없음)'}")
+    dest_dir = os.path.join(UPLOADS_DIR, "products")
+    os.makedirs(dest_dir, exist_ok=True)
+    paths = json.loads(product.detail_image_paths_json) if product.detail_image_paths_json else []
+    idx = len(paths)
+    dest = os.path.join(dest_dir, f"product_{product.id}_detail_{idx}{ext}")
+    with open(dest, "wb") as f:
+        f.write(content)
+    paths.append(f"/uploads/products/product_{product.id}_detail_{idx}{ext}")
+    product.detail_image_paths_json = json.dumps(paths)
+    db.commit()
+    db.refresh(product)
+    return _product_to_out(product)
+
+
+def remove_product_detail_image(db: Session, product: models.Product, image_path: str) -> schemas.ProductOut:
+    paths = json.loads(product.detail_image_paths_json) if product.detail_image_paths_json else []
+    if image_path in paths:
+        paths.remove(image_path)
+        product.detail_image_paths_json = json.dumps(paths)
+        db.commit()
+        db.refresh(product)
+    return _product_to_out(product)
+
+
 def save_experience_campaign_image(
     db: Session, campaign: models.ExperienceCampaign, content: bytes, filename: str
 ) -> schemas.ExperienceCampaignOut:

@@ -214,6 +214,40 @@ export const api = {
   },
 }
 
+export const productApi = {
+  list: () => request('/products'),
+  create: (data) => request('/products', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => request(`/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id) => request(`/products/${id}`, { method: 'DELETE' }),
+  uploadThumbnail: (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest(`/products/${id}/thumbnail`, form)
+  },
+  addDetailImage: (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest(`/products/${id}/detail-images`, form)
+  },
+  removeDetailImage: (id, imagePath) =>
+    request(`/products/${id}/detail-images`, {
+      method: 'DELETE',
+      body: JSON.stringify({ image_path: imagePath }),
+    }),
+}
+
+export const noticeApi = {
+  list: () => request('/notices'),
+  create: (data) => request('/notices', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => request(`/notices/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id) => request(`/notices/${id}`, { method: 'DELETE' }),
+  uploadImage: (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest(`/notices/${id}/image`, form)
+  },
+}
+
 export const experienceCampaignApi = {
   list: () => request('/experience-campaigns'),
   create: (data) => request('/experience-campaigns', { method: 'POST', body: JSON.stringify(data) }),
@@ -320,6 +354,9 @@ export const advertiserApi = {
     authedRequest('/advertiser/stores', token, { method: 'POST', body: JSON.stringify(data) }),
   updateStore: (token, id, data) =>
     authedRequest(`/advertiser/stores/${id}`, token, { method: 'PATCH', body: JSON.stringify(data) }),
+  getProducts: (token) => authedRequest('/advertiser/products', token),
+  getNotices: (token) => authedRequest('/advertiser/notices', token),
+
   getCampaigns: (token) => authedRequest('/advertiser/campaigns', token),
   createCampaign: (token, data) =>
     authedRequest('/advertiser/campaigns', token, { method: 'POST', body: JSON.stringify(data) }),

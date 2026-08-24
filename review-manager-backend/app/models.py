@@ -247,6 +247,38 @@ class Settings(Base):
     kakao_default_claim_minutes = Column(Integer, nullable=False, default=1440)
 
 
+class Notice(Base):
+    """광고주센터 등에 노출하는 공지사항 게시판(popomon류 서비스의 공지사항
+    위젯과 동일한 개념) — 제목+본문 텍스트 중심, 이미지는 선택."""
+
+    __tablename__ = "notices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    content = Column(String, nullable=True)
+    image_path = Column(String, nullable=True)
+    display_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class Product(Base):
+    """광고주센터에 소개하는 이지리뷰 서비스 상품 — 캠페인의 "상품"
+    (ProductRowsEditor, 매장 메뉴/가격)과는 다른 개념. 실제 쇼핑몰 상세페이지처럼
+    관리자가 상세 이미지를 올리면 그 순서 그대로 이어붙여 보여준다(텍스트로
+    구성/효과를 따로 입력받지 않음)."""
+
+    __tablename__ = "products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    thumbnail_path = Column(String, nullable=True)  # 카드 목록용 썸네일
+    detail_image_paths_json = Column(String, nullable=True)  # 상세페이지 이미지 경로 목록(JSON 배열), 순서대로 렌더링
+    display_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=utcnow)
+
+
 class ExperienceCampaign(Base):
     """체험단 캠페인 — 영수증 리뷰용 ReviewTarget과는 완전히 별도 파이프라인.
     즉시-클레임이 아니라 지원(ExperienceApplication) 후 관리자가 승인하는 구조."""

@@ -506,6 +506,10 @@ function AdvertiserHome({ token, onLogout }) {
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [stores, setStores] = useState([])
   const [campaigns, setCampaigns] = useState([])
+  const [products, setProducts] = useState([])
+  const [productDetail, setProductDetail] = useState(null)
+  const [notices, setNotices] = useState([])
+  const [noticeDetail, setNoticeDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [storeModalOpen, setStoreModalOpen] = useState(false)
   const [editingStore, setEditingStore] = useState(null)
@@ -543,16 +547,21 @@ function AdvertiserHome({ token, onLogout }) {
       // Promise.all이면 넷 중 하나(예: 아직 배포되지 않은 캠페인 종류)가 실패할 때
       // me/stores/campaigns까지 통째로 안 채워져서 "내 정보 수정" 등 나머지 화면이
       // 멈춰버린다 — allSettled로 각자 독립적으로 반영한다.
-      const [meResult, storesResult, campaignsResult, reviewTargetsResult] = await Promise.allSettled([
-        advertiserApi.me(token),
-        advertiserApi.getStores(token),
-        advertiserApi.getCampaigns(token),
-        advertiserApi.getReviewTargets(token),
-      ])
+      const [meResult, storesResult, campaignsResult, reviewTargetsResult, productsResult, noticesResult] =
+        await Promise.allSettled([
+          advertiserApi.me(token),
+          advertiserApi.getStores(token),
+          advertiserApi.getCampaigns(token),
+          advertiserApi.getReviewTargets(token),
+          advertiserApi.getProducts(token),
+          advertiserApi.getNotices(token),
+        ])
       if (meResult.status === 'fulfilled') setMe(meResult.value)
       if (storesResult.status === 'fulfilled') setStores(storesResult.value)
       if (campaignsResult.status === 'fulfilled') setCampaigns(campaignsResult.value)
       if (reviewTargetsResult.status === 'fulfilled') setReviewTargets(reviewTargetsResult.value)
+      if (productsResult.status === 'fulfilled') setProducts(productsResult.value)
+      if (noticesResult.status === 'fulfilled') setNotices(noticesResult.value)
     } finally {
       setLoading(false)
     }
@@ -820,6 +829,85 @@ function AdvertiserHome({ token, onLogout }) {
         <div className="rounded-card border border-amber-200 bg-warning-bg px-3 py-2 text-sm text-warning-text">
           사업자등록증 승인 대기 중입니다. 관리자 확인 후 매장 등록과 캠페인 개설이 가능해요.
         </div>
+      )}
+
+      {notices.length > 0 && (
+        <Card>
+          <h2 className="mb-2 font-semibold text-gray-800">공지사항</h2>
+          <div className="divide-y divide-gray-100">
+            {notices.map((n) => (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => setNoticeDetail(n)}
+                className="flex w-full items-center justify-between gap-2 py-2 text-left hover:text-brand-600"
+              >
+                <span className="truncate text-sm text-gray-700">{n.title}</span>
+                <span className="shrink-0 text-xs text-gray-400">{formatDate(n.created_at)}</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {noticeDetail && (
+        <Modal open={!!noticeDetail} onClose={() => setNoticeDetail(null)}>
+          <h3 className="mb-1 font-semibold text-gray-800">{noticeDetail.title}</h3>
+          <p className="mb-3 text-xs text-gray-400">{formatDate(noticeDetail.created_at)}</p>
+          {noticeDetail.image_path && (
+            <img
+              src={`${API_ORIGIN}${noticeDetail.image_path}`}
+              alt={noticeDetail.title}
+              className="mb-3 w-full rounded-btn object-cover"
+            />
+          )}
+          {noticeDetail.content && (
+            <p className="whitespace-pre-line text-sm text-gray-700">{noticeDetail.content}</p>
+          )}
+        </Modal>
+      )}
+
+      {products.length > 0 && (
+        <Card>
+          <h2 className="mb-3 font-semibold text-gray-800">마케팅 이렇게 하세요</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {products.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setProductDetail(p)}
+                className="rounded-btn border border-gray-200 p-3 text-left hover:border-brand-300 hover:bg-brand-50"
+              >
+                {p.thumbnail_path ? (
+                  <img
+                    src={`${API_ORIGIN}${p.thumbnail_path}`}
+                    alt={p.name}
+                    className="mb-2 h-28 w-full rounded-btn object-cover"
+                  />
+                ) : (
+                  <div className="mb-2 flex h-28 w-full items-center justify-center rounded-btn bg-gray-50 text-xs text-gray-400">
+                    {p.name}
+                  </div>
+                )}
+                <div className="font-medium text-gray-800">{p.name}</div>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {productDetail && (
+        <Modal open={!!productDetail} onClose={() => setProductDetail(null)}>
+          <h3 className="mb-3 font-semibold text-gray-800">{productDetail.name}</h3>
+          <div className="space-y-2">
+            {productDetail.detail_image_paths.length === 0 && (
+              <p className="text-sm text-gray-400">등록된 상세 이미지가 없습니다.</p>
+            )}
+            {productDetail.detail_image_paths.map((path) => (
+              <img key={path} src={`${API_ORIGIN}${path}`} alt={productDetail.name} className="w-full" />
+            ))}
+          </div>
+        </Modal>
       )}
 
       <Card>

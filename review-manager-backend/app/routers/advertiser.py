@@ -38,6 +38,17 @@ def get_me(reviewer: models.Reviewer = Depends(get_current_reviewer)):
     return crud.reviewer_to_out(reviewer)
 
 
+@router.get("/products", response_model=list[schemas.ProductOut])
+def list_products(reviewer: models.Reviewer = Depends(get_current_advertiser), db: Session = Depends(get_db)):
+    """이지리뷰 상품 소개 — 승인 대기 중이어도 볼 수 있게 get_current_advertiser만 요구."""
+    return crud.get_products(db, active_only=True)
+
+
+@router.get("/notices", response_model=list[schemas.NoticeOut])
+def list_notices(reviewer: models.Reviewer = Depends(get_current_advertiser), db: Session = Depends(get_db)):
+    return crud.get_notices(db, active_only=True)
+
+
 @router.post("/stores/fetch-info", response_model=schemas.StoreInfoFetchOut)
 def fetch_store_info(
     data: schemas.StoreInfoFetchIn, reviewer: models.Reviewer = Depends(get_current_advertiser)

@@ -4,6 +4,8 @@ import CampaignManager from './components/CampaignManager.jsx'
 import ExperienceManager from './components/ExperienceManager.jsx'
 import MemberManager from './components/MemberManager.jsx'
 import Nav from './components/Nav.jsx'
+import NoticeManager from './components/NoticeManager.jsx'
+import ProductManager from './components/ProductManager.jsx'
 import ReceiptGenerator from './components/ReceiptGenerator.jsx'
 import ReviewerManager from './components/ReviewerManager.jsx'
 import SettingsPanel from './components/SettingsPanel.jsx'
@@ -61,6 +63,8 @@ export default function App() {
         {tab === 'settlement' && <SettlementSummary />}
         {tab === 'settings' && <SettingsPanel />}
         {tab === 'members' && <MemberManager />}
+        {tab === 'notices' && <NoticeManager />}
+        {tab === 'products' && <ProductManager />}
       </main>
     </div>
   )

@@ -38,6 +38,8 @@ const GROUPS = [
     children: [
       { id: 'settings', label: '일반설정' },
       { id: 'members', label: '회원관리' },
+      { id: 'notices', label: '공지사항 관리' },
+      { id: 'products', label: '마케팅 이렇게 하세요' },
     ],
   },
 ]

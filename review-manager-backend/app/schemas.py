@@ -672,6 +672,64 @@ class AccountStoreHistoryItem(BaseModel):
 ReviewTargetDetailOut.model_rebuild()
 
 
+# --- Notices (공지사항) ---
+
+class NoticeCreate(BaseModel):
+    title: str
+    content: Optional[str] = None
+    display_order: int = 0
+    is_active: bool = True
+
+
+class NoticeUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class NoticeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    content: Optional[str] = None
+    image_path: Optional[str] = None
+    display_order: int
+    is_active: bool
+    created_at: datetime.datetime
+
+
+# --- Products (광고주센터 상품 소개 — 쇼핑몰 상세페이지 형태) ---
+
+class ProductCreate(BaseModel):
+    name: str
+    display_order: int = 0
+    is_active: bool = True
+
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class ProductDetailImageRemoveIn(BaseModel):
+    image_path: str
+
+
+class ProductOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    thumbnail_path: Optional[str] = None
+    detail_image_paths: list[str] = []
+    display_order: int
+    is_active: bool
+    created_at: datetime.datetime
+
+
 # --- Experience campaigns (체험단 캠페인) ---
 
 CampaignType = Literal["방문형", "배송형"]
