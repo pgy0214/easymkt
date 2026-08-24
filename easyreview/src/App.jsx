@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AdminAccountManager from './components/AdminAccountManager.jsx'
 import CampaignManager from './components/CampaignManager.jsx'
 import ExperienceManager from './components/ExperienceManager.jsx'
@@ -16,22 +16,34 @@ import TaskDashboard from './components/TaskDashboard.jsx'
 
 const TOKEN_KEY = 'admin_token'
 
+function NoAdminAccess() {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.location.href = '/'
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
+      <div className="w-full max-w-sm rounded-card border border-gray-200 bg-white p-6 text-center">
+        <img src="/logo.svg" alt="" className="mx-auto mb-3 h-12 w-12" />
+        <h1 className="mb-2 text-lg font-semibold text-gray-900">권한이 없습니다</h1>
+        <p className="text-sm text-gray-500">
+          관리자 계정으로 로그인해야 볼 수 있는 페이지입니다.
+        </p>
+        <p className="mt-3 text-xs text-gray-400">잠시 후 메인 페이지로 이동합니다...</p>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [tab, setTab] = useState('reviewers')
 
   if (!token) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
-        <div className="w-full max-w-sm rounded-card border border-gray-200 bg-white p-6 text-center">
-          <img src="/logo.svg" alt="" className="mx-auto mb-3 h-12 w-12" />
-          <h1 className="mb-2 text-lg font-semibold text-gray-900">권한이 없습니다</h1>
-          <p className="text-sm text-gray-500">
-            관리자 계정으로 로그인해야 볼 수 있는 페이지입니다.
-          </p>
-        </div>
-      </div>
-    )
+    return <NoAdminAccess />
   }
 
   function handleLogout() {

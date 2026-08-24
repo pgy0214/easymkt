@@ -58,7 +58,7 @@ export default function AccountForm({ onCreate, showIp = false }) {
         <Input
           value={form.label}
           onChange={(e) => setForm({ ...form, label: e.target.value })}
-          className="w-32"
+          className="w-40"
         />
       </div>
 
@@ -103,7 +103,7 @@ export default function AccountForm({ onCreate, showIp = false }) {
       {error && <span className="text-xs text-danger-text">{error}</span>}
 
       <div className="w-full space-y-1.5 rounded-btn bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
-        <p>계정 아이디는 여러 리뷰 계정을 구분하기 편하도록 적어두는 용도입니다.</p>
+        <p>계정아이디는 리뷰어들의 계정 구분용도입니다.</p>
         {form.platform === 'naver' && (
           <p>
             마이플레이스 URL 찾는법:{' '}

@@ -26,6 +26,39 @@ const WORK_RULES_KEY = 'workRulesAcknowledged_v1'
 const TOKEN_KEY = 'portal_token'
 const MODE_KEY = 'portal_mode'
 
+// 마이플레이스 링크를 브라우저 대신 네이버 앱으로 직접 열기 시도 — 앱이 없거나
+// 스킴이 안 맞으면 hidden 이벤트가 안 걸려서 아래 타임아웃 폴백이 그냥 웹링크로
+// 넘어간다(최악의 경우에도 지금까지의 동작과 동일).
+function openNaverProfileUrl(url, e) {
+  if (!url.includes('naver.com')) return // 카카오 등 다른 플랫폼은 기존 동작 그대로
+  e.preventDefault()
+
+  const isAndroid = /Android/i.test(navigator.userAgent)
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  if (!isAndroid && !isIOS) {
+    window.location.href = url
+    return
+  }
+
+  let appOpened = false
+  const onHide = () => {
+    if (document.hidden) appOpened = true
+  }
+  document.addEventListener('visibilitychange', onHide)
+
+  if (isAndroid) {
+    const bare = url.replace(/^https?:\/\//, '')
+    window.location.href = `intent://${bare}#Intent;scheme=https;package=com.nhn.android.search;S.browser_fallback_url=${encodeURIComponent(url)};end`
+  } else {
+    window.location.href = `naversearchapp://inappbrowser?url=${encodeURIComponent(url)}`
+  }
+
+  setTimeout(() => {
+    document.removeEventListener('visibilitychange', onHide)
+    if (!appOpened) window.location.href = url
+  }, 1500)
+}
+
 export default function Portal() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [checkingDevAutoLogin, setCheckingDevAutoLogin] = useState(!token)
@@ -751,45 +784,43 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
 
   return (
     <div className={`mx-auto space-y-6 p-4 ${mode === 'experience' ? 'max-w-6xl' : 'max-w-3xl'}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="" className="h-8 w-8 shrink-0" />
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">{reviewer.name}님, 안녕하세요</h1>
-            <p className="text-sm text-gray-500">{reviewer.contact_info}</p>
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="" className="h-8 w-8 shrink-0" />
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">{reviewer.name}님, 안녕하세요</h1>
+              <p className="text-sm text-gray-500">{reviewer.contact_info}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-gray-500">
+            <button type="button" onClick={() => setShowProfileEdit(true)} className="whitespace-nowrap hover:text-gray-800">
+              내 정보 수정
+            </button>
+            <button onClick={onLogout} className="flex items-center gap-1 whitespace-nowrap hover:text-gray-800">
+              <LogOut size={14} />
+              로그아웃
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 rounded-btn bg-gray-100 p-0.5">
-            <button
-              type="button"
-              onClick={() => onModeChange('reviewer')}
-              className={`rounded-btn px-2 py-1 text-xs font-medium transition-colors ${
-                mode === 'reviewer' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              리뷰단
-            </button>
-            <button
-              type="button"
-              onClick={() => onModeChange('experience')}
-              className={`rounded-btn px-2 py-1 text-xs font-medium transition-colors ${
-                mode === 'experience' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              체험단
-            </button>
-          </div>
+        <div className="flex w-full gap-1 rounded-btn bg-gray-100 p-0.5">
           <button
             type="button"
-            onClick={() => setShowProfileEdit(true)}
-            className="text-sm text-gray-500 hover:text-gray-800"
+            onClick={() => onModeChange('reviewer')}
+            className={`flex-1 whitespace-nowrap rounded-btn px-2 py-1.5 text-sm font-medium transition-colors ${
+              mode === 'reviewer' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
+            }`}
           >
-            내 정보 수정
+            리뷰단
           </button>
-          <button onClick={onLogout} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
-            <LogOut size={14} />
-            로그아웃
+          <button
+            type="button"
+            onClick={() => onModeChange('experience')}
+            className={`flex-1 whitespace-nowrap rounded-btn px-2 py-1.5 text-sm font-medium transition-colors ${
+              mode === 'experience' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'
+            }`}
+          >
+            체험단
           </button>
         </div>
       </div>
@@ -1514,6 +1545,7 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
               href={task.account_profile_url}
               target="_blank"
               rel="noreferrer"
+              onClick={(e) => openNaverProfileUrl(task.account_profile_url, e)}
               className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
             >
               작업하러가기
@@ -1609,6 +1641,7 @@ function TaskBriefModal({ token, taskId, accountProfileUrl, onClose }) {
               href={accountProfileUrl}
               target="_blank"
               rel="noreferrer"
+              onClick={(e) => openNaverProfileUrl(accountProfileUrl, e)}
               className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
             >
               작업하러가기
