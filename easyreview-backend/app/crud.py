@@ -1875,7 +1875,43 @@ def _product_to_out(product: models.Product) -> schemas.ProductOut:
     out.detail_image_paths = (
         json.loads(product.detail_image_paths_json) if product.detail_image_paths_json else []
     )
+    out.options = [
+        schemas.ProductOptionOut.model_validate(o)
+        for o in sorted(product.options, key=lambda o: (o.display_order, o.id))
+    ]
     return out
+
+
+def create_product_option(
+    db: Session, product: models.Product, data: schemas.ProductOptionCreate
+) -> schemas.ProductOut:
+    option = models.ProductOption(product_id=product.id, **data.model_dump())
+    db.add(option)
+    db.commit()
+    db.refresh(product)
+    return _product_to_out(product)
+
+
+def get_product_option(db: Session, option_id: int) -> models.ProductOption | None:
+    return db.query(models.ProductOption).filter(models.ProductOption.id == option_id).first()
+
+
+def update_product_option(
+    db: Session, option: models.ProductOption, data: schemas.ProductOptionUpdate
+) -> schemas.ProductOut:
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(option, field, value)
+    db.commit()
+    db.refresh(option.product)
+    return _product_to_out(option.product)
+
+
+def delete_product_option(db: Session, option: models.ProductOption) -> schemas.ProductOut:
+    product = option.product
+    db.delete(option)
+    db.commit()
+    db.refresh(product)
+    return _product_to_out(product)
 
 
 def get_products(db: Session, active_only: bool = False) -> list[schemas.ProductOut]:

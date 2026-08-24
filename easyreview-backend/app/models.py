@@ -278,6 +278,26 @@ class Product(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, default=utcnow)
 
+    options = relationship(
+        "ProductOption", back_populates="product", cascade="all, delete-orphan"
+    )
+
+
+class ProductOption(Base):
+    """구매 가능한 상품(SKU)의 옵션 — 예: "리뷰 10건" 30,000원 / "리뷰 30건" 80,000원.
+    easystore(상품판매 사이트)에서 옵션선택 드롭다운 + 가격표시에 쓰인다."""
+
+    __tablename__ = "product_options"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    label = Column(String, nullable=False)  # 예: "리뷰 10건"
+    price = Column(Integer, nullable=False)  # 원 단위
+    display_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    product = relationship("Product", back_populates="options")
+
 
 class ExperienceCampaign(Base):
     """체험단 캠페인 — 영수증 리뷰용 ReviewTarget과는 완전히 별도 파이프라인.

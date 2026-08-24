@@ -234,6 +234,11 @@ export const productApi = {
       method: 'DELETE',
       body: JSON.stringify({ image_path: imagePath }),
     }),
+  addOption: (id, data) =>
+    request(`/products/${id}/options`, { method: 'POST', body: JSON.stringify(data) }),
+  updateOption: (optionId, data) =>
+    request(`/products/options/${optionId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteOption: (optionId) => request(`/products/options/${optionId}`, { method: 'DELETE' }),
 }
 
 export const noticeApi = {

@@ -61,6 +61,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 # 둘 다 공개 프론트엔드 도메인이라 코드에 있어도 민감정보 아님.
 _frontend_origins = [
     "http://localhost:5173",
+    "http://localhost:5174",
     "https://review-managing.vercel.app",
     "https://easymkt.com",
     "https://www.easymkt.com",
@@ -87,6 +88,7 @@ app.include_router(notify.router, dependencies=[Depends(admin.get_current_admin)
 app.include_router(card_rules.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(experience_campaigns.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(products.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(products.public_router)
 app.include_router(notices.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(advertiser.router)
 

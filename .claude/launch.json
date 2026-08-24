@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "easyreview"],
       "port": 5173
+    },
+    {
+      "name": "easystore",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "easystore"],
+      "port": 5174
     }
   ]
 }

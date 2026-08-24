@@ -19,6 +19,8 @@ export default function ProductManager() {
   const [manageTarget, setManageTarget] = useState(null) // product being managed (thumbnail/detail images)
   const [uploadingThumb, setUploadingThumb] = useState(false)
   const [uploadingDetail, setUploadingDetail] = useState(false)
+  const [optionForm, setOptionForm] = useState({ label: '', price: '' })
+  const [savingOption, setSavingOption] = useState(false)
   const thumbInputRef = useRef(null)
   const detailInputRef = useRef(null)
 
@@ -110,6 +112,33 @@ export default function ProductManager() {
   async function handleRemoveDetailImage(imagePath) {
     try {
       replaceProduct(await productApi.removeDetailImage(manageTarget.id, imagePath))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function handleAddOption(e) {
+    e.preventDefault()
+    if (!optionForm.label || !optionForm.price) return
+    setSavingOption(true)
+    try {
+      const updated = await productApi.addOption(manageTarget.id, {
+        label: optionForm.label,
+        price: Number(optionForm.price),
+        display_order: manageTarget.options.length,
+      })
+      replaceProduct(updated)
+      setOptionForm({ label: '', price: '' })
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setSavingOption(false)
+    }
+  }
+
+  async function handleDeleteOption(optionId) {
+    try {
+      replaceProduct(await productApi.deleteOption(optionId))
     } catch (err) {
       alert(err.message)
     }
@@ -268,6 +297,51 @@ export default function ProductManager() {
               >
                 {uploadingDetail ? '업로드 중...' : '상세 이미지 추가'}
               </Button>
+            </div>
+
+            <div>
+              <p className="mb-1 text-xs font-medium text-gray-500">
+                옵션 (easystore 상품구매용 — 옵션별 가격)
+              </p>
+              <div className="mb-2 space-y-1">
+                {manageTarget.options.map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center justify-between rounded-btn border border-gray-200 px-2 py-1 text-sm"
+                  >
+                    <span>
+                      {o.label} — {o.price.toLocaleString()}원
+                    </span>
+                    <button
+                      onClick={() => handleDeleteOption(o.id)}
+                      className="text-xs text-danger-text hover:underline"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
+                {manageTarget.options.length === 0 && (
+                  <p className="text-xs text-gray-400">등록된 옵션이 없습니다.</p>
+                )}
+              </div>
+              <form onSubmit={handleAddOption} className="flex gap-2">
+                <Input
+                  placeholder="예: 리뷰 10건"
+                  value={optionForm.label}
+                  onChange={(e) => setOptionForm((prev) => ({ ...prev, label: e.target.value }))}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  placeholder="가격"
+                  value={optionForm.price}
+                  onChange={(e) => setOptionForm((prev) => ({ ...prev, price: e.target.value }))}
+                  className="w-28"
+                />
+                <Button type="submit" size="sm" variant="secondary" disabled={savingOption}>
+                  추가
+                </Button>
+              </form>
             </div>
           </div>
         )}

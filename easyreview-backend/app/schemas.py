@@ -718,6 +718,31 @@ class ProductDetailImageRemoveIn(BaseModel):
     image_path: str
 
 
+class ProductOptionCreate(BaseModel):
+    label: str
+    price: int
+    display_order: int = 0
+    is_active: bool = True
+
+
+class ProductOptionUpdate(BaseModel):
+    label: Optional[str] = None
+    price: Optional[int] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class ProductOptionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    product_id: int
+    label: str
+    price: int
+    display_order: int
+    is_active: bool
+
+
 class ProductOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -728,6 +753,7 @@ class ProductOut(BaseModel):
     display_order: int
     is_active: bool
     created_at: datetime.datetime
+    options: list[ProductOptionOut] = []
 
 
 # --- Experience campaigns (체험단 캠페인) ---
