@@ -131,6 +131,8 @@ export const api = {
     request(`/targets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   getTarget: (id) => request(`/targets/${id}`),
   deleteTarget: (id) => request(`/targets/${id}`, { method: 'DELETE' }),
+  updateTargetApproval: (id, status) =>
+    request(`/targets/${id}/approval`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   uploadTargetPhoto: (id, file) => {
     const form = new FormData()
     form.append('file', file)

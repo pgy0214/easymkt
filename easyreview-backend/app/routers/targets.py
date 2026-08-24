@@ -54,6 +54,17 @@ def update_target(
     return crud.target_to_out(crud.update_target(db, target, data))
 
 
+@router.patch("/{target_id}/approval", response_model=schemas.ReviewTargetOut)
+def update_target_approval(
+    target_id: int, data: schemas.ReviewTargetApprovalIn, db: Session = Depends(get_db)
+):
+    """광고주가 등록한 캠페인을 관리자가 승인/거절 — 승인돼야 오픈풀에 노출된다."""
+    target = crud.get_target(db, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    return crud.target_to_out(crud.update_review_target_approval(db, target, data.status))
+
+
 @router.get("/{target_id}", response_model=schemas.ReviewTargetDetailOut)
 def get_target(target_id: int, db: Session = Depends(get_db)):
     target = crud.get_target(db, target_id)

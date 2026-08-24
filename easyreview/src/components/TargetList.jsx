@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
 import { formatDateRange, formatDateTime, formatKRW, formatWorkDays, PLATFORM_LABEL } from '../lib/format.js'
 import Badge from './ui/Badge.jsx'
+import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
 import BulkMessageModal from './BulkMessageModal.jsx'
 import TargetDataModal from './TargetDataModal.jsx'
@@ -69,6 +70,15 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
     onUpdated(updated)
   }
 
+  async function handleApproval(id, status) {
+    try {
+      const updated = await api.updateTargetApproval(id, status)
+      onUpdated(updated)
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
   return (
     <div className="space-y-3">
       <button
@@ -115,6 +125,7 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
                 <th className="px-3 py-2">플랫폼</th>
                 <th className="px-3 py-2">가게명</th>
                 <th className="px-3 py-2">상태</th>
+                <th className="px-3 py-2">승인</th>
                 <th className="px-3 py-2">건수</th>
                 <th className="px-3 py-2">단가(정산)</th>
                 <th className="px-3 py-2">판매금액</th>
@@ -146,6 +157,20 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
                       <Badge variant={isCompleted ? 'neutral' : 'success'}>
                         {isCompleted ? '완료' : '진행중'} ({target.completed_count}/{target.required_count})
                       </Badge>
+                    </td>
+                    <td className="px-3 py-2">
+                      {target.approval_status === 'pending' && (
+                        <div className="flex items-center gap-1">
+                          <Badge variant="warning">광고주 등록 · 승인대기</Badge>
+                          <Button size="sm" variant="ghost" tone="emerald" onClick={() => handleApproval(target.id, 'approved')}>
+                            승인
+                          </Button>
+                          <Button size="sm" variant="danger" onClick={() => handleApproval(target.id, 'rejected')}>
+                            거절
+                          </Button>
+                        </div>
+                      )}
+                      {target.approval_status === 'rejected' && <Badge variant="danger">거절됨</Badge>}
                     </td>
                     <td className="px-3 py-2">{target.required_count}건</td>
                     <td className="px-3 py-2">{formatKRW(target.unit_price)}</td>

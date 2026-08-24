@@ -120,6 +120,9 @@ class ReviewTarget(Base):
     photos_per_review = Column(Integer, nullable=False, default=1)  # 리뷰 1건당 배정할 사진 갯수
     review_length = Column(Integer, nullable=False, default=80)  # 리뷰 원고 목표 글자수 (50/80/100)
 
+    created_by_reviewer_id = Column(Integer, ForeignKey("reviewers.id"), nullable=True)  # 광고주가 등록한 경우
+    approval_status = Column(String, nullable=False, default="approved")  # approved|pending|rejected — 광고주 등록분만 관리자 승인 필요, 승인 전엔 오픈풀에 노출 안 함
+
     created_at = Column(DateTime, default=utcnow)
 
     store = relationship("Store", back_populates="targets")

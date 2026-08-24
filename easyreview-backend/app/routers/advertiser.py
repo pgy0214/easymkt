@@ -164,7 +164,11 @@ def create_my_review_target(
     if not data.menu_items:
         raise HTTPException(status_code=400, detail="메뉴를 1개 이상 등록해야 캠페인을 개설할 수 있습니다")
     try:
-        return crud.target_to_out(crud.create_review_target(db, data))
+        return crud.target_to_out(
+            crud.create_review_target(
+                db, data, created_by_reviewer_id=reviewer.id, approval_status="pending"
+            )
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

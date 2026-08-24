@@ -1012,9 +1012,13 @@ function AdvertiserHome({ token, onLogout }) {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-800">{t.store_name}</span>
-                          <Badge variant={t.completed_count >= t.required_count ? 'success' : 'info'}>
-                            {t.completed_count >= t.required_count ? '완료' : '진행중'}
-                          </Badge>
+                          {t.approval_status !== 'approved' ? (
+                            <Badge variant={APPROVAL_VARIANT[t.approval_status]}>{APPROVAL_LABEL[t.approval_status]}</Badge>
+                          ) : (
+                            <Badge variant={t.completed_count >= t.required_count ? 'success' : 'info'}>
+                              {t.completed_count >= t.required_count ? '완료' : '진행중'}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-xs text-gray-500">
                           완료 {t.completed_count}/{t.required_count}건 · 건당 {t.unit_price.toLocaleString()}원 ·{' '}

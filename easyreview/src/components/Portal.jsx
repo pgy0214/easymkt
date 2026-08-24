@@ -1448,15 +1448,14 @@ function PoolTaskRow({ group, myAccounts, onClaim, disabled, claiming }) {
   const [accountId, setAccountId] = useState(eligibleAccounts[0]?.id ?? '')
 
   return (
-    <div className="flex items-center justify-between rounded-btn border border-gray-100 px-3 py-2 text-sm">
+    <div className="space-y-2 rounded-btn border border-gray-100 px-3 py-2.5 text-sm">
       <div>
         <div className="font-medium text-gray-700">{group.store_name}</div>
-        <div className="text-xs text-gray-500">
-          {PLATFORM_LABEL[group.platform]} · 건당 {formatKRW(group.unit_price)} · 오늘{' '}
-          {group.remaining_today}/{group.total_today} 남음
+        <div className="mt-0.5 text-xs text-gray-500">
+          건당 {formatKRW(group.unit_price)} · 오늘 {group.remaining_today}/{group.total_today} 남음
         </div>
         {eligibleAccounts.length === 0 && (
-          <div className="text-xs text-warning-text">
+          <div className="mt-1 text-xs leading-relaxed text-warning-text">
             지금 신청 가능한 계정이 없어요 (재작업 가능 기간이거나, 오늘 리뷰 가능한 날짜가
             없거나, 이 매장은 하루 최대 3개 계정까지만 신청할 수 있어요)
           </div>
@@ -1464,28 +1463,25 @@ function PoolTaskRow({ group, myAccounts, onClaim, disabled, claiming }) {
       </div>
       {eligibleAccounts.length > 0 && (
         <div className="flex items-center gap-2">
-          {eligibleAccounts.length > 1 ? (
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(Number(e.target.value))}
-              className="rounded-btn border border-gray-300 px-1.5 py-1 text-xs"
-            >
-              {eligibleAccounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="text-xs text-gray-500">{eligibleAccounts[0].label} 계정으로</span>
-          )}
+          <select
+            value={accountId}
+            onChange={(e) => setAccountId(Number(e.target.value))}
+            className="min-w-0 flex-1 rounded-btn border border-gray-300 px-2 py-1.5 text-xs"
+          >
+            {eligibleAccounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.label}
+              </option>
+            ))}
+          </select>
           <Button
             variant="primary"
             size="sm"
+            className="shrink-0 whitespace-nowrap"
             onClick={() => onClaim(group.sample_task_id, accountId)}
             disabled={!accountId || disabled || claiming}
           >
-            {claiming ? '신청중입니다...' : '작업신청'}
+            {claiming ? '신청중...' : '작업신청'}
           </Button>
         </div>
       )}
@@ -1690,6 +1686,7 @@ function TaskBriefModal({ token, taskId, accountProfileUrl, onClose }) {
                 alt="영수증 이미지"
                 className="mt-1 max-h-96 max-w-full rounded border border-gray-200"
               />
+              <p className="mt-1 text-xs text-gray-400">*캡쳐해서 써주세요.</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <ImageCopyButton src={`${API_ORIGIN}${brief.receipt_image_path}`} label="영수증" size="lg" />
                 <ImageDownloadButton

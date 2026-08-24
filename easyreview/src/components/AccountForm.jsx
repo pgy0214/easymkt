@@ -102,11 +102,11 @@ export default function AccountForm({ onCreate, showIp = false }) {
       </Button>
       {error && <span className="text-xs text-danger-text">{error}</span>}
 
-      <div className="w-full space-y-0.5 text-xs text-gray-400">
-        <p>· 계정 아이디는 여러 리뷰 계정을 구분하기 편하도록 적어두는 용도입니다.</p>
+      <div className="w-full space-y-1.5 rounded-btn bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
+        <p>계정 아이디는 여러 리뷰 계정을 구분하기 편하도록 적어두는 용도입니다.</p>
         {form.platform === 'naver' && (
           <p>
-            · 마이플레이스 URL 찾는법 :{' '}
+            마이플레이스 URL 찾는법:{' '}
             <a
               href="https://m.place.naver.com/my"
               target="_blank"
@@ -115,8 +115,8 @@ export default function AccountForm({ onCreate, showIp = false }) {
             >
               마이플레이스 열기
               <ExternalLink size={11} />
-            </a>{' '}
-            클릭 후 ▶ 내 프로필 공유아이콘 클릭 ▶ 링크복사 ▶ 붙여넣기
+            </a>
+            {' '}클릭 → 내 프로필 공유아이콘 클릭 → 링크복사 → 붙여넣기
           </p>
         )}
       </div>

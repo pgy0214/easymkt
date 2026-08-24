@@ -887,7 +887,10 @@ def update_target(
 
 
 def create_review_target(
-    db: Session, data: schemas.ReviewTargetCreate
+    db: Session,
+    data: schemas.ReviewTargetCreate,
+    created_by_reviewer_id: int | None = None,
+    approval_status: str = "approved",
 ) -> models.ReviewTarget:
     """Create the target and its tasks as an unassigned open pool — reviewers
     claim them themselves via the self-service portal (no auto round-robin)."""
@@ -921,6 +924,8 @@ def create_review_target(
         menu_items_json=encode_menu_items(data.menu_items),
         photos_per_review=data.photos_per_review,
         review_length=data.review_length,
+        created_by_reviewer_id=created_by_reviewer_id,
+        approval_status=approval_status,
     )
     db.add(target)
     db.flush()
@@ -941,6 +946,17 @@ def create_review_target(
         )
         db.add(task)
 
+    db.commit()
+    db.refresh(target)
+    return target
+
+
+def update_review_target_approval(
+    db: Session, target: models.ReviewTarget, status: str
+) -> models.ReviewTarget:
+    """광고주가 등록한 영수증리뷰 캠페인을 관리자가 승인/거절 — 승인돼야 오픈풀에 노출된다
+    (get_open_pool_tasks의 approval_status 필터 참고). 이미 생성된 Task들은 손대지 않는다."""
+    target.approval_status = status
     db.commit()
     db.refresh(target)
     return target
@@ -1292,7 +1308,12 @@ def is_naver_receipt_possible_for_pool(
 def get_open_pool_tasks(db: Session, platforms: list[str]) -> list[models.Task]:
     tasks = (
         db.query(models.Task)
-        .filter(models.Task.status == "open", models.Task.platform.in_(platforms))
+        .join(models.ReviewTarget, models.Task.review_target_id == models.ReviewTarget.id)
+        .filter(
+            models.Task.status == "open",
+            models.Task.platform.in_(platforms),
+            models.ReviewTarget.approval_status == "approved",
+        )
         .order_by(models.Task.created_at)
         .all()
     )

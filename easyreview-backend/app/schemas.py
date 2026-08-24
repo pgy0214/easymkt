@@ -368,6 +368,12 @@ class ReviewTargetOut(BaseModel):
     # denormalized, filled in by the router — 캠페인 목록의 진행중/완료 필터에 사용
     completed_count: int = 0
 
+    approval_status: str = "approved"
+
+
+class ReviewTargetApprovalIn(BaseModel):
+    status: Literal["approved", "rejected"]
+
 
 class ReviewTargetDetailOut(ReviewTargetOut):
     tasks: list["TaskOut"] = []

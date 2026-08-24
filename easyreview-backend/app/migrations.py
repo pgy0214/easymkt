@@ -348,5 +348,12 @@ def run_migrations(engine) -> None:
             "approval_status",
             "approval_status TEXT NOT NULL DEFAULT 'approved'",
         )
+        _add_column_if_missing(conn, "review_targets", "created_by_reviewer_id", "created_by_reviewer_id INTEGER")
+        _add_column_if_missing(
+            conn,
+            "review_targets",
+            "approval_status",
+            "approval_status TEXT NOT NULL DEFAULT 'approved'",
+        )
 
         conn.commit()
