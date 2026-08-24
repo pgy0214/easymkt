@@ -17,13 +17,13 @@
 ## 폴더 구조
 
 ```
-review-manager/            프론트엔드 (React 19 + Vite + Tailwind v4)
-review-manager-backend/    백엔드 (FastAPI + SQLite + APScheduler)
+easyreview/            프론트엔드 (React 19 + Vite + Tailwind v4)
+easyreview-backend/    백엔드 (FastAPI + SQLite + APScheduler)
 ```
 
 ## 어떻게 로컬에서 실행하나
 
-**백엔드** (`review-manager-backend/`):
+**백엔드** (`easyreview-backend/`):
 ```powershell
 py -m venv .venv                              # 최초 1회
 .venv\Scripts\pip install -r requirements.txt  # 최초 1회
@@ -31,7 +31,7 @@ copy .env.example .env                         # 최초 1회, 이후 .env 값 �
 .venv\Scripts\uvicorn app.main:app --reload --port 8000
 ```
 
-**프론트엔드** (`review-manager/`):
+**프론트엔드** (`easyreview/`):
 ```powershell
 npm install    # 최초 1회
 npm run dev
@@ -45,7 +45,7 @@ npm run dev
   없으면 `/api/portal/otp/request` 호출 시 500 에러가 나지만, 에러 메시지 안에 인증번호가 그대로 찍혀서
   나오므로 개발 중엔 그걸로 로그인 테스트 가능.
 
-**DB 파일**: `review-manager-backend/review_manager.db`는 git에 올라가지 않는다 (개인정보 포함,
+**DB 파일**: `easyreview-backend/review_manager.db`는 git에 올라가지 않는다 (개인정보 포함,
 `.gitignore` 처리됨). 컴퓨터 간 데이터를 옮기려면 이 파일을 수동으로 복사해야 한다. **2026-07-26에
 사용자 요청으로 리뷰어 테이블을 전체 초기화함(848명 → 0명)** — 엑셀로 처음부터 다시 일괄등록할
 예정이라 진행. 초기화 시점에 등록된 계정(`review_accounts`)이 하나도 없었고 모든 Task가 미배정
@@ -1283,7 +1283,7 @@ review_target 등)은 그때그때 직접 삭제하며 정리함.
     빌드/린트/전체 소스 재스윕 전부 클린 확인, 브라우저로 포털 로그인 화면 실제 렌더링
     확인(백엔드 CORS 제약으로 로그인 이후 데이터 화면까지는 이 검증 세션에서 못 열어봄 —
     코드 자체는 grep/빌드/린트로 충분히 확인됨).
-    이걸로 **review-manager 앱 전체(관리자+포털)가 토스 스타일 디자인 시스템으로 완전히
+    이걸로 **easyreview 앱 전체(관리자+포털)가 토스 스타일 디자인 시스템으로 완전히
     마이그레이션 완료**됨.
   - **로고 제작 + 전 화면 삽입 (2026-08-09).** 사용자가 "영수증리뷰" 서비스 정체성을
     살린 로고를 요청 — 영수증 모양(밑단 지그재그) 안에 스파클(별)을 넣은 브랜드블루
@@ -1732,7 +1732,7 @@ date_check}/`, `.gitignore` 처리함)를 주면 쿠키·로컬스토리지가 �
   안 넣으면 기존처럼 `localhost:5173`만 허용.
 - `requirements.txt`: `psycopg2-binary` 추가(Postgres 드라이버).
 - `Procfile` 신설: Railway가 이걸 읽어서 `uvicorn app.main:app --host 0.0.0.0 --port $PORT`로 기동.
-- `review-manager/src/lib/api.js`: API 서버 주소를 하드코딩된 `localhost:8000`
+- `easyreview/src/lib/api.js`: API 서버 주소를 하드코딩된 `localhost:8000`
   대신 `VITE_API_BASE_URL` 환경변수로 뺌(Vercel 빌드 시 프로덕션 백엔드 URL 주입).
 - `.env.example`: `DATABASE_URL`/`FRONTEND_ORIGINS` 항목 설명 추가.
 
@@ -1741,7 +1741,7 @@ date_check}/`, `.gitignore` 처리함)를 주면 쿠키·로컬스토리지가 �
   키 + `DATABASE_URL`은 Railway가 자동 주입 + `FRONTEND_ORIGINS`는 Vercel 배포
   URL로, `VITE_API_BASE_URL`은 Vercel 쪽에 Railway 백엔드 URL로).
 - Railway에 업로드 파일(영수증/캠페인 이미지/사업자등록증) 영구 보존용 Volume
-  연결(`review-manager-backend/uploads`) — 안 붙이면 재배포 때 업로드 파일 유실.
+  연결(`easyreview-backend/uploads`) — 안 붙이면 재배포 때 업로드 파일 유실.
 - 카페24 도메인을 Vercel(프론트) / Railway(백엔드, 필요시 서브도메인)에 연결.
 - `PORTAL_DEV_BYPASS_REVIEWER_ID`는 반드시 배포 환경에서 비워둘 것(인증 우회 백도어).
 

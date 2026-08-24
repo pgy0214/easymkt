@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "review-manager",
+      "name": "easyreview",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "review-manager"],
+      "runtimeArgs": ["run", "dev", "--prefix", "easyreview"],
       "port": 5173
     }
   ]

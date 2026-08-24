@@ -3,7 +3,7 @@
 사용법:
   1. Railway -> Postgres 서비스 -> Connect 탭에서 "Public Network" 연결 문자열을 복사
      (내부용 말고 외부에서 접속 가능한 쪽 -- 보통 viaduct.proxy.rlwy.net 같은 호스트)
-  2. 이 파일이 있는 review-manager-backend 폴더에서:
+  2. 이 파일이 있는 easyreview-backend 폴더에서:
        TARGET_DATABASE_URL=postgresql://... python migrate_to_postgres.py
      (PowerShell이면: $env:TARGET_DATABASE_URL="postgresql://..."; python migrate_to_postgres.py)
 
