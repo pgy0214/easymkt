@@ -1,3 +1,4 @@
+import JSZip from 'jszip'
 import { Download, Receipt } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { API_ORIGIN, api } from '../lib/api.js'
@@ -23,6 +24,7 @@ export default function ReceiptGenerator() {
   const [error, setError] = useState(null)
   const [receiptUrls, setReceiptUrls] = useState([])
   const [downloadPrefix, setDownloadPrefix] = useState('')
+  const [downloadingAll, setDownloadingAll] = useState(false)
 
   useEffect(() => {
     api
@@ -59,6 +61,32 @@ export default function ReceiptGenerator() {
     a.download = `${downloadPrefix}${suffix}.jpg`
     a.click()
     URL.revokeObjectURL(objectUrl)
+  }
+
+  async function handleDownloadAll() {
+    if (receiptUrls.length === 0) return
+    setDownloadingAll(true)
+    try {
+      const zip = new JSZip()
+      const blobs = await Promise.all(
+        receiptUrls.map((url) => fetch(`${API_ORIGIN}${url}`).then((res) => res.blob())),
+      )
+      blobs.forEach((blob, i) => {
+        const suffix = receiptUrls.length > 1 ? `_${i + 1}` : ''
+        zip.file(`${downloadPrefix}${suffix}.jpg`, blob)
+      })
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const objectUrl = URL.createObjectURL(zipBlob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = `${downloadPrefix}_전체${receiptUrls.length}건.zip`
+      a.click()
+      URL.revokeObjectURL(objectUrl)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setDownloadingAll(false)
+    }
   }
 
   return (
@@ -118,6 +146,16 @@ export default function ReceiptGenerator() {
       )}
 
       {error && <p className="text-sm text-danger-text">{error}</p>}
+
+      {receiptUrls.length > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-500">생성된 영수증 {receiptUrls.length}건</p>
+          <Button onClick={handleDownloadAll} disabled={downloadingAll} variant="secondary" size="sm">
+            <Download size={14} />
+            {downloadingAll ? '압축 중...' : '전체 일괄 다운로드 (ZIP)'}
+          </Button>
+        </div>
+      )}
 
       {receiptUrls.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
