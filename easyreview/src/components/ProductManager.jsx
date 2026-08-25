@@ -264,34 +264,36 @@ export default function ProductManager() {
                   const isLast = index === manageTarget.detail_image_paths.length - 1
                   const busy = reorderingIndex !== null
                   return (
-                    <div key={path} className="relative">
-                      <img src={`${API_ORIGIN}${path}`} alt="" className="w-full rounded-btn object-cover" />
-                      <span className="absolute left-1 top-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white">
-                        {index + 1}
-                      </span>
-                      <div className="absolute right-1 top-1 flex gap-1">
+                    <div key={path} className="overflow-hidden rounded-btn border border-gray-200">
+                      <div className="relative">
+                        <img src={`${API_ORIGIN}${path}`} alt="" className="w-full object-cover" />
+                        <span className="absolute left-1 top-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white">
+                          {index + 1}번째
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 bg-gray-50 p-2">
                         <button
                           onClick={() => handleMoveDetailImage(index, -1)}
                           disabled={index === 0 || busy}
-                          className="rounded-full bg-white/90 p-1 text-gray-600 hover:bg-white disabled:opacity-40"
-                          title="위로"
+                          className="flex items-center gap-1 rounded-btn border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
                         >
                           <ChevronUp size={14} />
+                          위로
                         </button>
                         <button
                           onClick={() => handleMoveDetailImage(index, 1)}
                           disabled={isLast || busy}
-                          className="rounded-full bg-white/90 p-1 text-gray-600 hover:bg-white disabled:opacity-40"
-                          title="아래로"
+                          className="flex items-center gap-1 rounded-btn border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
                         >
                           <ChevronDown size={14} />
+                          아래로
                         </button>
                         <button
                           onClick={() => handleRemoveDetailImage(path)}
-                          className="rounded-full bg-white/90 p-1 text-gray-600 hover:bg-white"
-                          title="삭제"
+                          className="flex items-center gap-1 rounded-btn border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-danger-text hover:bg-red-50"
                         >
                           <X size={14} />
+                          삭제
                         </button>
                       </div>
                     </div>
