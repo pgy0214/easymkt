@@ -203,6 +203,7 @@ export default function NoticeManager() {
           <div>
             <label className="block text-xs text-gray-500">내용</label>
             <textarea
+              lang="ko"
               value={form.content}
               onChange={(e) => setForm((prev) => ({ ...prev, content: e.target.value }))}
               rows={4}

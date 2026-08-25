@@ -94,6 +94,7 @@ export default function BulkMessageModal({ reviewers, onClose, initialMessage = 
           메시지 {channel === 'kakao' && '(승인된 템플릿 문구와 정확히 일치해야 발송됩니다)'}
         </label>
         <textarea
+          lang="ko"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={4}

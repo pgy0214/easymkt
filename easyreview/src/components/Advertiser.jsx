@@ -1273,6 +1273,7 @@ function AdvertiserHome({ token, onLogout }) {
                 <div>
                   <label className="block text-xs text-gray-500">가이드라인 (선택)</label>
                   <textarea
+                    lang="ko"
                     value={campaignForm.content_guide}
                     onChange={(e) => setCampaignForm({ ...campaignForm, content_guide: e.target.value })}
                     rows={4}
@@ -1413,6 +1414,7 @@ function AdvertiserHome({ token, onLogout }) {
                       원고 가이드라인 (엑셀 업로드분이 부족할 때 AI가 참고하는 예시)
                     </label>
                     <textarea
+                      lang="ko"
                       value={reviewTargetForm.guideline}
                       onChange={(e) => setReviewTargetForm({ ...reviewTargetForm, guideline: e.target.value })}
                       rows={5}
@@ -1422,6 +1424,7 @@ function AdvertiserHome({ token, onLogout }) {
                   <div>
                     <label className="block text-xs text-gray-500">지역적 특징</label>
                     <textarea
+                      lang="ko"
                       value={reviewTargetForm.regional_features}
                       onChange={(e) => setReviewTargetForm({ ...reviewTargetForm, regional_features: e.target.value })}
                       rows={2}
@@ -1432,6 +1435,7 @@ function AdvertiserHome({ token, onLogout }) {
                   <div>
                     <label className="block text-xs text-gray-500">말투 (선택)</label>
                     <textarea
+                      lang="ko"
                       value={reviewTargetForm.tone}
                       onChange={(e) => setReviewTargetForm({ ...reviewTargetForm, tone: e.target.value })}
                       rows={2}

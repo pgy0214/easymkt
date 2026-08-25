@@ -26,13 +26,11 @@ const WORK_RULES_KEY = 'workRulesAcknowledged_v1'
 const TOKEN_KEY = 'portal_token'
 const MODE_KEY = 'portal_mode'
 
-// 네이버 공식 문서(developers.naver.com "네이버 앱 URL Scheme 연동") 2.3 인앱브라우저로
-// 열기 · 1.3 중계페이지 방식 — iOS/Android 공통. 이전 시도는 https로 잘못 만들어서
-// 실패했던 것으로 보임(공식 예시는 http). 네이버 앱이 설치돼 있으면 앱으로, 없으면
-// 이 중계 페이지가 자체적으로 웹으로 열어준다.
+// 네이버 앱 강제 실행 시도(공식 문서의 URL Scheme/중계페이지 포함 3가지 방식)를
+// 전부 실기기에서 확인했으나 작동하지 않아 보류 — 그냥 일반 웹링크로 열리며,
+// 브라우저 로그인 상태로 정상 작동함을 확인함(마이플레이스 정보 정상 표시).
 function toNaverAppUrl(url) {
-  if (!url.includes('naver.com')) return url
-  return `http://naverapp.naver.com/inappbrowser/?url=${encodeURIComponent(url)}&target=new&version=6`
+  return url
 }
 
 export default function Portal() {
@@ -1563,6 +1561,7 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
       ) : canSubmit ? (
         <div className="mt-1 flex gap-1">
           <input
+            lang="ko"
             value={link}
             onChange={(e) => setLink(e.target.value)}
             placeholder="결과 링크"

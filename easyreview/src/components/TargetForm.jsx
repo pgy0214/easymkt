@@ -452,6 +452,7 @@ export default function TargetForm() {
                   </label>
                   <div className="mt-1 rounded-card border border-gray-200 bg-gray-50 p-2">
                     <textarea
+                      lang="ko"
                       value={form.guideline}
                       onChange={(e) => setForm({ ...form, guideline: e.target.value })}
                       rows={6}
@@ -462,6 +463,7 @@ export default function TargetForm() {
                 <div>
                   <label className="block text-xs text-gray-500">지역적 특징</label>
                   <textarea
+                    lang="ko"
                     value={form.regional_features}
                     onChange={(e) => setForm({ ...form, regional_features: e.target.value })}
                     rows={2}
@@ -472,6 +474,7 @@ export default function TargetForm() {
                 <div>
                   <label className="block text-xs text-gray-500">말투 (선택)</label>
                   <textarea
+                    lang="ko"
                     value={form.tone}
                     onChange={(e) => setForm({ ...form, tone: e.target.value })}
                     rows={2}

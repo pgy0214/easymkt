@@ -66,6 +66,7 @@ function HistoryRow({ task, onSubmitResult, onUploadReceipt }) {
           ) : canEnterResult ? (
             <div className="flex gap-1">
               <input
+                lang="ko"
                 value={linkInput}
                 onChange={(e) => setLinkInput(e.target.value)}
                 placeholder="결과 링크"
@@ -301,6 +302,7 @@ export default function AccountTaskModal({ row, onClose }) {
           <div className="relative mb-1 w-48">
             <Search size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
+              lang="ko"
               value={storeSearch}
               onChange={(e) => setStoreSearch(e.target.value)}
               placeholder="매장명 검색"

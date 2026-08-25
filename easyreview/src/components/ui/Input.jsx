@@ -3,13 +3,13 @@ const BASE =
 
 export default function Input({ label, className = '', ...props }) {
   if (!label) {
-    return <input className={`${BASE} ${className}`} {...props} />
+    return <input lang="ko" className={`${BASE} ${className}`} {...props} />
   }
 
   return (
     <label className="block w-full text-sm text-gray-700">
       {label}
-      <input className={`mt-1 w-full ${BASE} ${className}`} {...props} />
+      <input lang="ko" className={`mt-1 w-full ${BASE} ${className}`} {...props} />
     </label>
   )
 }

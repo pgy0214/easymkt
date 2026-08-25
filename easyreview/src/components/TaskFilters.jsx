@@ -9,6 +9,7 @@ export default function TaskFilters({ filters, onChange, reviewers, stores = [] 
     <div className="flex flex-wrap items-center gap-2 rounded-card border border-gray-200 bg-white p-3">
       <input
         type="text"
+        lang="ko"
         value={filters.search}
         onChange={(e) => set('search', e.target.value)}
         placeholder="검색 (작업번호/리뷰어/연락처/계정/링크)"

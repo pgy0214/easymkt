@@ -384,6 +384,7 @@ export default function CampaignManager() {
           <div>
             <label className="block text-xs text-gray-500">가이드라인</label>
             <textarea
+              lang="ko"
               value={form.content_guide}
               onChange={(e) => setForm({ ...form, content_guide: e.target.value })}
               rows={6}
@@ -448,6 +449,7 @@ export default function CampaignManager() {
             <div>
               <label className="block text-xs text-gray-500">추가 정보</label>
               <textarea
+                lang="ko"
                 value={form.extra_info}
                 onChange={(e) => setForm({ ...form, extra_info: e.target.value })}
                 rows={2}

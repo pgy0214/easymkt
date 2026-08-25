@@ -288,6 +288,7 @@ export default function ReviewerManager() {
         <div className="relative ml-auto">
           <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
+            lang="ko"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="이름/연락처 검색"

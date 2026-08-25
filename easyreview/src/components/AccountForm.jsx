@@ -1,7 +1,8 @@
-import { Clipboard, ExternalLink, Plus } from 'lucide-react'
+import { Clipboard, ExternalLink, ImageIcon, Plus } from 'lucide-react'
 import { useState } from 'react'
 import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
+import Modal from './ui/Modal.jsx'
 
 const EMPTY = { platform: 'naver', label: '', profile_url: '', ip_address: '' }
 
@@ -9,6 +10,7 @@ export default function AccountForm({ onCreate, showIp = false }) {
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [guideOpen, setGuideOpen] = useState(false)
 
   async function handlePasteUrl() {
     try {
@@ -100,26 +102,37 @@ export default function AccountForm({ onCreate, showIp = false }) {
         <Plus size={14} />
         계정 추가
       </Button>
+      <Button type="button" onClick={() => setGuideOpen(true)} variant="outline" size="sm">
+        <ImageIcon size={14} />
+        사진설명
+      </Button>
       {error && <span className="text-xs text-danger-text">{error}</span>}
 
       <div className="w-full space-y-1.5 rounded-btn bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
-        <p>계정아이디는 리뷰어들의 계정 구분용도입니다.</p>
+        <p>1. 계정아이디는 리뷰어님들의 계정구분용도 입니다.</p>
         {form.platform === 'naver' && (
-          <p>
-            마이플레이스 URL 찾는법:{' '}
-            <a
-              href="https://m.place.naver.com/my"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-0.5 text-brand-600 hover:underline"
-            >
-              마이플레이스 열기
-              <ExternalLink size={11} />
-            </a>
-            {' '}클릭 → 내 프로필 공유아이콘 클릭 → 링크복사 → 붙여넣기
-          </p>
+          <div>
+            <p>2. 마이플레이스 URL 찾는법 :</p>
+            <p className="pl-3">
+              - 원하는 계정 로그인 후{' '}
+              <a
+                href="https://m.place.naver.com/my"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-0.5 text-brand-600 hover:underline"
+              >
+                마이플레이스 열기
+                <ExternalLink size={11} />
+              </a>
+              {' '}클릭 → 내 프로필공유 아이콘클릭 → 링크복사 → 붙여넣기
+            </p>
+          </div>
         )}
       </div>
+
+      <Modal open={guideOpen} onClose={() => setGuideOpen(false)} size="sm">
+        <img src="/account-guide.png" alt="작업가능 계정 전달 방법 안내" className="w-full rounded-btn" />
+      </Modal>
     </form>
   )
 }

@@ -169,6 +169,7 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
         <div>
           <label className="block text-xs text-gray-500">원고 가이드라인</label>
           <textarea
+            lang="ko"
             value={guideline}
             onChange={(e) => setGuideline(e.target.value)}
             rows={3}
@@ -178,6 +179,7 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
         <div>
           <label className="block text-xs text-gray-500">지역적 특징</label>
           <textarea
+            lang="ko"
             value={regionalFeatures}
             onChange={(e) => setRegionalFeatures(e.target.value)}
             rows={2}
@@ -187,6 +189,7 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
         <div>
           <label className="block text-xs text-gray-500">말투 (선택)</label>
           <textarea
+            lang="ko"
             value={tone}
             onChange={(e) => setTone(e.target.value)}
             rows={2}

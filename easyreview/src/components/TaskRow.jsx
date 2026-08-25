@@ -122,6 +122,7 @@ export default function TaskRow({
             {showReject && (
               <div className="mt-1 flex gap-1">
                 <input
+                  lang="ko"
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="수정사항을 입력하세요"
@@ -144,6 +145,7 @@ export default function TaskRow({
         ) : canEnterResult ? (
           <div className="flex gap-1">
             <input
+              lang="ko"
               value={linkInput}
               onChange={(e) => setLinkInput(e.target.value)}
               placeholder="결과 링크"
