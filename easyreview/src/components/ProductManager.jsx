@@ -20,6 +20,7 @@ export default function ProductManager() {
   const [uploadingThumb, setUploadingThumb] = useState(false)
   const [uploadingDetail, setUploadingDetail] = useState(false)
   const [reorderingIndex, setReorderingIndex] = useState(null)
+  const [reorderingProductId, setReorderingProductId] = useState(null)
   const thumbInputRef = useRef(null)
   const detailInputRef = useRef(null)
 
@@ -37,6 +38,34 @@ export default function ProductManager() {
   function replaceProduct(updated) {
     setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
     setManageTarget((prev) => (prev && prev.id === updated.id ? updated : prev))
+  }
+
+  // 목록 정렬 기준(백엔드 get_products와 동일): display_order 오름차순, 같으면 id 내림차순
+  function sortProducts(list) {
+    return [...list].sort((a, b) => a.display_order - b.display_order || b.id - a.id)
+  }
+
+  async function handleMoveProduct(index, direction) {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= products.length) return
+    const a = products[index]
+    const b = products[targetIndex]
+    setReorderingProductId(a.id)
+    try {
+      const [updatedA, updatedB] = await Promise.all([
+        productApi.update(a.id, { display_order: b.display_order }),
+        productApi.update(b.id, { display_order: a.display_order }),
+      ])
+      setProducts((prev) =>
+        sortProducts(
+          prev.map((p) => (p.id === updatedA.id ? updatedA : p.id === updatedB.id ? updatedB : p)),
+        ),
+      )
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setReorderingProductId(null)
+    }
   }
 
   function openCreate() {
@@ -153,39 +182,60 @@ export default function ProductManager() {
       {products.length === 0 && <p className="text-sm text-gray-400">등록된 상품이 없습니다.</p>}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((p) => (
-          <div key={p.id} className="rounded-card border border-gray-200 bg-white p-3">
-            <div className="mb-2 flex items-start justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <span className="font-medium text-gray-800">{p.name}</span>
-                <Badge variant={p.is_active ? 'success' : 'neutral'}>{p.is_active ? '노출중' : '숨김'}</Badge>
+        {products.map((p, index) => {
+          const busy = reorderingProductId !== null
+          return (
+            <div key={p.id} className="rounded-card border border-gray-200 bg-white p-3">
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-gray-800">{p.name}</span>
+                  <Badge variant={p.is_active ? 'success' : 'neutral'}>{p.is_active ? '노출중' : '숨김'}</Badge>
+                </div>
+              </div>
+              {p.thumbnail_path ? (
+                <img
+                  src={`${API_ORIGIN}${p.thumbnail_path}`}
+                  alt={p.name}
+                  className="mb-2 h-32 w-full rounded-btn object-cover"
+                />
+              ) : (
+                <div className="mb-2 flex h-32 w-full items-center justify-center rounded-btn bg-gray-50 text-xs text-gray-400">
+                  썸네일 없음
+                </div>
+              )}
+              <p className="mb-2 text-xs text-gray-400">상세이미지 {p.detail_image_paths.length}장</p>
+              <div className="mb-2 flex gap-2">
+                <button
+                  onClick={() => handleMoveProduct(index, -1)}
+                  disabled={index === 0 || busy}
+                  className="flex items-center gap-1 rounded-btn border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                >
+                  <ChevronUp size={14} />
+                  위로
+                </button>
+                <button
+                  onClick={() => handleMoveProduct(index, 1)}
+                  disabled={index === products.length - 1 || busy}
+                  className="flex items-center gap-1 rounded-btn border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                >
+                  <ChevronDown size={14} />
+                  아래로
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => setManageTarget(p)} className="text-xs text-brand-600 hover:underline">
+                  이미지 관리
+                </button>
+                <button onClick={() => handleToggleActive(p)} className="text-xs text-gray-500 hover:underline">
+                  {p.is_active ? '숨기기' : '노출하기'}
+                </button>
+                <button onClick={() => handleDelete(p)} className="text-xs text-danger-text hover:underline">
+                  삭제
+                </button>
               </div>
             </div>
-            {p.thumbnail_path ? (
-              <img
-                src={`${API_ORIGIN}${p.thumbnail_path}`}
-                alt={p.name}
-                className="mb-2 h-32 w-full rounded-btn object-cover"
-              />
-            ) : (
-              <div className="mb-2 flex h-32 w-full items-center justify-center rounded-btn bg-gray-50 text-xs text-gray-400">
-                썸네일 없음
-              </div>
-            )}
-            <p className="mb-2 text-xs text-gray-400">상세이미지 {p.detail_image_paths.length}장</p>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setManageTarget(p)} className="text-xs text-brand-600 hover:underline">
-                이미지 관리
-              </button>
-              <button onClick={() => handleToggleActive(p)} className="text-xs text-gray-500 hover:underline">
-                {p.is_active ? '숨기기' : '노출하기'}
-              </button>
-              <button onClick={() => handleDelete(p)} className="text-xs text-danger-text hover:underline">
-                삭제
-              </button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)}>
@@ -252,6 +302,12 @@ export default function ProductManager() {
               <p className="mb-1 text-xs font-medium text-gray-500">
                 상세 이미지 (화살표로 순서를 바꿀 수 있어요 — 이 순서대로 상세페이지에 이어붙여집니다)
               </p>
+              {manageTarget.detail_image_paths.length <= 1 && (
+                <p className="mb-2 text-xs text-gray-400">
+                  이미지가 1장뿐이라 순서를 바꿀 게 없어요 — "상세 이미지 추가"로 2장 이상 올리면
+                  위로/아래로 버튼이 눌러집니다.
+                </p>
+              )}
               <input
                 ref={detailInputRef}
                 type="file"
