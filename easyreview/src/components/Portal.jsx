@@ -26,30 +26,10 @@ const WORK_RULES_KEY = 'workRulesAcknowledged_v1'
 const TOKEN_KEY = 'portal_token'
 const MODE_KEY = 'portal_mode'
 
-// 네이버 공식 문서 "5. URL Scheme 호출 시 이슈 처리 방법" 우회 방식 — 안드로이드
-// 크롬은 일반 <a href="intent://...">/<a href="naversearchapp://...">를 그냥
-// 무시해버리는 경우가 있어서(보안 정책), iframe의 src를 DOM에 붙이기 "전에" 먼저
-// 지정해야 스킴 호출이 실제로 트리거된다(문서에 명시된 순서). 앱이 없거나 스킴이
-// 안 맞으면 지정 시간 안에 페이지가 그대로 보이므로(hidden 안 됨) 웹링크로 폴백.
-function openNaverProfileUrl(url, e) {
-  if (!url.includes('naver.com')) return
-  e.preventDefault()
-
-  const isAndroid = /Android/i.test(navigator.userAgent)
-  const scheme = isAndroid
-    ? `intent://inappbrowser?url=${encodeURIComponent(url)}&target=new&version=6#Intent;scheme=naversearchapp;package=com.nhn.android.search;end`
-    : `naversearchapp://inappbrowser?url=${encodeURIComponent(url)}&target=new&version=6`
-
-  const iframe = document.createElement('iframe')
-  iframe.style.display = 'none'
-  iframe.src = scheme // DOM에 붙이기 전에 먼저 지정 — 크롬 우회 처리 핵심
-  document.body.appendChild(iframe)
-
-  setTimeout(() => {
-    document.body.removeChild(iframe)
-    if (!document.hidden) window.location.href = url
-  }, 1500)
-}
+// 네이버 앱 강제 실행은 여러 방식(커스텀 스킴/공식 중계페이지/iframe 우회)을
+// 실기기에서 확인했으나 전부 안 됨 — 브라우저(웹)에서 다른 앱을 여는 것 자체가
+// 보안 정책상 제약이 많아서로 추정. 네이티브 앱 연동은 별도 앱팀 작업으로 이관하고,
+// 여기서는 일반 웹링크로 유지(브라우저 로그인 상태로 정상 작동 확인됨).
 
 export default function Portal() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
@@ -1539,7 +1519,8 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
           {task.account_profile_url && (
             <a
               href={task.account_profile_url}
-              onClick={(e) => openNaverProfileUrl(task.account_profile_url, e)}
+              target="_blank"
+              rel="noreferrer"
               className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
             >
               작업하러가기
@@ -1634,7 +1615,8 @@ function TaskBriefModal({ token, taskId, accountProfileUrl, onClose }) {
           {accountProfileUrl && (
             <a
               href={accountProfileUrl}
-              onClick={(e) => openNaverProfileUrl(accountProfileUrl, e)}
+              target="_blank"
+              rel="noreferrer"
               className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
             >
               작업하러가기
