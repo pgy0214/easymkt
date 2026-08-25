@@ -26,12 +26,13 @@ const WORK_RULES_KEY = 'workRulesAcknowledged_v1'
 const TOKEN_KEY = 'portal_token'
 const MODE_KEY = 'portal_mode'
 
-// 네이버가 공식 제공하는 인앱브라우저 중계 페이지 — 네이버 앱이 설치돼 있으면
-// 앱으로, 없으면 자체적으로 웹으로 열어준다(플랫폼별 커스텀 스킴을 직접 추측할
-// 필요가 없다). 카카오 등 naver.com이 아닌 링크는 그대로 둔다.
+// 네이버 공식 문서(developers.naver.com "네이버 앱 URL Scheme 연동") 2.3 인앱브라우저로
+// 열기 · 1.3 중계페이지 방식 — iOS/Android 공통. 이전 시도는 https로 잘못 만들어서
+// 실패했던 것으로 보임(공식 예시는 http). 네이버 앱이 설치돼 있으면 앱으로, 없으면
+// 이 중계 페이지가 자체적으로 웹으로 열어준다.
 function toNaverAppUrl(url) {
   if (!url.includes('naver.com')) return url
-  return `https://naverapp.naver.com/inappbrowser/?url=${encodeURIComponent(url)}&target=new&version=6`
+  return `http://naverapp.naver.com/inappbrowser/?url=${encodeURIComponent(url)}&target=new&version=6`
 }
 
 export default function Portal() {
@@ -764,7 +765,11 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
           <div className="flex items-center gap-2">
             <img src="/logo.svg" alt="" className="h-8 w-8 shrink-0" />
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">{reviewer.name}님, 안녕하세요</h1>
+              <h1 className="text-lg font-semibold leading-snug text-gray-900">
+                {reviewer.name}님,
+                <br />
+                안녕하세요
+              </h1>
               <p className="text-sm text-gray-500">{reviewer.contact_info}</p>
             </div>
           </div>
@@ -1518,8 +1523,6 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
           {task.account_profile_url && (
             <a
               href={toNaverAppUrl(task.account_profile_url)}
-              target="_blank"
-              rel="noreferrer"
               className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
             >
               작업하러가기
@@ -1613,8 +1616,6 @@ function TaskBriefModal({ token, taskId, accountProfileUrl, onClose }) {
           {accountProfileUrl && (
             <a
               href={toNaverAppUrl(accountProfileUrl)}
-              target="_blank"
-              rel="noreferrer"
               className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
             >
               작업하러가기
