@@ -724,6 +724,10 @@ class ProductDetailImageRemoveIn(BaseModel):
     image_path: str
 
 
+class ProductDetailImagesReorderIn(BaseModel):
+    image_paths: list[str]
+
+
 class ProductOptionCreate(BaseModel):
     label: str
     price: int

@@ -75,6 +75,19 @@ def remove_product_detail_image(
     return crud.remove_product_detail_image(db, product, data.image_path)
 
 
+@router.patch("/{product_id}/detail-images/order", response_model=schemas.ProductOut)
+def reorder_product_detail_images(
+    product_id: int, data: schemas.ProductDetailImagesReorderIn, db: Session = Depends(get_db)
+):
+    product = crud.get_product(db, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="상품을 찾을 수 없습니다")
+    try:
+        return crud.reorder_product_detail_images(db, product, data.image_paths)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.delete("/{product_id}")
 def delete_product(product_id: int, db: Session = Depends(get_db)):
     product = crud.get_product(db, product_id)

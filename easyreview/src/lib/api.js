@@ -236,6 +236,11 @@ export const productApi = {
       method: 'DELETE',
       body: JSON.stringify({ image_path: imagePath }),
     }),
+  reorderDetailImages: (id, imagePaths) =>
+    request(`/products/${id}/detail-images/order`, {
+      method: 'PATCH',
+      body: JSON.stringify({ image_paths: imagePaths }),
+    }),
   addOption: (id, data) =>
     request(`/products/${id}/options`, { method: 'POST', body: JSON.stringify(data) }),
   updateOption: (optionId, data) =>

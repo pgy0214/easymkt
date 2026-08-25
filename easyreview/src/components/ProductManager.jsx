@@ -19,8 +19,8 @@ export default function ProductManager() {
   const [manageTarget, setManageTarget] = useState(null) // product being managed (thumbnail/detail images)
   const [uploadingThumb, setUploadingThumb] = useState(false)
   const [uploadingDetail, setUploadingDetail] = useState(false)
-  const [optionForm, setOptionForm] = useState({ label: '', price: '' })
-  const [savingOption, setSavingOption] = useState(false)
+  const [dragIndex, setDragIndex] = useState(null)
+  const [reordering, setReordering] = useState(false)
   const thumbInputRef = useRef(null)
   const detailInputRef = useRef(null)
 
@@ -117,30 +117,20 @@ export default function ProductManager() {
     }
   }
 
-  async function handleAddOption(e) {
-    e.preventDefault()
-    if (!optionForm.label || !optionForm.price) return
-    setSavingOption(true)
+  async function handleDropReorder(dropIndex) {
+    const fromIndex = dragIndex
+    setDragIndex(null)
+    if (fromIndex === null || fromIndex === dropIndex) return
+    const paths = [...manageTarget.detail_image_paths]
+    const [moved] = paths.splice(fromIndex, 1)
+    paths.splice(dropIndex, 0, moved)
+    setReordering(true)
     try {
-      const updated = await productApi.addOption(manageTarget.id, {
-        label: optionForm.label,
-        price: Number(optionForm.price),
-        display_order: manageTarget.options.length,
-      })
-      replaceProduct(updated)
-      setOptionForm({ label: '', price: '' })
+      replaceProduct(await productApi.reorderDetailImages(manageTarget.id, paths))
     } catch (err) {
       alert(err.message)
     } finally {
-      setSavingOption(false)
-    }
-  }
-
-  async function handleDeleteOption(optionId) {
-    try {
-      replaceProduct(await productApi.deleteOption(optionId))
-    } catch (err) {
-      alert(err.message)
+      setReordering(false)
     }
   }
 
@@ -263,7 +253,7 @@ export default function ProductManager() {
 
             <div>
               <p className="mb-1 text-xs font-medium text-gray-500">
-                상세 이미지 (업로드한 순서대로 상세페이지에 이어붙여집니다)
+                상세 이미지 (드래그해서 순서를 바꿀 수 있어요 — 이 순서대로 상세페이지에 이어붙여집니다)
               </p>
               <input
                 ref={detailInputRef}
@@ -273,9 +263,22 @@ export default function ProductManager() {
                 onChange={handleDetailFileChange}
               />
               <div className="mb-2 space-y-2">
-                {manageTarget.detail_image_paths.map((path) => (
-                  <div key={path} className="relative">
+                {manageTarget.detail_image_paths.map((path, index) => (
+                  <div
+                    key={path}
+                    draggable
+                    onDragStart={() => setDragIndex(index)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleDropReorder(index)}
+                    onDragEnd={() => setDragIndex(null)}
+                    className={`relative cursor-move rounded-btn ring-2 transition-opacity ${
+                      dragIndex === index ? 'opacity-40 ring-brand-400' : 'ring-transparent'
+                    } ${reordering ? 'pointer-events-none' : ''}`}
+                  >
                     <img src={`${API_ORIGIN}${path}`} alt="" className="w-full rounded-btn object-cover" />
+                    <span className="absolute left-1 top-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white">
+                      {index + 1}
+                    </span>
                     <button
                       onClick={() => handleRemoveDetailImage(path)}
                       className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-gray-600 hover:bg-white"
@@ -297,51 +300,6 @@ export default function ProductManager() {
               >
                 {uploadingDetail ? '업로드 중...' : '상세 이미지 추가'}
               </Button>
-            </div>
-
-            <div>
-              <p className="mb-1 text-xs font-medium text-gray-500">
-                옵션 (easystore 상품구매용 — 옵션별 가격)
-              </p>
-              <div className="mb-2 space-y-1">
-                {manageTarget.options.map((o) => (
-                  <div
-                    key={o.id}
-                    className="flex items-center justify-between rounded-btn border border-gray-200 px-2 py-1 text-sm"
-                  >
-                    <span>
-                      {o.label} — {o.price.toLocaleString()}원
-                    </span>
-                    <button
-                      onClick={() => handleDeleteOption(o.id)}
-                      className="text-xs text-danger-text hover:underline"
-                    >
-                      삭제
-                    </button>
-                  </div>
-                ))}
-                {manageTarget.options.length === 0 && (
-                  <p className="text-xs text-gray-400">등록된 옵션이 없습니다.</p>
-                )}
-              </div>
-              <form onSubmit={handleAddOption} className="flex gap-2">
-                <Input
-                  placeholder="예: 리뷰 10건"
-                  value={optionForm.label}
-                  onChange={(e) => setOptionForm((prev) => ({ ...prev, label: e.target.value }))}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  placeholder="가격"
-                  value={optionForm.price}
-                  onChange={(e) => setOptionForm((prev) => ({ ...prev, price: e.target.value }))}
-                  className="w-28"
-                />
-                <Button type="submit" size="sm" variant="secondary" disabled={savingOption}>
-                  추가
-                </Button>
-              </form>
             </div>
           </div>
         )}

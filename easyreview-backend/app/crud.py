@@ -2016,6 +2016,19 @@ def remove_product_detail_image(db: Session, product: models.Product, image_path
     return _product_to_out(product)
 
 
+def reorder_product_detail_images(
+    db: Session, product: models.Product, image_paths: list[str]
+) -> schemas.ProductOut:
+    """관리자가 상세페이지 이미지들을 드래그로 재배열한 순서를 그대로 저장한다."""
+    current = json.loads(product.detail_image_paths_json) if product.detail_image_paths_json else []
+    if sorted(image_paths) != sorted(current):
+        raise ValueError("이미지 목록이 서버와 일치하지 않습니다. 새로고침 후 다시 시도해주세요")
+    product.detail_image_paths_json = json.dumps(image_paths)
+    db.commit()
+    db.refresh(product)
+    return _product_to_out(product)
+
+
 def save_experience_campaign_image(
     db: Session, campaign: models.ExperienceCampaign, content: bytes, filename: str
 ) -> schemas.ExperienceCampaignOut:
