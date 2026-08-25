@@ -26,11 +26,29 @@ const WORK_RULES_KEY = 'workRulesAcknowledged_v1'
 const TOKEN_KEY = 'portal_token'
 const MODE_KEY = 'portal_mode'
 
-// 네이버 앱 강제 실행 시도(공식 문서의 URL Scheme/중계페이지 포함 3가지 방식)를
-// 전부 실기기에서 확인했으나 작동하지 않아 보류 — 그냥 일반 웹링크로 열리며,
-// 브라우저 로그인 상태로 정상 작동함을 확인함(마이플레이스 정보 정상 표시).
-function toNaverAppUrl(url) {
-  return url
+// 네이버 공식 문서 "5. URL Scheme 호출 시 이슈 처리 방법" 우회 방식 — 안드로이드
+// 크롬은 일반 <a href="intent://...">/<a href="naversearchapp://...">를 그냥
+// 무시해버리는 경우가 있어서(보안 정책), iframe의 src를 DOM에 붙이기 "전에" 먼저
+// 지정해야 스킴 호출이 실제로 트리거된다(문서에 명시된 순서). 앱이 없거나 스킴이
+// 안 맞으면 지정 시간 안에 페이지가 그대로 보이므로(hidden 안 됨) 웹링크로 폴백.
+function openNaverProfileUrl(url, e) {
+  if (!url.includes('naver.com')) return
+  e.preventDefault()
+
+  const isAndroid = /Android/i.test(navigator.userAgent)
+  const scheme = isAndroid
+    ? `intent://inappbrowser?url=${encodeURIComponent(url)}&target=new&version=6#Intent;scheme=naversearchapp;package=com.nhn.android.search;end`
+    : `naversearchapp://inappbrowser?url=${encodeURIComponent(url)}&target=new&version=6`
+
+  const iframe = document.createElement('iframe')
+  iframe.style.display = 'none'
+  iframe.src = scheme // DOM에 붙이기 전에 먼저 지정 — 크롬 우회 처리 핵심
+  document.body.appendChild(iframe)
+
+  setTimeout(() => {
+    document.body.removeChild(iframe)
+    if (!document.hidden) window.location.href = url
+  }, 1500)
 }
 
 export default function Portal() {
@@ -1520,7 +1538,8 @@ function MyTaskRow({ task, token, onSubmitResult, locked }) {
           </button>
           {task.account_profile_url && (
             <a
-              href={toNaverAppUrl(task.account_profile_url)}
+              href={task.account_profile_url}
+              onClick={(e) => openNaverProfileUrl(task.account_profile_url, e)}
               className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
             >
               작업하러가기
@@ -1614,7 +1633,8 @@ function TaskBriefModal({ token, taskId, accountProfileUrl, onClose }) {
         <div className="flex items-center gap-2">
           {accountProfileUrl && (
             <a
-              href={toNaverAppUrl(accountProfileUrl)}
+              href={accountProfileUrl}
+              onClick={(e) => openNaverProfileUrl(accountProfileUrl, e)}
               className="rounded-btn border border-brand-300 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
             >
               작업하러가기
