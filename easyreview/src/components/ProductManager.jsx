@@ -48,19 +48,20 @@ export default function ProductManager() {
   async function handleMoveProduct(index, direction) {
     const targetIndex = index + direction
     if (targetIndex < 0 || targetIndex >= products.length) return
-    const a = products[index]
-    const b = products[targetIndex]
-    setReorderingProductId(a.id)
+    // 기존 display_order가 여러 상품에서 똑같은 값(대부분 0)일 수 있어서, 두 상품끼리
+    // 값만 맞바꾸면 변화가 없는 경우가 있다 — 그래서 새 순서 그대로 전체를 0,1,2...로
+    // 다시 매겨서 항상 확실하게 순서가 바뀌도록 한다.
+    const reordered = [...products]
+    const [moved] = reordered.splice(index, 1)
+    reordered.splice(targetIndex, 0, moved)
+    setReorderingProductId(products[index].id)
     try {
-      const [updatedA, updatedB] = await Promise.all([
-        productApi.update(a.id, { display_order: b.display_order }),
-        productApi.update(b.id, { display_order: a.display_order }),
-      ])
-      setProducts((prev) =>
-        sortProducts(
-          prev.map((p) => (p.id === updatedA.id ? updatedA : p.id === updatedB.id ? updatedB : p)),
+      const updated = await Promise.all(
+        reordered.map((p, i) =>
+          p.display_order === i ? p : productApi.update(p.id, { display_order: i }),
         ),
       )
+      setProducts(sortProducts(updated))
     } catch (err) {
       alert(err.message)
     } finally {
