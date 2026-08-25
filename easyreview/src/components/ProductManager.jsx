@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { API_ORIGIN, productApi } from '../lib/api.js'
 import Badge from './ui/Badge.jsx'
@@ -19,8 +19,7 @@ export default function ProductManager() {
   const [manageTarget, setManageTarget] = useState(null) // product being managed (thumbnail/detail images)
   const [uploadingThumb, setUploadingThumb] = useState(false)
   const [uploadingDetail, setUploadingDetail] = useState(false)
-  const [dragIndex, setDragIndex] = useState(null)
-  const [reordering, setReordering] = useState(false)
+  const [reorderingIndex, setReorderingIndex] = useState(null)
   const thumbInputRef = useRef(null)
   const detailInputRef = useRef(null)
 
@@ -117,20 +116,18 @@ export default function ProductManager() {
     }
   }
 
-  async function handleDropReorder(dropIndex) {
-    const fromIndex = dragIndex
-    setDragIndex(null)
-    if (fromIndex === null || fromIndex === dropIndex) return
+  async function handleMoveDetailImage(index, direction) {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= manageTarget.detail_image_paths.length) return
     const paths = [...manageTarget.detail_image_paths]
-    const [moved] = paths.splice(fromIndex, 1)
-    paths.splice(dropIndex, 0, moved)
-    setReordering(true)
+    ;[paths[index], paths[targetIndex]] = [paths[targetIndex], paths[index]]
+    setReorderingIndex(index)
     try {
       replaceProduct(await productApi.reorderDetailImages(manageTarget.id, paths))
     } catch (err) {
       alert(err.message)
     } finally {
-      setReordering(false)
+      setReorderingIndex(null)
     }
   }
 
@@ -253,7 +250,7 @@ export default function ProductManager() {
 
             <div>
               <p className="mb-1 text-xs font-medium text-gray-500">
-                상세 이미지 (드래그해서 순서를 바꿀 수 있어요 — 이 순서대로 상세페이지에 이어붙여집니다)
+                상세 이미지 (화살표로 순서를 바꿀 수 있어요 — 이 순서대로 상세페이지에 이어붙여집니다)
               </p>
               <input
                 ref={detailInputRef}
@@ -263,31 +260,43 @@ export default function ProductManager() {
                 onChange={handleDetailFileChange}
               />
               <div className="mb-2 space-y-2">
-                {manageTarget.detail_image_paths.map((path, index) => (
-                  <div
-                    key={path}
-                    draggable
-                    onDragStart={() => setDragIndex(index)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleDropReorder(index)}
-                    onDragEnd={() => setDragIndex(null)}
-                    className={`relative cursor-move rounded-btn ring-2 transition-opacity ${
-                      dragIndex === index ? 'opacity-40 ring-brand-400' : 'ring-transparent'
-                    } ${reordering ? 'pointer-events-none' : ''}`}
-                  >
-                    <img src={`${API_ORIGIN}${path}`} alt="" className="w-full rounded-btn object-cover" />
-                    <span className="absolute left-1 top-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white">
-                      {index + 1}
-                    </span>
-                    <button
-                      onClick={() => handleRemoveDetailImage(path)}
-                      className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-gray-600 hover:bg-white"
-                      title="삭제"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
+                {manageTarget.detail_image_paths.map((path, index) => {
+                  const isLast = index === manageTarget.detail_image_paths.length - 1
+                  const busy = reorderingIndex !== null
+                  return (
+                    <div key={path} className="relative">
+                      <img src={`${API_ORIGIN}${path}`} alt="" className="w-full rounded-btn object-cover" />
+                      <span className="absolute left-1 top-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white">
+                        {index + 1}
+                      </span>
+                      <div className="absolute right-1 top-1 flex gap-1">
+                        <button
+                          onClick={() => handleMoveDetailImage(index, -1)}
+                          disabled={index === 0 || busy}
+                          className="rounded-full bg-white/90 p-1 text-gray-600 hover:bg-white disabled:opacity-40"
+                          title="위로"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleMoveDetailImage(index, 1)}
+                          disabled={isLast || busy}
+                          className="rounded-full bg-white/90 p-1 text-gray-600 hover:bg-white disabled:opacity-40"
+                          title="아래로"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveDetailImage(path)}
+                          className="rounded-full bg-white/90 p-1 text-gray-600 hover:bg-white"
+                          title="삭제"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
                 {manageTarget.detail_image_paths.length === 0 && (
                   <p className="text-xs text-gray-400">등록된 상세 이미지가 없습니다.</p>
                 )}
