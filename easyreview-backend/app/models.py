@@ -247,6 +247,10 @@ class Settings(Base):
     naver_blind_check_interval_minutes = Column(Integer, nullable=False, default=20)
     kakao_blind_check_interval_minutes = Column(Integer, nullable=False, default=20)
     naver_default_claim_minutes = Column(Integer, nullable=False, default=1440)
+    # easystore 결제 계좌 — PG 없이 계좌이체(무통장입금)만 지원하므로 입금 안내에 쓰임
+    bank_name = Column(String, nullable=True)
+    bank_account_number = Column(String, nullable=True)
+    bank_account_holder = Column(String, nullable=True)
     kakao_default_claim_minutes = Column(Integer, nullable=False, default=1440)
 
 
@@ -358,3 +362,42 @@ class ExperienceApplication(Base):
 
     campaign = relationship("ExperienceCampaign", back_populates="applications")
     reviewer = relationship("Reviewer")
+
+
+class Order(Base):
+    """easystore(상품판매 사이트) 주문 — 로그인/회원가입 없는 게스트 주문.
+    결제는 PG 연동 없이 계좌이체(무통장입금)만 지원 — 관리자가 입금 확인 후
+    status를 수동으로 'paid'로 바꾸고, 그 정보를 보고 실행 사이트에 캠페인을
+    수동으로 개설한다(easystore/STORE_CONTEXT.md 참고, 자동 연결 아님)."""
+
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    buyer_name = Column(String, nullable=False)
+    buyer_phone = Column(String, nullable=False)
+    buyer_email = Column(String, nullable=True)
+    depositor_name = Column(String, nullable=False)  # 입금자명 — 관리자가 입금내역과 대조
+    total_price = Column(Integer, nullable=False)
+    status = Column(String, nullable=False, default="pending_payment")  # pending_payment|paid|cancelled
+    memo = Column(String, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+
+
+class OrderItem(Base):
+    """주문 1건에 담긴 상품(옵션) 1줄 — product/option 이름·가격은 주문 시점 값을
+    스냅샷해서 저장(이후 상품/옵션이 바뀌거나 삭제돼도 주문 내역은 그대로 유지)."""
+
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    product_name = Column(String, nullable=False)
+    option_id = Column(Integer, ForeignKey("product_options.id"), nullable=True)
+    option_label = Column(String, nullable=False)
+    unit_price = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+
+    order = relationship("Order", back_populates="items")

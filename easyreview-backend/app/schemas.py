@@ -510,6 +510,9 @@ class SettingsOut(BaseModel):
     kakao_blind_check_interval_minutes: int
     naver_default_claim_minutes: int
     kakao_default_claim_minutes: int
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_account_holder: Optional[str] = None
 
 
 class SettingsUpdate(BaseModel):
@@ -517,6 +520,17 @@ class SettingsUpdate(BaseModel):
     kakao_blind_check_interval_minutes: Optional[int] = None
     naver_default_claim_minutes: Optional[int] = None
     kakao_default_claim_minutes: Optional[int] = None
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_account_holder: Optional[str] = None
+
+
+class BankInfoOut(BaseModel):
+    """easystore 결제(계좌이체) 안내용 — 공개 엔드포인트, 계좌정보 3개만 노출."""
+
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_account_holder: Optional[str] = None
 
 
 class ReviewerImportResult(BaseModel):
@@ -764,6 +778,57 @@ class ProductOut(BaseModel):
     is_active: bool
     created_at: datetime.datetime
     options: list[ProductOptionOut] = []
+
+
+# --- Order (easystore, 계좌이체 전용) ---
+
+OrderStatus = Literal["pending_payment", "paid", "cancelled"]
+
+
+class OrderItemCreate(BaseModel):
+    product_id: int
+    option_id: int
+    quantity: int = 1
+
+
+class OrderItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    product_id: int
+    product_name: str
+    option_id: Optional[int] = None
+    option_label: str
+    unit_price: int
+    quantity: int
+
+
+class OrderCreate(BaseModel):
+    buyer_name: str
+    buyer_phone: str
+    buyer_email: Optional[str] = None
+    depositor_name: str
+    memo: Optional[str] = None
+    items: list[OrderItemCreate]
+
+
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus
+
+
+class OrderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    buyer_name: str
+    buyer_phone: str
+    buyer_email: Optional[str] = None
+    depositor_name: str
+    total_price: int
+    status: OrderStatus
+    memo: Optional[str] = None
+    created_at: datetime.datetime
+    items: list[OrderItemOut] = []
 
 
 # --- Experience campaigns (체험단 캠페인) ---

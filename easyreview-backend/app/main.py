@@ -20,6 +20,7 @@ from app.routers import (
     experience_campaigns,
     notices,
     notify,
+    orders,
     portal,
     products,
     reviewers,
@@ -84,12 +85,15 @@ app.include_router(targets.router, dependencies=[Depends(admin.get_current_admin
 app.include_router(tasks.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(settlement.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(settings.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(settings.public_router)
 app.include_router(portal.router)
 app.include_router(notify.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(card_rules.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(experience_campaigns.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(products.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(products.public_router)
+app.include_router(orders.router, dependencies=[Depends(admin.get_current_admin)])
+app.include_router(orders.public_router)
 app.include_router(notices.router, dependencies=[Depends(admin.get_current_admin)])
 app.include_router(advertiser.router)
 

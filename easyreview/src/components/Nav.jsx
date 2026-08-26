@@ -1,4 +1,4 @@
-import { ChevronDown, Settings2, Store, UserCheck, Users, Wallet } from 'lucide-react'
+import { ChevronDown, Settings2, ShoppingBag, Store, UserCheck, Users, Wallet } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 const GROUPS = [
@@ -30,6 +30,12 @@ const GROUPS = [
       { id: 'campaigns', label: '캠페인관리' },
       { id: 'experience-pool', label: '체험단관리' },
     ],
+  },
+  {
+    id: 'store',
+    label: '스토어',
+    icon: ShoppingBag,
+    children: [{ id: 'orders', label: '주문 관리' }],
   },
   {
     id: 'settings-group',

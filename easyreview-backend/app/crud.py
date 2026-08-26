@@ -1628,6 +1628,12 @@ def update_settings(db: Session, data: schemas.SettingsUpdate) -> models.Setting
         settings.naver_default_claim_minutes = data.naver_default_claim_minutes
     if data.kakao_default_claim_minutes is not None:
         settings.kakao_default_claim_minutes = data.kakao_default_claim_minutes
+    if data.bank_name is not None:
+        settings.bank_name = data.bank_name
+    if data.bank_account_number is not None:
+        settings.bank_account_number = data.bank_account_number
+    if data.bank_account_holder is not None:
+        settings.bank_account_holder = data.bank_account_holder
     db.commit()
     db.refresh(settings)
     return settings
@@ -1933,6 +1939,57 @@ def delete_product_option(db: Session, option: models.ProductOption) -> schemas.
     db.commit()
     db.refresh(product)
     return _product_to_out(product)
+
+
+def create_order(db: Session, data: schemas.OrderCreate) -> models.Order:
+    """옵션 이름/가격을 주문 시점 값으로 스냅샷해서 OrderItem에 저장하고 합계를 계산한다."""
+    if not data.items:
+        raise ValueError("주문할 상품이 없습니다")
+    order = models.Order(
+        buyer_name=data.buyer_name,
+        buyer_phone=data.buyer_phone,
+        buyer_email=data.buyer_email,
+        depositor_name=data.depositor_name,
+        memo=data.memo,
+        total_price=0,
+    )
+    total = 0
+    for item in data.items:
+        option = get_product_option(db, item.option_id)
+        if not option or option.product_id != item.product_id:
+            raise ValueError("존재하지 않는 상품 옵션입니다")
+        line_total = option.price * item.quantity
+        total += line_total
+        order.items.append(
+            models.OrderItem(
+                product_id=option.product_id,
+                product_name=option.product.name,
+                option_id=option.id,
+                option_label=option.label,
+                unit_price=option.price,
+                quantity=item.quantity,
+            )
+        )
+    order.total_price = total
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+    return order
+
+
+def get_orders(db: Session) -> list[models.Order]:
+    return db.query(models.Order).order_by(models.Order.created_at.desc()).all()
+
+
+def get_order(db: Session, order_id: int) -> models.Order | None:
+    return db.query(models.Order).filter(models.Order.id == order_id).first()
+
+
+def update_order_status(db: Session, order: models.Order, status: str) -> models.Order:
+    order.status = status
+    db.commit()
+    db.refresh(order)
+    return order
 
 
 def get_products(db: Session, active_only: bool = False) -> list[schemas.ProductOut]:

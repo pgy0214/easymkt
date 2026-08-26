@@ -214,6 +214,10 @@ export const api = {
     form.append('file', file)
     return uploadRequest('/card-rules/import', form)
   },
+
+  getOrders: () => request('/orders'),
+  updateOrderStatus: (id, status) =>
+    request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 }
 
 export const productApi = {

@@ -5,6 +5,7 @@ import ExperienceManager from './components/ExperienceManager.jsx'
 import MemberManager from './components/MemberManager.jsx'
 import Nav from './components/Nav.jsx'
 import NoticeManager from './components/NoticeManager.jsx'
+import OrderManager from './components/OrderManager.jsx'
 import ProductManager from './components/ProductManager.jsx'
 import ReceiptGenerator from './components/ReceiptGenerator.jsx'
 import ReviewerManager from './components/ReviewerManager.jsx'
@@ -77,6 +78,7 @@ export default function App() {
         {tab === 'members' && <MemberManager />}
         {tab === 'notices' && <NoticeManager />}
         {tab === 'products' && <ProductManager />}
+        {tab === 'orders' && <OrderManager />}
       </main>
     </div>
   )

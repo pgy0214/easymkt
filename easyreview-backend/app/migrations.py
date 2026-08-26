@@ -356,4 +356,9 @@ def run_migrations(engine) -> None:
             "approval_status TEXT NOT NULL DEFAULT 'approved'",
         )
 
+        # settings: easystore 계좌이체 입금 안내용 계좌정보
+        _add_column_if_missing(conn, "settings", "bank_name", "bank_name TEXT")
+        _add_column_if_missing(conn, "settings", "bank_account_number", "bank_account_number TEXT")
+        _add_column_if_missing(conn, "settings", "bank_account_holder", "bank_account_holder TEXT")
+
         conn.commit()

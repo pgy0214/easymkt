@@ -106,6 +106,39 @@ export default function SettingsPanel() {
 
     <Card className="space-y-3">
       <div>
+        <h3 className="text-sm font-medium text-gray-700">easystore 입금계좌 (계좌이체 안내용)</h3>
+        <p className="mt-0.5 text-xs text-gray-400">
+          PG 연동 없이 계좌이체만 지원합니다. 고객이 결제(주문) 화면에서 이 계좌로 입금하고,
+          관리자가 입금 확인 후 주문 상태를 처리합니다.
+        </p>
+      </div>
+      <form onSubmit={handleSave} className="space-y-3">
+        <Input
+          label="은행명"
+          value={settings.bank_name || ''}
+          onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
+          className="w-full"
+        />
+        <Input
+          label="계좌번호"
+          value={settings.bank_account_number || ''}
+          onChange={(e) => setSettings({ ...settings, bank_account_number: e.target.value })}
+          className="w-full"
+        />
+        <Input
+          label="예금주"
+          value={settings.bank_account_holder || ''}
+          onChange={(e) => setSettings({ ...settings, bank_account_holder: e.target.value })}
+          className="w-full"
+        />
+        <Button type="submit" disabled={saving}>
+          저장
+        </Button>
+      </form>
+    </Card>
+
+    <Card className="space-y-3">
+      <div>
         <h3 className="text-sm font-medium text-gray-700">알림 발송 (문자 / 카카오 알림톡)</h3>
         <p className="mt-0.5 text-xs text-gray-400">
           리뷰어관리 탭에서 리뷰어를 선택하고 "선택 메시지 발송"으로 보낼 수 있습니다. 아래는

@@ -6,6 +6,14 @@ from app.database import get_db
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
+# easystore 결제 안내용 계좌정보 — 인증 없이 공개(체크아웃 화면에서 조회)
+public_router = APIRouter(prefix="/api/settings", tags=["settings-public"])
+
+
+@public_router.get("/bank-info", response_model=schemas.BankInfoOut)
+def get_bank_info(db: Session = Depends(get_db)):
+    return crud.get_settings(db)
+
 
 @router.get("", response_model=schemas.SettingsOut)
 def get_settings(db: Session = Depends(get_db)):

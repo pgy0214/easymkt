@@ -72,7 +72,7 @@ export default function ProductDetailPage({ productId }) {
               </span>
             </div>
             <button
-              onClick={() => alert('결제 기능은 아직 준비 중입니다.')}
+              onClick={() => navigate(`/checkout/${product.id}?option=${selectedOptionId}`)}
               className="w-full rounded-btn bg-brand-500 py-3 text-sm font-semibold text-white hover:bg-brand-600"
             >
               구매하기
