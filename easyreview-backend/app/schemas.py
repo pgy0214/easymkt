@@ -192,8 +192,13 @@ class StoreCreate(BaseModel):
 
 class StoreUpdate(BaseModel):
     # name/address/representative_hours are crawled facts about the real
-    # place and are intentionally not editable after creation — fix a wrong
-    # value by deleting the store and re-registering it with the right URL.
+    # place — the admin can't free-type them (no text input in the UI for
+    # these), but the "네이버에서 다시 확인" re-crawl flow writes fresh values
+    # here so a stale/wrong initial crawl doesn't require deleting and
+    # re-registering the whole store (which would orphan its campaigns).
+    name: Optional[str] = None
+    address: Optional[str] = None
+    representative_hours: Optional[str] = None
     url: Optional[str] = None
     region: Optional[str] = None
     representative_product: Optional[str] = None

@@ -593,8 +593,12 @@ def get_stores_by_owner(db: Session, owner_reviewer_id: int) -> list[models.Stor
 
 
 def update_store(db: Session, store: models.Store, data: schemas.StoreUpdate) -> models.Store:
-    # name/address/representative_hours are intentionally not in StoreUpdate
-    # — see the comment there
+    if data.name is not None:
+        store.name = data.name
+    if data.address is not None:
+        store.address = data.address
+    if data.representative_hours is not None:
+        store.representative_hours = data.representative_hours
     if data.url is not None:
         store.url = data.url
     if data.region is not None:

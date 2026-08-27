@@ -146,18 +146,15 @@ def _parse_hour_rows(soup) -> list[tuple[int, int]]:
 def _compute_representative_hours(ranges: list[tuple[int, int]]) -> str | None:
     """대표시간 = the time window that's open across every business day —
     e.g. Mon 10-18 / Tue 11-18 / Wed 10-18 → 11:00~18:00 (latest common
-    start, earliest common end). Minutes are truncated to the hour (08:40
-    becomes 08:00, 19:20 becomes 19:00) so the displayed range stays a
-    clean, easy-to-scan number rather than an exact-to-the-minute figure.
-    Returns None if there's no common window (or nothing was parsed)."""
+    start, earliest common end). 분 단위까지 실제 크롤링한 값 그대로 유지한다
+    (예전엔 "깔끔하게 보이라고" 정시로 반올림했었는데, 08:40~19:20인 매장이
+    08:00~19:00으로 저장돼 실제보다 이르게/늦게 문을 연 것처럼 영수증이 생성되는
+    문제가 있었음 — receipt_generator의 시간 파서는 분 단위를 그대로 지원하므로
+    반올림할 이유가 없다). Returns None if there's no common window."""
     if not ranges:
         return None
     start = max(r[0] for r in ranges)
     end = min(r[1] for r in ranges)
-    if start >= end:
-        return None
-    start = (start // 60) * 60
-    end = (end // 60) * 60
     if start >= end:
         return None
     return f"{_minutes_to_text(start)}~{_minutes_to_text(end)}"

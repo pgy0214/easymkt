@@ -7,6 +7,11 @@ import Input from './ui/Input.jsx'
 import Modal from './ui/Modal.jsx'
 
 export default function StoreEditModal({ store, onClose, onSaved, showCooldown = true, updateFn }) {
+  const [crawledInfo, setCrawledInfo] = useState({
+    name: store.name,
+    address: store.address,
+    representative_hours: store.representative_hours,
+  })
   const [url, setUrl] = useState(store.url)
   const [representativeProduct, setRepresentativeProduct] = useState(
     store.representative_product || '',
@@ -19,6 +24,32 @@ export default function StoreEditModal({ store, onClose, onSaved, showCooldown =
   const [phone, setPhone] = useState(store.phone || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [rechecking, setRechecking] = useState(false)
+  const [recheckError, setRecheckError] = useState(null)
+
+  async function handleRecheck() {
+    setRechecking(true)
+    setRecheckError(null)
+    try {
+      const fresh = await api.fetchStoreInfo(url.trim())
+      const patch = {
+        name: fresh.name || null,
+        address: fresh.address || null,
+        representative_hours: fresh.representative_hours || null,
+      }
+      const updated = await (updateFn || api.updateStore)(store.id, patch)
+      setCrawledInfo({
+        name: updated.name,
+        address: updated.address,
+        representative_hours: updated.representative_hours,
+      })
+      onSaved(updated)
+    } catch (err) {
+      setRecheckError(err.message)
+    } finally {
+      setRechecking(false)
+    }
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -45,12 +76,29 @@ export default function StoreEditModal({ store, onClose, onSaved, showCooldown =
     <Modal open onClose={onClose} size="md">
       <h3 className="font-semibold text-gray-800">{store.name} 수정</h3>
 
-      <div className="space-y-1 rounded-card border border-gray-100 bg-gray-50 p-2 text-xs text-gray-500">
-        <p>매장명·주소·대표시간은 크롤링한 사실 정보라 여기서 고칠 수 없어요.</p>
-        <p>
-          {store.address || '주소 없음'}
-          {store.representative_hours ? ` · ${store.representative_hours}` : ''}
+      <div className="space-y-1.5 rounded-card border border-gray-100 bg-gray-50 p-3 text-xs">
+        <p className="text-gray-400">
+          아래 3개는 네이버에서 크롤링한 사실 정보라 직접 입력할 수 없어요 — 값이 실제와 다르면
+          "네이버에서 다시 확인"을 눌러 새로고침하세요.
         </p>
+        <div className="grid grid-cols-[64px_1fr] gap-x-2 gap-y-1 text-gray-700">
+          <span className="text-gray-400">매장명</span>
+          <span>{crawledInfo.name || '-'}</span>
+          <span className="text-gray-400">주소</span>
+          <span>{crawledInfo.address || '-'}</span>
+          <span className="text-gray-400">대표시간</span>
+          <span>{crawledInfo.representative_hours || '-'}</span>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleRecheck}
+          disabled={rechecking}
+        >
+          {rechecking ? '확인 중...' : '네이버에서 다시 확인'}
+        </Button>
+        {recheckError && <p className="text-danger-text">{recheckError}</p>}
       </div>
 
       <Input
