@@ -63,7 +63,7 @@ export default function ReceiptGenerator() {
     URL.revokeObjectURL(objectUrl)
   }
 
-  async function handleDownloadAll() {
+  async function handleDownloadAllZip() {
     if (receiptUrls.length === 0) return
     setDownloadingAll(true)
     try {
@@ -82,6 +82,23 @@ export default function ReceiptGenerator() {
       a.download = `${downloadPrefix}_전체${receiptUrls.length}건.zip`
       a.click()
       URL.revokeObjectURL(objectUrl)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setDownloadingAll(false)
+    }
+  }
+
+  async function handleDownloadAllIndividually() {
+    if (receiptUrls.length === 0) return
+    setDownloadingAll(true)
+    try {
+      // 브라우저가 연속 다운로드를 팝업으로 막는 경우가 있어, 파일 사이에 약간의
+      // 간격을 두고 하나씩 내려받는다.
+      for (let i = 0; i < receiptUrls.length; i++) {
+        await handleDownload(receiptUrls[i], i)
+        if (i < receiptUrls.length - 1) await new Promise((r) => setTimeout(r, 300))
+      }
     } catch (err) {
       alert(err.message)
     } finally {
@@ -150,10 +167,16 @@ export default function ReceiptGenerator() {
       {receiptUrls.length > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-500">생성된 영수증 {receiptUrls.length}건</p>
-          <Button onClick={handleDownloadAll} disabled={downloadingAll} variant="secondary" size="sm">
-            <Download size={14} />
-            {downloadingAll ? '압축 중...' : '전체 일괄 다운로드 (ZIP)'}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleDownloadAllZip} disabled={downloadingAll} variant="secondary" size="sm">
+              <Download size={14} />
+              {downloadingAll ? '처리 중...' : 'ZIP으로 전체 다운로드'}
+            </Button>
+            <Button onClick={handleDownloadAllIndividually} disabled={downloadingAll} variant="secondary" size="sm">
+              <Download size={14} />
+              {downloadingAll ? '처리 중...' : '낱개로 전체 다운로드'}
+            </Button>
+          </div>
         </div>
       )}
 
