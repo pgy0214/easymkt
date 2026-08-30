@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FileText, MessageSquare, Pencil, Search, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Copy, FileText, MessageSquare, Pencil, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
 import { formatDateRange, formatDateTime, formatKRW, formatWorkDays, PLATFORM_LABEL } from '../lib/format.js'
@@ -9,7 +9,7 @@ import BulkMessageModal from './BulkMessageModal.jsx'
 import TargetDataModal from './TargetDataModal.jsx'
 import TargetEditModal from './TargetEditModal.jsx'
 
-export default function TargetList({ targets, onDelete, onUpdated }) {
+export default function TargetList({ targets, onDelete, onUpdated, onCopy }) {
   const [dataModalTargetId, setDataModalTargetId] = useState(null)
   const [editingTarget, setEditingTarget] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all') // all | in_progress | completed
@@ -199,6 +199,15 @@ export default function TargetList({ targets, onDelete, onUpdated }) {
                           <MessageSquare size={12} />
                           {preparingSmsId === target.id ? '대상 확인 중...' : '문자 발송'}
                         </button>
+                        {onCopy && (
+                          <button
+                            onClick={() => onCopy(target)}
+                            className="text-gray-400 hover:text-brand-600"
+                            title="이 캠페인 복사해서 새로 등록"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        )}
                         <button
                           onClick={() => setEditingTarget(target)}
                           className="text-gray-400 hover:text-brand-600"

@@ -1,7 +1,13 @@
 import { Download, Plus, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
-import { enforceProductNameLength, MAX_PRODUCT_NAME_LENGTH, WEEKDAY_LABELS, parseProductString } from '../lib/format.js'
+import {
+  enforceProductNameLength,
+  MAX_PRODUCT_NAME_LENGTH,
+  TONE_PRESET_OPTIONS,
+  WEEKDAY_LABELS,
+  parseProductString,
+} from '../lib/format.js'
 import TargetList from './TargetList.jsx'
 import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
@@ -28,10 +34,12 @@ function daysBetween(start, end) {
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 const REVIEW_LENGTH_OPTIONS = [50, 80, 100]
+const STEP_LABELS = ['캠페인정보', '사진유무', '원고등록']
 
 const EMPTY_MENU_ITEM = { name: '', price: '' }
 
 const DEFAULT_GUIDELINE = [
+  '(예시)',
   '1) 한잔 하기 좋고, 칵테일, 위스키메뉴가 많았다.',
   '2) 특이한 칵테일을 먹어보고 싶다면 시그니처 메뉴 칵테일을 먹어봐라.',
   '3) 인스타에 칵테일 사진 올리기 좋다.',
@@ -51,6 +59,8 @@ const EMPTY = {
   guideline: DEFAULT_GUIDELINE,
   regional_features: '',
   tone: '',
+  tone_preset: 'friendly',
+  forbidden_words: '',
   menu_items: [{ ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }],
   review_length: 80,
   photos_per_review: 1,
@@ -91,6 +101,7 @@ export default function TargetForm() {
   const [previewText, setPreviewText] = useState(null)
   const [previewing, setPreviewing] = useState(false)
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
+  const [step, setStep] = useState(1)
   const photoInputRef = useRef(null)
   const reviewTextInputRef = useRef(null)
 
@@ -156,8 +167,10 @@ export default function TargetForm() {
         guideline: form.guideline.trim() || null,
         regional_features: form.regional_features.trim() || null,
         tone: form.tone.trim() || null,
+        tone_preset: form.tone_preset,
         review_length: Number(form.review_length),
         menu_items: menuItems.length > 0 ? menuItems : null,
+        forbidden_words: form.forbidden_words.trim() || null,
       })
       setPreviewText(result.text)
     } catch (err) {
@@ -180,11 +193,52 @@ export default function TargetForm() {
   function openRegisterModal() {
     setError(null)
     setMessage(null)
+    setStep(1)
     setRegisterModalOpen(true)
   }
 
   function closeRegisterModal() {
     setRegisterModalOpen(false)
+    setStep(1)
+  }
+
+  async function handleCopy(target) {
+    setError(null)
+    setMessage(null)
+    if (target.platform !== form.platform) {
+      const list = await api.getStores(target.platform)
+      setStores(list)
+    }
+    setForm({
+      platform: target.platform,
+      store_id: String(target.store_id),
+      unit_price: target.unit_price,
+      sale_price: target.sale_price ?? '',
+      daily_limit: target.daily_limit ?? 1,
+      start_date: target.start_date ?? '',
+      end_date: target.end_date ?? '',
+      work_days: target.work_days?.length ? target.work_days : ALL_DAYS,
+      guideline: target.guideline ?? DEFAULT_GUIDELINE,
+      regional_features: target.regional_features ?? '',
+      tone: target.tone ?? '',
+      tone_preset: target.tone_preset ?? 'friendly',
+      forbidden_words: target.forbidden_words ?? '',
+      menu_items: target.menu_items?.length
+        ? [0, 1, 2].map((i) =>
+            target.menu_items[i]
+              ? { name: target.menu_items[i].name, price: String(target.menu_items[i].price) }
+              : { ...EMPTY_MENU_ITEM },
+          )
+        : EMPTY.menu_items,
+      review_length: target.review_length ?? 80,
+      photos_per_review: target.photos_per_review > 0 ? target.photos_per_review : 1,
+    })
+    setUsePhotos(target.photos_per_review > 0)
+    setPhotoFiles([])
+    setReviewTextFile(null)
+    setPreviewText(null)
+    setStep(1)
+    setRegisterModalOpen(true)
   }
 
   const dayCount = daysBetween(form.start_date, form.end_date)
@@ -192,22 +246,36 @@ export default function TargetForm() {
   const totalCount = matchingDays * (Number(form.daily_limit) || 0)
   const selectedStore = stores.find((s) => s.id === Number(form.store_id))
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  function validateStep1() {
     if (!form.store_id) {
       setError('먼저 "매장정보" 탭에서 매장을 등록해주세요.')
-      return
+      return false
     }
     if (form.work_days.length === 0) {
       setError('작업요일을 최소 하루 이상 선택해주세요.')
-      return
+      return false
     }
     if (!form.start_date || !form.end_date) {
       setError('작업 기간(시작일~종료일)을 입력해주세요 — 총 건수 계산에 필요합니다.')
-      return
+      return false
     }
     if (totalCount <= 0) {
       setError('작업 기간/작업요일/1일 작업 갯수를 확인해주세요 — 총 건수가 0건입니다.')
+      return false
+    }
+    return true
+  }
+
+  function goToStep(next) {
+    if (next > step && step === 1 && !validateStep1()) return
+    setError(null)
+    setStep(next)
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!validateStep1()) {
+      setStep(1)
       return
     }
     setSubmitting(true)
@@ -228,6 +296,8 @@ export default function TargetForm() {
         guideline: form.guideline.trim() || null,
         regional_features: form.regional_features.trim() || null,
         tone: form.tone.trim() || null,
+        tone_preset: form.tone_preset,
+        forbidden_words: form.forbidden_words.trim() || null,
         menu_items: menuItems.length > 0 ? menuItems : null,
         review_length: Number(form.review_length),
         photos_per_review: usePhotos ? Number(form.photos_per_review) || 1 : 0,
@@ -252,6 +322,7 @@ export default function TargetForm() {
       setReviewTextFile(null)
       setPreviewText(null)
       setRegisterModalOpen(false)
+      setStep(1)
       await refreshTargets()
     } catch (err) {
       setError(err.message)
@@ -272,7 +343,7 @@ export default function TargetForm() {
 
       {message && <p className="text-sm text-success-text">{message}</p>}
 
-      <TargetList targets={targets} onDelete={handleDelete} onUpdated={refreshTargets} />
+      <TargetList targets={targets} onDelete={handleDelete} onUpdated={refreshTargets} onCopy={handleCopy} />
 
       {registerModalOpen && (
         <div
@@ -289,7 +360,30 @@ export default function TargetForm() {
                 <X size={18} />
               </button>
             </div>
+            <div className="mb-3 flex items-center gap-2 text-xs">
+              {STEP_LABELS.map((label, i) => {
+                const n = i + 1
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => n < step && goToStep(n)}
+                    className={`flex items-center gap-1 rounded-full px-2 py-1 font-medium ${
+                      n === step
+                        ? 'bg-brand-500 text-white'
+                        : n < step
+                          ? 'cursor-pointer bg-brand-50 text-brand-600'
+                          : 'bg-gray-100 text-gray-400'
+                    }`}
+                  >
+                    {n}. {label}
+                  </button>
+                )
+              })}
+            </div>
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+              {step === 1 && (
+              <>
               <div>
                 <label className="block text-xs text-gray-500">플랫폼</label>
                 <select
@@ -398,7 +492,85 @@ export default function TargetForm() {
                   className="w-full rounded-btn border border-gray-200 bg-gray-100 px-2 py-1 text-sm text-gray-500"
                 />
               </div>
-              <div className="space-y-3 border-t border-gray-100 pt-3">
+              </>
+              )}
+              {step === 2 && (
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-gray-500">
+                  사진 사용 여부 (선택 — 리뷰에 사진을 첨부하려면 켜주세요)
+                </p>
+                <div>
+                  <label className="flex items-center gap-2 text-xs text-gray-500">
+                    <input
+                      type="checkbox"
+                      checked={usePhotos}
+                      onChange={(e) => setUsePhotos(e.target.checked)}
+                    />
+                    사진을 리뷰에 사용
+                  </label>
+                  {usePhotos && (
+                    <div className="mt-2 space-y-2 rounded-card border border-gray-200 bg-gray-50 p-2">
+                      <div>
+                        <input
+                          ref={photoInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) =>
+                            setPhotoFiles((prev) => [...prev, ...Array.from(e.target.files || [])])
+                          }
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => photoInputRef.current?.click()}
+                          className="bg-white"
+                        >
+                          <Upload size={12} />
+                          사진 업로드하기
+                        </Button>
+                        {photoFiles.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {photoFiles.map((f, i) => (
+                              <span
+                                key={`${f.name}-${i}`}
+                                className="flex items-center gap-1 rounded-btn bg-white px-2 py-0.5 text-xs text-gray-600"
+                              >
+                                {f.name}
+                                <button
+                                  type="button"
+                                  onClick={() => setPhotoFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                                  className="text-gray-400 hover:text-danger-text"
+                                >
+                                  <X size={10} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="mt-1 text-xs text-gray-400">
+                          업로드한 사진은 저장 전 EXIF(촬영정보)가 자동으로 랜덤 처리됩니다.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500">리뷰당 사진 갯수</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={form.photos_per_review}
+                          onChange={(e) => setForm((prev) => ({ ...prev, photos_per_review: e.target.value }))}
+                          className="w-20"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              )}
+              {step === 3 && (
+              <div className="space-y-3">
                 <p className="text-xs font-medium text-gray-500">
                   리뷰 원고 자료 (리뷰어가 포털에서 "리뷰 자료 보기"로 확인)
                 </p>
@@ -472,13 +644,42 @@ export default function TargetForm() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">말투 (선택)</label>
+                  <label className="block text-xs text-gray-500">말투</label>
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
+                    {TONE_PRESET_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => setForm({ ...form, tone_preset: opt.key })}
+                        className={`rounded px-2 py-1 text-xs font-medium ${
+                          form.tone_preset === opt.key
+                            ? 'bg-brand-500 text-white'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                   <textarea
                     lang="ko"
                     value={form.tone}
                     onChange={(e) => setForm({ ...form, tone: e.target.value })}
                     rows={2}
-                    placeholder="예: 친구한테 편하게 말하듯이 — 문장 종결어미는 항상 다양하게 섞어서 씁니다"
+                    placeholder="추가 지시 (선택) — 위 말투 프리셋에 더해서 세부적으로 요청할 내용이 있으면 입력"
+                    className="mt-1 w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500">
+                    금지어 (선택 — 쉼표나 줄바꿈으로 구분, AI 원고 생성 시 이 단어와 연상 표현을 전부 제외)
+                  </label>
+                  <textarea
+                    lang="ko"
+                    value={form.forbidden_words}
+                    onChange={(e) => setForm({ ...form, forbidden_words: e.target.value })}
+                    rows={2}
+                    placeholder="예: 치료, 안마, 마사지, 진료, 시술"
                     className="w-full rounded-btn border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
@@ -547,79 +748,28 @@ export default function TargetForm() {
                     ))}
                   </div>
                 </div>
+              </div>
+              )}
+              <div className="flex items-center justify-between border-t border-gray-100 pt-3">
                 <div>
-                  <label className="flex items-center gap-2 text-xs text-gray-500">
-                    <input
-                      type="checkbox"
-                      checked={usePhotos}
-                      onChange={(e) => setUsePhotos(e.target.checked)}
-                    />
-                    사진을 리뷰에 사용
-                  </label>
-                  {usePhotos && (
-                    <div className="mt-2 space-y-2 rounded-card border border-gray-200 bg-gray-50 p-2">
-                      <div>
-                        <input
-                          ref={photoInputRef}
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(e) =>
-                            setPhotoFiles((prev) => [...prev, ...Array.from(e.target.files || [])])
-                          }
-                          className="hidden"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => photoInputRef.current?.click()}
-                          className="bg-white"
-                        >
-                          <Upload size={12} />
-                          사진 업로드하기
-                        </Button>
-                        {photoFiles.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {photoFiles.map((f, i) => (
-                              <span
-                                key={`${f.name}-${i}`}
-                                className="flex items-center gap-1 rounded-btn bg-white px-2 py-0.5 text-xs text-gray-600"
-                              >
-                                {f.name}
-                                <button
-                                  type="button"
-                                  onClick={() => setPhotoFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                                  className="text-gray-400 hover:text-danger-text"
-                                >
-                                  <X size={10} />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <p className="mt-1 text-xs text-gray-400">
-                          업로드한 사진은 저장 전 EXIF(촬영정보)가 자동으로 랜덤 처리됩니다.
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500">리뷰당 사진 갯수</label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={form.photos_per_review}
-                          onChange={(e) => setForm((prev) => ({ ...prev, photos_per_review: e.target.value }))}
-                          className="w-20"
-                        />
-                      </div>
-                    </div>
+                  {step > 1 && (
+                    <Button type="button" variant="outline" onClick={() => goToStep(step - 1)}>
+                      이전
+                    </Button>
                   )}
                 </div>
-              </div>
-              <div>
-                <Button type="submit" variant="primary" disabled={submitting || !form.store_id}>
-                  등록 (오픈풀에 공개)
-                </Button>
+                <div>
+                  {step < 3 && (
+                    <Button type="button" variant="primary" onClick={() => goToStep(step + 1)}>
+                      다음
+                    </Button>
+                  )}
+                  {step === 3 && (
+                    <Button type="submit" variant="primary" disabled={submitting || !form.store_id}>
+                      {submitting ? '등록 중...' : '등록 (오픈풀에 공개)'}
+                    </Button>
+                  )}
+                </div>
               </div>
               <p className="text-xs text-gray-400">
                 매장 목록에 없다면 먼저 "매장정보" 탭에서 등록해주세요. 등록된 작업은 자동

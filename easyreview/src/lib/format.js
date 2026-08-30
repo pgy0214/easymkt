@@ -41,6 +41,18 @@ export const PLATFORM_LABEL = {
   kakao: '카카오맵',
 }
 
+// review_writer.TONE_PRESETS와 키를 맞춰서 유지 — 원고 생성 시 말투 세부 규칙으로 쓰임
+export const TONE_PRESET_OPTIONS = [
+  { key: 'friendly', label: '친근한 구어체 (기본)' },
+  { key: 'formal', label: '정중한 존댓말체' },
+  { key: 'heartfelt', label: '진심 어린 감사체' },
+  { key: 'concise', label: '간결하고 임팩트있게' },
+  { key: 'detailed', label: '꼼꼼한 설명형' },
+]
+export const TONE_PRESET_LABEL = Object.fromEntries(
+  TONE_PRESET_OPTIONS.map((o) => [o.key, o.label]),
+)
+
 export const CATEGORY_LABEL = {
   admin: '관리자',
   own: '자체계정',

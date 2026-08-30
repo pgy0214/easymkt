@@ -119,6 +119,8 @@ class ReviewTarget(Base):
     reference_photo_path = Column(String, nullable=True)  # 참고 이미지 (선택, 구버전 단일사진 — 유지만 함)
     photos_per_review = Column(Integer, nullable=False, default=1)  # 리뷰 1건당 배정할 사진 갯수
     review_length = Column(Integer, nullable=False, default=80)  # 리뷰 원고 목표 글자수 (50/80/100)
+    forbidden_words = Column(String, nullable=True)  # AI 원고 생성 시 제외할 단어 목록 (쉼표/줄바꿈 구분)
+    tone_preset = Column(String, nullable=True)  # 말투 프리셋 키 (review_writer.TONE_PRESETS) — None이면 기본(친근한 구어체)
 
     created_by_reviewer_id = Column(Integer, ForeignKey("reviewers.id"), nullable=True)  # 광고주가 등록한 경우
     approval_status = Column(String, nullable=False, default="approved")  # approved|pending|rejected — 광고주 등록분만 관리자 승인 필요, 승인 전엔 오픈풀에 노출 안 함

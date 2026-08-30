@@ -7,6 +7,14 @@ import ImageCopyButton from './ImageCopyButton.jsx'
 import Button from './ui/Button.jsx'
 import Modal from './ui/Modal.jsx'
 
+// 이 계정으로 오늘(KST) 배정하면 바로 작업 가능한지 판단하는 기준 날짜 —
+// scheduled_date가 이 날짜 이전(오늘 포함, 밀린 미클레임분 포함)인 작업만 "가능"으로 센다.
+function todayKstDateString() {
+  const now = new Date()
+  const kst = new Date(now.getTime() + (9 * 60 - now.getTimezoneOffset()) * 60000)
+  return kst.toISOString().slice(0, 10)
+}
+
 function HistoryRow({ task, onSubmitResult, onUploadReceipt }) {
   const [linkInput, setLinkInput] = useState('')
   const [showMaterials, setShowMaterials] = useState(false)
@@ -206,7 +214,19 @@ export default function AccountTaskModal({ row, onClose }) {
     [storeHistory],
   )
 
+  // 이 계정에 이미 진행 중(완료 전)인 작업이 있는 매장 — 같은 계정으로 같은 매장을
+  // 중복 배정하지 않도록 오픈풀 목록에서 제외한다(쿨다운은 "완료"된 작업 기준이라
+  // 아직 진행 중인 작업은 쿨다운 계산에 안 잡히므로 별도로 걸러줘야 함).
+  const activeStoreIds = useMemo(() => {
+    const ids = new Set()
+    for (const t of history) {
+      if (t.status !== 'completed') ids.add(t.store_id)
+    }
+    return ids
+  }, [history])
+
   const campaigns = useMemo(() => {
+    const today = todayKstDateString()
     const byTarget = new Map()
     for (const task of openTasks) {
       const key = task.review_target_id
@@ -219,14 +239,18 @@ export default function AccountTaskModal({ row, onClose }) {
           unit_price: task.settlement_amount,
           firstTaskId: task.id,
           count: 0,
-          isEligible: !eligibility || eligibility.is_eligible_now,
+          availableToday: 0,
+          isEligible: (!eligibility || eligibility.is_eligible_now) && !activeStoreIds.has(task.store_id),
           eligibleAt: eligibility?.eligible_at,
+          hasActiveTask: activeStoreIds.has(task.store_id),
         })
       }
-      byTarget.get(key).count += 1
+      const entry = byTarget.get(key)
+      entry.count += 1
+      if (!task.scheduled_date || task.scheduled_date <= today) entry.availableToday += 1
     }
     return Array.from(byTarget.values())
-  }, [openTasks, eligibilityByStore])
+  }, [openTasks, eligibilityByStore, activeStoreIds])
 
   const filteredCampaigns = useMemo(() => {
     const query = storeSearch.trim().toLowerCase()
@@ -294,7 +318,7 @@ export default function AccountTaskModal({ row, onClose }) {
           새 작업 배정 (오픈풀)
           {ineligibleCount > 0 && (
             <span className="ml-1 font-normal text-warning-text">
-              · 쿨다운 중이라 안 보이는 매장 {ineligibleCount}곳
+              · 쿨다운 중이거나 진행 중인 작업이 있어 안 보이는 매장 {ineligibleCount}곳
             </span>
           )}
         </p>
@@ -330,7 +354,7 @@ export default function AccountTaskModal({ row, onClose }) {
               <div>
                 <span className="font-medium text-gray-700">{c.store_name}</span>
                 <span className="ml-2 text-xs text-gray-400">
-                  {c.count}건 남음 · {formatKRW(c.unit_price)}
+                  오늘 기준 {c.availableToday}건 가능 (전체 {c.count}건 남음) · {formatKRW(c.unit_price)}
                 </span>
               </div>
               <Button

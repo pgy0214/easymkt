@@ -361,4 +361,10 @@ def run_migrations(engine) -> None:
         _add_column_if_missing(conn, "settings", "bank_account_number", "bank_account_number TEXT")
         _add_column_if_missing(conn, "settings", "bank_account_holder", "bank_account_holder TEXT")
 
+        # review_targets: forbidden_words — AI 원고 생성 시 제외할 단어 목록(원고 만들기)
+        _add_column_if_missing(conn, "review_targets", "forbidden_words", "forbidden_words TEXT")
+
+        # review_targets: tone_preset — 말투 프리셋 키(원고 만들기)
+        _add_column_if_missing(conn, "review_targets", "tone_preset", "tone_preset TEXT")
+
         conn.commit()

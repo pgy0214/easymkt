@@ -1,8 +1,9 @@
-import { ChevronDown, Send, Trash2 } from 'lucide-react'
+import { ChevronDown, ClipboardList, Send, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { GENDER_LABEL, REVIEWER_CATEGORY_LABEL } from '../lib/format.js'
 import AccountForm from './AccountForm.jsx'
 import AccountStoreBadges from './AccountStoreBadges.jsx'
+import AccountTaskModal from './AccountTaskModal.jsx'
 import AssignTaskModal from './AssignTaskModal.jsx'
 
 const PLATFORM_BADGE = {
@@ -33,6 +34,7 @@ export default function ReviewerCard({
 }) {
   const [assigning, setAssigning] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [taskAccount, setTaskAccount] = useState(null)
 
   return (
     <div className={`rounded-card border bg-white p-4 ${reviewer.is_active ? 'border-gray-200' : 'border-gray-200 opacity-70'}`}>
@@ -176,13 +178,22 @@ export default function ReviewerCard({
                           <AccountStoreBadges account={account} />
                         </td>
                         <td className="px-3 py-2 text-right align-top">
-                          <button
-                            onClick={() => onDeleteAccount(reviewer.id, account.id)}
-                            className="text-gray-400 hover:text-danger-text"
-                            title="계정 삭제"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setTaskAccount({ ...account, name: reviewer.name })}
+                              className="text-gray-400 hover:text-brand-600"
+                              title="작업 관리 (배정/결과 링크 입력)"
+                            >
+                              <ClipboardList size={14} />
+                            </button>
+                            <button
+                              onClick={() => onDeleteAccount(reviewer.id, account.id)}
+                              className="text-gray-400 hover:text-danger-text"
+                              title="계정 삭제"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -202,6 +213,7 @@ export default function ReviewerCard({
           onAssigned={() => setAssigning(false)}
         />
       )}
+      {taskAccount && <AccountTaskModal row={taskAccount} onClose={() => setTaskAccount(null)} />}
     </div>
   )
 }

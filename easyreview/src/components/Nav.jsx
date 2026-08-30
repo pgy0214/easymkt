@@ -17,8 +17,9 @@ const GROUPS = [
     icon: Store,
     children: [
       { id: 'stores', label: '매장정보' },
-      { id: 'receipt', label: '영수증 만들기' },
       { id: 'targets', label: '캠페인 등록/목록' },
+      { id: 'receipt', label: '영수증 만들기' },
+      { id: 'draft', label: '원고 만들기' },
       { id: 'tasks', label: '작업 현황' },
     ],
   },

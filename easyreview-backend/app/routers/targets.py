@@ -40,6 +40,8 @@ def preview_review_text(data: schemas.ReviewTextGenerateIn):
         tone=data.tone,
         length=data.review_length,
         menu_items=[m.model_dump() for m in data.menu_items] if data.menu_items else None,
+        forbidden_words=data.forbidden_words,
+        tone_preset=data.tone_preset,
     )
     return schemas.ReviewTextGenerateOut(text=text)
 
@@ -135,6 +137,49 @@ async def upload_target_review_texts(
     if not texts:
         raise HTTPException(status_code=400, detail="파일에서 리뷰내용을 찾을 수 없습니다")
     return crud.save_target_review_texts(db, target, texts)
+
+
+MAX_GENERATE_COUNT = 30
+
+
+@router.post(
+    "/{target_id}/review-texts/generate",
+    response_model=list[schemas.TargetReviewTextGeneratedOut],
+)
+def generate_target_review_texts(
+    target_id: int, data: schemas.ReviewTextBulkGenerateIn, db: Session = Depends(get_db)
+):
+    """원고 만들기 페이지 — 캠페인에 등록된 가이드라인/지역특징/말투/금지어/메뉴 정보를
+    그대로 사용해 원고 count건을 생성해 원고 풀에 저장한다(save_target_review_texts와
+    동일하게 작업 생성 순서로 1:1 배정됨). 관리자가 "정상적으로 나왔는지" 바로 확인할 수
+    있도록 건별 QA 경고(금지어 포함/중복/글자수 이탈)를 같이 내려준다."""
+    target = crud.get_target(db, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다")
+    if not review_writer.is_configured():
+        raise HTTPException(
+            status_code=400, detail="ANTHROPIC_API_KEY가 서버에 설정되어 있지 않습니다"
+        )
+    count = max(1, min(data.count, MAX_GENERATE_COUNT))
+    menu_items = crud.decode_menu_items(target.menu_items_json)
+    texts = review_writer.generate_review_texts_batch(
+        guideline=target.guideline,
+        regional_features=target.regional_features,
+        tone=target.tone,
+        length=target.review_length,
+        menu_items=menu_items,
+        forbidden_words=target.forbidden_words,
+        tone_preset=target.tone_preset,
+        count=count,
+    )
+    if not texts:
+        raise HTTPException(status_code=502, detail="원고 생성에 실패했습니다 — 다시 시도해주세요")
+    warnings = review_writer.validate_review_texts(texts, target.forbidden_words, target.review_length)
+    saved = crud.save_target_review_texts(db, target, texts)
+    return [
+        schemas.TargetReviewTextGeneratedOut(id=t.id, content=t.content, warnings=w)
+        for t, w in zip(saved, warnings)
+    ]
 
 
 @router.delete("/{target_id}/review-texts/{text_id}")

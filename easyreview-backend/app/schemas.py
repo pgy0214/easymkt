@@ -290,6 +290,8 @@ class ReviewTargetCreate(BaseModel):
     menu_items: Optional[list[MenuItemIn]] = None  # 최대 3개, 영수증 생성에도 사용
     photos_per_review: int = 1  # 리뷰 1건당 배정할 사진 갯수
     review_length: int = 80  # 리뷰 원고 목표 글자수 (50/80/100)
+    forbidden_words: Optional[str] = None  # AI 원고 생성 시 제외할 단어 목록 (쉼표/줄바꿈 구분)
+    tone_preset: Optional[str] = None  # 말투 프리셋 키 (review_writer.TONE_PRESETS)
 
 
 class ReviewTargetUpdate(BaseModel):
@@ -307,6 +309,8 @@ class ReviewTargetUpdate(BaseModel):
     menu_items: Optional[list[MenuItemIn]] = None
     photos_per_review: Optional[int] = None
     review_length: Optional[int] = None
+    forbidden_words: Optional[str] = None
+    tone_preset: Optional[str] = None
 
 
 class TargetPhotoOut(BaseModel):
@@ -329,10 +333,25 @@ class ReviewTextGenerateIn(BaseModel):
     tone: Optional[str] = None
     review_length: int = 80
     menu_items: Optional[list[MenuItemIn]] = None
+    forbidden_words: Optional[str] = None
+    tone_preset: Optional[str] = None
 
 
 class ReviewTextGenerateOut(BaseModel):
     text: str
+
+
+class ReviewTextBulkGenerateIn(BaseModel):
+    count: int
+
+
+class TargetReviewTextGeneratedOut(BaseModel):
+    """generate 엔드포인트 전용 응답 — 저장은 TargetReviewText와 동일하지만, 관리자가
+    "정상적으로 나왔는지" 바로 확인할 수 있도록 건별 QA 경고를 같이 내려준다."""
+
+    id: int
+    content: str
+    warnings: list[str] = []
 
 
 class ReviewTargetOut(BaseModel):
@@ -368,6 +387,8 @@ class ReviewTargetOut(BaseModel):
     photos_per_review: int = 1
     photos: list[TargetPhotoOut] = []
     review_length: int = 80
+    forbidden_words: Optional[str] = None
+    tone_preset: Optional[str] = None
     review_texts: list[TargetReviewTextOut] = []
 
     # denormalized, filled in by the router — 캠페인 목록의 진행중/완료 필터에 사용

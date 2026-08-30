@@ -885,6 +885,10 @@ def update_target(
         target.photos_per_review = data.photos_per_review
     if data.review_length is not None:
         target.review_length = data.review_length
+    if data.forbidden_words is not None:
+        target.forbidden_words = data.forbidden_words
+    if data.tone_preset is not None:
+        target.tone_preset = data.tone_preset
     db.commit()
     db.refresh(target)
     return target
@@ -928,6 +932,8 @@ def create_review_target(
         menu_items_json=encode_menu_items(data.menu_items),
         photos_per_review=data.photos_per_review,
         review_length=data.review_length,
+        forbidden_words=data.forbidden_words,
+        tone_preset=data.tone_preset,
         created_by_reviewer_id=created_by_reviewer_id,
         approval_status=approval_status,
     )

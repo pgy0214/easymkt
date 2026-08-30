@@ -152,6 +152,11 @@ export const api = {
   },
   deleteTargetReviewText: (targetId, textId) =>
     request(`/targets/${targetId}/review-texts/${textId}`, { method: 'DELETE' }),
+  generateTargetReviewTexts: (targetId, count) =>
+    request(`/targets/${targetId}/review-texts/generate`, {
+      method: 'POST',
+      body: JSON.stringify({ count }),
+    }),
   previewReviewText: (data) =>
     request('/targets/preview-review-text', { method: 'POST', body: JSON.stringify(data) }),
 
