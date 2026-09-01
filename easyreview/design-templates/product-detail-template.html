@@ -1,0 +1,128 @@
+<!--
+  광고주센터 "마케팅 이렇게 하세요" 상품 상세이미지 — 기준 템플릿 (2026-09-01 승인)
+
+  이 파일 자체가 완성된 예시(네이버 영수증 리뷰 대행)이자, 앞으로 새 상품 상세이미지를
+  만들 때 그대로 복사해서 문구/색상/숫자만 바꿔 쓰는 기준 템플릿이다.
+
+  왜 이 크기인가:
+  상세이미지가 뜨는 모달이 PC/모바일 모두 폭이 좁게 고정되어 있어서(모바일 앱 기준 실제
+  표시 폭은 약 330px), 900px로 만든 원본 이미지가 그 폭까지 약 0.37배로 축소되어 보인다.
+  즉 여기 적힌 폰트 크기는 "900px 캔버스 기준"이고, 실제로 보이는 크기는 이 값의 약
+  37%다 — 글자를 이 정도로 크게 잡아야 실제 화면에서 일반 본문 글자 크기 정도로 보인다.
+  새 상품을 만들 때도 이 비율 감각을 유지할 것(폰트 크기를 줄이지 말 것).
+
+  캔버스: 900px 폭 고정 (광고주센터 "마케팅 이렇게 하세요" 상세이미지 권장 규격과 동일)
+  본문 폭: .wrap이 700px로 캔버스 안에서 중앙 정렬 — 좌우 여백 100px씩
+
+  색상 규칙: 상품마다 하나의 포인트 컬러(hero 배경)를 정하고, 그 색의 진한 톤을
+  .eyebrow2 / .stat .num 등 강조 텍스트에 재사용한다. 이미 쓴 색:
+    - 네이버 영수증 리뷰 대행: #1B64DA (블루)
+    - 체험단 캠페인: #6355C7 (퍼플)
+    - 네이버 플레이스 최적화: #02A34A (그린)
+    - 메타(페이스북·인스타그램) 광고: #2F4BC7 (인디고)
+    - 카카오맵 등록·리뷰 관리: #D4B900 배경 + 짙은 네이비 텍스트 (밝은 배경이라 예외)
+  새 상품은 이 5개와 겹치지 않는 색으로 고른다.
+
+  구조(섹션 순서, 필요에 따라 가감):
+    1. .hero — 컬러 배경, eyebrow(상품명 라벨) + h1(핵심 카피, 강조 구간은 .hl로 노란색) +
+       부연설명 + 신뢰 배지 3개
+    2. .section — 흰 배경, 근거 데이터/사용법 등. 통계면 .stats(3열) + .stats2(2열)
+    3. .case — 어두운 배경(#171B21 고정), 마무리 요약/실사례. .big으로 핵심 수치 강조 가능
+
+  실제 사진(스크린샷 등)을 넣을 땐 <img class="proof-img" style="max-width:460px">
+  형태로 넣고, 개인정보/타 매장 정보는 반드시 모자이크된 이미지만 사용한다(가공 금지,
+  사용자가 직접 모자이크한 이미지를 받아서 그대로 쓸 것).
+
+  렌더링 방법(PNG로 뽑을 때):
+    1. easyreview/public/ 에 임시로 복사 후 로컬 dev 서버(5173)로 접속
+    2. document.body.scrollHeight로 실제 높이 확인
+    3. headless chrome으로 900×(그 높이)로 스크린샷
+    4. 광고주센터 관리자 화면(설정 → 마케팅 이렇게 하세요)에서 해당 상품 이미지로 업로드
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 900px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+    background: #FFFFFF;
+  }
+  .wrap { max-width: 700px; margin: 0 auto; }
+
+  .hero { background: #1B64DA; padding: 72px 44px 56px; text-align: center; }
+  .eyebrow { color: #DFEBFF; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }
+  .hero h1 { color: #FFFFFF; font-size: 52px; line-height: 1.42; font-weight: 800; margin: 24px 0 20px; word-break: keep-all; }
+  .hero h1 .hl { color: #FFE380; }
+  .hero p { color: #DFEBFF; font-size: 26px; line-height: 1.6; margin: 0 0 32px; font-weight: 500; word-break: keep-all; }
+
+  .badges { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .badge { background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.4); color: #FFFFFF; font-size: 20px; font-weight: 700; padding: 12px 22px; border-radius: 999px; }
+
+  .section { padding: 64px 44px; text-align: center; }
+  .section .eyebrow2 { color: #1B64DA; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }
+  .section h2 { font-size: 40px; font-weight: 800; color: #191F28; margin: 18px 0 16px; line-height: 1.4; word-break: keep-all; }
+  .cite { color: #8B95A1; font-size: 20px; margin: 0 0 36px; line-height: 1.6; word-break: keep-all; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .stat { background: #F2F4F6; border-radius: 18px; padding: 30px 12px; }
+  .stat .num { color: #1B64DA; font-size: 42px; font-weight: 800; }
+  .stat .label { color: #4E5968; font-size: 19px; margin-top: 8px; line-height: 1.4; word-break: keep-all; }
+  .stats2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px; }
+
+  .proof-img { width: 100%; max-width: 460px; height: auto; border-radius: 16px; border: 2px solid #E5E8EB; }
+  .proof-caption { color: #8B95A1; font-size: 17px; margin-top: 14px; word-break: keep-all; }
+
+  .case { background: #171B21; padding: 76px 44px; text-align: center; }
+  .case .eyebrow3 { color: #9AA5B1; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }
+  .case .big { color: #FFFFFF; font-size: 76px; font-weight: 800; margin: 22px 0; }
+  .case .big span { color: #6FA8FF; }
+  .case p { color: #F2F4F6; font-size: 25px; font-weight: 700; line-height: 1.6; margin: 0 0 18px; word-break: keep-all; }
+  .case .sub { color: #9AA5B1; font-size: 21px; font-weight: 500; line-height: 1.7; word-break: keep-all; }
+</style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="wrap">
+      <div class="eyebrow">EASY REVIEW · 네이버 영수증 리뷰 대행</div>
+      <h1>네이버 리뷰가 쌓일수록,<br><span class="hl">매장 매출도 함께 늘어납니다</span></h1>
+      <p>실제 방문·결제 고객이 남기는 진짜 후기로<br>내 매장을 네이버 지도 상위에 노출시키세요</p>
+      <div class="badges">
+        <span class="badge">실결제 기반 리뷰</span>
+        <span class="badge">조작 위험 없음</span>
+        <span class="badge">서울대 연구 검증</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="wrap">
+      <div class="eyebrow2">DATA REPORT</div>
+      <h2>영수증 리뷰 100개가 늘어나면<br>실제로 무슨 일이 벌어질까요?</h2>
+      <p class="cite">서울대학교 유병준 교수팀<br>'네이버 플레이스 리뷰 사업자 성과창출 효과' 연구 결과</p>
+      <div class="stats">
+        <div class="stat"><div class="num">178회</div><div class="label">업체 페이지<br>조회수 증가</div></div>
+        <div class="stat"><div class="num">56명</div><div class="label">페이지 방문자<br>수 증가</div></div>
+        <div class="stat"><div class="num">3.4명</div><div class="label">길찾기 클릭<br>증가</div></div>
+      </div>
+      <div class="stats2">
+        <div class="stat"><div class="num">2.5명</div><div class="label">장소 저장 증가</div></div>
+        <div class="stat"><div class="num">1.8명</div><div class="label">장소 공유 증가</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="case">
+    <div class="wrap">
+      <div class="eyebrow3">REAL CASE</div>
+      <div class="big">+<span>30</span>%</div>
+      <p>영수증 리뷰 이벤트를 시작한 매장의<br>연매출이 전년 대비 30% 증가했습니다</p>
+      <div class="sub">리뷰가 쌓일수록 손님도 함께 늘어나는 선순환 구조 —<br>조회수·유입키워드·예약·주문수로 효과를 직접 확인할 수 있습니다</div>
+    </div>
+  </div>
+
+</body>
+</html>

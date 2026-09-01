@@ -136,8 +136,8 @@ export default function ReviewerCard({
             {reviewer.accounts.length === 0 ? (
               <p className="text-sm text-gray-400">등록된 계정이 없습니다</p>
             ) : (
-              <div className="overflow-hidden rounded-card border border-gray-200">
-                <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto rounded-card border border-gray-200">
+                <table className="w-full min-w-[480px] text-left text-sm">
                   <thead className="bg-gray-50 text-xs text-gray-500">
                     <tr>
                       <th className="px-3 py-2 font-medium">플랫폼</th>
@@ -150,7 +150,7 @@ export default function ReviewerCard({
                     {reviewer.accounts.map((account) => (
                       <tr key={account.id} className="border-t border-gray-100">
                         <td className="px-3 py-2 align-top">
-                          <span className={`rounded-pill px-1.5 py-0.5 text-xs font-medium ${PLATFORM_BADGE[account.platform]}`}>
+                          <span className={`whitespace-nowrap rounded-pill px-1.5 py-0.5 text-xs font-medium ${PLATFORM_BADGE[account.platform]}`}>
                             {account.platform === 'naver' ? '네이버' : '카카오'}
                           </span>
                         </td>

@@ -897,7 +897,7 @@ function AdvertiserHome({ token, onLogout }) {
       )}
 
       {productDetail && (
-        <Modal open={!!productDetail} onClose={() => setProductDetail(null)}>
+        <Modal open={!!productDetail} onClose={() => setProductDetail(null)} size="2xl">
           <h3 className="mb-3 font-semibold text-gray-800">{productDetail.name}</h3>
           <div className="space-y-2">
             {productDetail.detail_image_paths.length === 0 && (
