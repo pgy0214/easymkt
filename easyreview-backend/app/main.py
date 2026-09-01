@@ -65,6 +65,7 @@ _frontend_origins = [
     "http://localhost:5174",
     "https://review-managing.vercel.app",
     "https://review-ezmkt.vercel.app",
+    "https://store-ezmkt.vercel.app",
     "https://easymkt.com",
     "https://www.easymkt.com",
 ]
