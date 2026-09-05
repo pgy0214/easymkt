@@ -224,12 +224,17 @@ def dashed(draw, x0, y, count=42, dash_len=7.8, gap=5):
     return y + 6
 
 
+# 영수증 한 장에 찍히는 상품 줄 수 상한 — 메뉴 풀(대표상품) 자체는 크롤링으로 몇
+# 개든 쌓일 수 있지만, 실제 영수증에는 자연스러운 개수만 들어가야 한다.
+MAX_RECEIPT_ITEM_COUNT = 3
+
+
 # ============================ ORDER SELECTION ============================
 def _pick_random_order(menu_items: list[dict]) -> tuple[list[str], list[int], list[int]]:
     """레거시 runner의 '방/메뉴 조합을 랜덤으로 골라 자연스러운 합계를 만드는' 방식과
-    동일한 취지 — 입력된 메뉴(최대 3개) 중 1개~전체를 랜덤으로 골라 수량(1~2)도
-    랜덤으로 매긴다."""
-    num = random.randint(1, len(menu_items))
+    동일한 취지 — 입력된 메뉴 풀(크롤링 결과라 몇 개든 될 수 있음) 중 1개~
+    MAX_RECEIPT_ITEM_COUNT개를 랜덤으로 골라 수량(1~2)도 랜덤으로 매긴다."""
+    num = random.randint(1, min(MAX_RECEIPT_ITEM_COUNT, len(menu_items)))
     chosen = random.sample(menu_items, num)
     names = [m["name"][:MAX_PRODUCT_NAME_LENGTH] for m in chosen]
     prices = [m["price"] for m in chosen]

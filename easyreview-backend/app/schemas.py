@@ -288,7 +288,7 @@ class ReviewTargetCreate(BaseModel):
     guideline: Optional[str] = None
     regional_features: Optional[str] = None
     tone: Optional[str] = None  # 말투(문체) 지시 — 예: "친구한테 말하듯 편하게"
-    menu_items: Optional[list[MenuItemIn]] = None  # 최대 3개, 영수증 생성에도 사용
+    menu_items: Optional[list[MenuItemIn]] = None  # 개수 제한 없음(크롤링 풀 그대로) — 영수증 1장엔 receipt_generator.MAX_RECEIPT_ITEM_COUNT개만 랜덤으로 들어감
     photos_per_review: int = 1  # 리뷰 1건당 배정할 사진 갯수
     review_length: int = 80  # 리뷰 원고 목표 글자수 (50/80/100)
     forbidden_words: Optional[str] = None  # AI 원고 생성 시 제외할 단어 목록 (쉼표/줄바꿈 구분)

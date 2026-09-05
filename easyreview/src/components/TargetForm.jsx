@@ -61,17 +61,18 @@ const EMPTY = {
   tone: '',
   tone_preset: 'friendly',
   forbidden_words: '',
-  menu_items: [{ ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }],
+  menu_items: [{ ...EMPTY_MENU_ITEM }],
   review_length: 80,
   photos_per_review: 1,
 }
 
+// 매장의 대표상품(크롤링 결과라 몇 개든 있을 수 있음)을 전부 그대로 캠페인 메뉴 풀로
+// 가져온다 — 개수를 3개로 자르지 않는다. 영수증 한 장에 몇 개가 찍힐지는
+// receipt_generator.MAX_RECEIPT_ITEM_COUNT가 생성 시점에 따로 정한다.
 function menuItemsFromStore(store) {
   const items = parseProductString(store?.representative_product)
   if (items.length === 0) return null
-  return [0, 1, 2].map((i) =>
-    items[i] ? { name: items[i].name.slice(0, MAX_PRODUCT_NAME_LENGTH), price: items[i].price } : { ...EMPTY_MENU_ITEM },
-  )
+  return items.map((item) => ({ name: item.name.slice(0, MAX_PRODUCT_NAME_LENGTH), price: item.price }))
 }
 
 // work_days는 백엔드와 동일하게 0=월..6=일 — JS Date.getDay()(0=일..6=토)를 변환해서 맞춘다
@@ -136,7 +137,7 @@ export default function TargetForm() {
     setForm((prev) => ({
       ...prev,
       store_id: storeId,
-      menu_items: menuItemsFromStore(selected) ?? [{ ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }, { ...EMPTY_MENU_ITEM }],
+      menu_items: menuItemsFromStore(selected) ?? [{ ...EMPTY_MENU_ITEM }],
     }))
   }
 
@@ -154,6 +155,17 @@ export default function TargetForm() {
       ...prev,
       menu_items: prev.menu_items.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     }))
+  }
+
+  function addMenuItem() {
+    setForm((prev) => ({ ...prev, menu_items: [...prev.menu_items, { ...EMPTY_MENU_ITEM }] }))
+  }
+
+  function removeMenuItem(index) {
+    setForm((prev) => {
+      const next = prev.menu_items.filter((_, i) => i !== index)
+      return { ...prev, menu_items: next.length > 0 ? next : [{ ...EMPTY_MENU_ITEM }] }
+    })
   }
 
   async function handlePreviewReviewText() {
@@ -719,8 +731,9 @@ export default function TargetForm() {
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500">
-                    메뉴 3개 (매장정보의 대표상품에서 자동으로 채워집니다 — 이 캠페인만 다르게
-                    쓰려면 직접 수정하세요. 영수증 이미지 생성에도 사용됩니다)
+                    메뉴 (매장정보의 대표상품에서 자동으로 채워집니다 — 이 캠페인만 다르게
+                    쓰려면 직접 수정하세요. 영수증을 만들 때마다 이 중 1~3개가 랜덤으로
+                    골라져서 들어갑니다)
                   </label>
                   {selectedStore && !selectedStore.representative_product && (
                     <p className="mt-1 text-xs text-warning-text">
@@ -744,9 +757,24 @@ export default function TargetForm() {
                           placeholder="가격"
                           className="w-28"
                         />
+                        <button
+                          type="button"
+                          onClick={() => removeMenuItem(i)}
+                          className="text-gray-400 hover:text-danger-text"
+                          title="메뉴 삭제"
+                        >
+                          <X size={14} />
+                        </button>
                       </div>
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    onClick={addMenuItem}
+                    className="mt-1 text-xs text-brand-600 hover:underline"
+                  >
+                    + 메뉴 추가
+                  </button>
                 </div>
               </div>
               )}

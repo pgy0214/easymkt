@@ -10,10 +10,8 @@ const EMPTY_MENU_ITEM = { name: '', price: '' }
 
 function toMenuItemForm(menuItems) {
   const items = menuItems || []
-  return [0, 1, 2].map((i) => {
-    const item = items[i]
-    return item ? { name: item.name, price: String(item.price) } : { ...EMPTY_MENU_ITEM }
-  })
+  if (items.length === 0) return [{ ...EMPTY_MENU_ITEM }]
+  return items.map((item) => ({ name: item.name, price: String(item.price) }))
 }
 
 export default function TargetEditModal({ target, onClose, onSaved }) {
@@ -48,6 +46,17 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
 
   function updateMenuItem(index, field, value) {
     setMenuItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)))
+  }
+
+  function addMenuItem() {
+    setMenuItems((prev) => [...prev, { ...EMPTY_MENU_ITEM }])
+  }
+
+  function removeMenuItem(index) {
+    setMenuItems((prev) => {
+      const next = prev.filter((_, i) => i !== index)
+      return next.length > 0 ? next : [{ ...EMPTY_MENU_ITEM }]
+    })
   }
 
   async function handleSave() {
@@ -198,7 +207,9 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500">메뉴 3개</label>
+          <label className="block text-xs text-gray-500">
+            메뉴 (영수증을 만들 때마다 이 중 1~3개가 랜덤으로 골라져서 들어갑니다)
+          </label>
           <div className="space-y-1">
             {menuItems.map((item, i) => (
               <div key={i} className="flex gap-1">
@@ -216,9 +227,24 @@ export default function TargetEditModal({ target, onClose, onSaved }) {
                   placeholder="가격"
                   className="w-28"
                 />
+                <button
+                  type="button"
+                  onClick={() => removeMenuItem(i)}
+                  className="text-gray-400 hover:text-danger-text"
+                  title="메뉴 삭제"
+                >
+                  <X size={14} />
+                </button>
               </div>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={addMenuItem}
+            className="mt-1 text-xs text-brand-600 hover:underline"
+          >
+            + 메뉴 추가
+          </button>
         </div>
         <div>
           <label className="block text-xs text-gray-500">사진 풀 (여러 장 추가 가능)</label>
