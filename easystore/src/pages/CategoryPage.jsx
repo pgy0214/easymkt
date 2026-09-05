@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { ShieldCheck, TrendingUp, Users, Zap } from 'lucide-react'
 import { API_ORIGIN, productApi } from '../lib/api.js'
 import { navigate } from '../App.jsx'
+import Header from '../components/Header.jsx'
+import Footer from '../components/Footer.jsx'
 
 function lowestPrice(product) {
   const active = product.options.filter((o) => o.is_active)
@@ -31,11 +33,7 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-100">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <span className="text-lg font-bold text-gray-900">이지스토어</span>
-        </div>
-      </header>
+      <Header />
 
       <section className="bg-gray-900 px-4 py-16 text-center text-white sm:py-24">
         <p className="mb-2 text-sm font-semibold tracking-wide text-brand-300">EASY STORE</p>
@@ -121,10 +119,7 @@ export default function CategoryPage() {
         </div>
       </section>
 
-      <footer className="border-t border-gray-100 px-4 py-8 text-center text-xs text-gray-400">
-        <p className="mb-1 font-semibold text-gray-600">이지스토어</p>
-        <p className="mt-3">© 이지스토어. All rights reserved.</p>
-      </footer>
+      <Footer />
     </div>
   )
 }
