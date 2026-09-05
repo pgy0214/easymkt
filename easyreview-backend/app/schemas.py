@@ -67,6 +67,7 @@ class ReviewAccountOut(BaseModel):
 class AccountLaunchOut(BaseModel):
     debug_port: Optional[str] = None
     has_login_issue: bool = False
+    live_view_url: Optional[str] = None  # Browserbase 경로일 때만 채워짐 — 프론트가 새 탭으로 여는 링크
 
 
 class AccountAvailabilityOut(BaseModel):

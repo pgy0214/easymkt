@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import adspower, crud, schemas
+from app import adspower, browserbase, crud, schemas
 from app.database import get_db
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
@@ -49,8 +49,39 @@ def launch_account(account_id: int, db: Session = Depends(get_db)):
     account = crud.get_account(db, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
+
+    # Browserbase 경로 — IP(Bright Data 고정 IP)가 배정된 계정은 이쪽을 쓴다. 로컬
+    # 프로그램 없이 서버(Railway)에서 바로 클라우드 브라우저를 띄우고, 관리자는
+    # live_view_url을 새 탭으로 열어서 그 화면을 바로 본다.
+    if account.ip_address:
+        if not browserbase.is_configured():
+            raise HTTPException(
+                status_code=400, detail="Browserbase API 키가 서버에 설정되어 있지 않습니다"
+            )
+        if not account.browserbase_context_id:
+            try:
+                ctx = browserbase.create_context(name=f"account-{account.id}")
+            except Exception as e:
+                raise HTTPException(status_code=502, detail=f"Browserbase context 생성 실패: {e}")
+            account.browserbase_context_id = ctx["id"]
+            db.commit()
+        try:
+            session = browserbase.create_session(account.browserbase_context_id, account.ip_address)
+            live_view_url = browserbase.get_live_view_url(session["id"])
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Browserbase 세션 생성 실패: {e}")
+        return schemas.AccountLaunchOut(
+            has_login_issue=account.has_login_issue, live_view_url=live_view_url
+        )
+
+    # AdsPower 경로 — 이 백엔드 프로세스와 AdsPower가 같은 로컬 PC에서 돌 때만 동작함
+    # (로컬 API라 Railway 등 원격 서버에서는 접속 자체가 안 됨). IP 배정 전 계정을
+    # 위한 예전 경로로 남겨둔다.
     if not account.adspower_profile_id:
-        raise HTTPException(status_code=400, detail="이 계정에는 AdsPower 프로필이 연결되어 있지 않습니다")
+        raise HTTPException(
+            status_code=400,
+            detail="이 계정에는 IP(Bright Data)도 AdsPower 프로필도 연결되어 있지 않습니다",
+        )
     if not adspower.is_configured():
         raise HTTPException(status_code=400, detail="AdsPower API 키가 서버에 설정되어 있지 않습니다")
     try:

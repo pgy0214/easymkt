@@ -277,7 +277,10 @@ export default function AccountTaskModal({ row, onClose }) {
   async function handleLaunch() {
     setLaunching(true)
     try {
-      await api.launchAccount(row.id)
+      const result = await api.launchAccount(row.id)
+      // Browserbase 경로는 로컬에서 자동으로 창이 뜨지 않으므로, 받은 링크를 직접 새
+      // 탭으로 열어줘야 한다(AdsPower 경로는 로컬 프로그램이 알아서 창을 띄움).
+      if (result.live_view_url) window.open(result.live_view_url, '_blank')
     } catch (err) {
       alert(err.message)
     } finally {
@@ -305,7 +308,7 @@ export default function AccountTaskModal({ row, onClose }) {
         <h3 className="font-semibold text-gray-800">
           {row.name} — {row.label} 작업 관리
         </h3>
-        {row.adspower_profile_id && (
+        {(row.ip_address || row.adspower_profile_id) && (
           <Button variant="primary" size="sm" onClick={handleLaunch} disabled={launching}>
             <Play size={12} />
             {launching ? '실행 중...' : '지금 실행'}

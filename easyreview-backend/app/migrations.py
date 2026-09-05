@@ -367,4 +367,9 @@ def run_migrations(engine) -> None:
         # review_targets: tone_preset — 말투 프리셋 키(원고 만들기)
         _add_column_if_missing(conn, "review_targets", "tone_preset", "tone_preset TEXT")
 
+        # review_accounts: browserbase_context_id — Browserbase Context id 저장(로그인상태 유지)
+        _add_column_if_missing(
+            conn, "review_accounts", "browserbase_context_id", "browserbase_context_id TEXT"
+        )
+
         conn.commit()
