@@ -221,6 +221,8 @@ def update_my_profile(
         reviewer.name = data.name
     if data.contact_info is not None:
         reviewer.contact_info = data.contact_info
+    if data.bank_account is not None:
+        reviewer.bank_account = data.bank_account.strip()
     if data.gender is not None:
         reviewer.gender = data.gender
     if data.region is not None:

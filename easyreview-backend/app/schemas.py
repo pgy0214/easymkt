@@ -630,6 +630,7 @@ class PortalProfileUpdateIn(BaseModel):
 
     name: Optional[str] = None
     contact_info: Optional[str] = None
+    bank_account: Optional[str] = None
     gender: Optional[Gender] = None
     region: Optional[str] = None
     age_group: Optional[str] = None
