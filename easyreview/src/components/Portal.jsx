@@ -1,4 +1,4 @@
-import { ExternalLink, Loader2, LogOut, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ExternalLink, Loader2, LogOut, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, API_ORIGIN, portalApi } from '../lib/api.js'
 import {
@@ -658,6 +658,7 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   )
   const [showRules, setShowRules] = useState(false)
   const [showProfileEdit, setShowProfileEdit] = useState(false)
+  const [showSettlement, setShowSettlement] = useState(false)
 
   const completedTasks = useMemo(
     () =>
@@ -768,6 +769,17 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   if (error) return <p className="p-6 text-sm text-danger-text">{error}</p>
   if (!reviewer) return null
 
+  if (showSettlement) {
+    return (
+      <SettlementPage
+        completedTasks={completedTasks}
+        unpaidTotal={unpaidTotal}
+        paidTotal={paidTotal}
+        onBack={() => setShowSettlement(false)}
+      />
+    )
+  }
+
   return (
     <div className={`mx-auto space-y-6 p-4 ${mode === 'experience' ? 'max-w-6xl' : 'max-w-3xl'}`}>
       <div className="space-y-2.5">
@@ -784,6 +796,9 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm text-gray-500">
+            <button type="button" onClick={() => setShowSettlement(true)} className="whitespace-nowrap hover:text-gray-800">
+              작업내역보기
+            </button>
             <button type="button" onClick={() => setShowProfileEdit(true)} className="whitespace-nowrap hover:text-gray-800">
               내 정보 수정
             </button>
@@ -958,58 +973,75 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
             ))}
           </Card>
 
-          <Card padding="md" className="space-y-2">
-            <h2 className="font-medium text-gray-800">정산 확인</h2>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-btn bg-gray-50 py-2">
-                <div className="text-base font-semibold text-gray-800">{completedTasks.length}건</div>
-                <div className="text-xs text-gray-500">완료 작업</div>
-              </div>
-              <div className="rounded-btn bg-gray-50 py-2">
-                <div className="text-base font-semibold text-warning-text">{formatKRW(unpaidTotal)}</div>
-                <div className="text-xs text-gray-500">미정산</div>
-              </div>
-              <div className="rounded-btn bg-gray-50 py-2">
-                <div className="text-base font-semibold text-success-text">{formatKRW(paidTotal)}</div>
-                <div className="text-xs text-gray-500">정산완료</div>
-              </div>
-            </div>
-            {completedTasks.length === 0 ? (
-              <p className="text-sm text-gray-400">완료된 작업이 없습니다.</p>
-            ) : (
-              <div className="max-h-64 space-y-1 overflow-auto">
-                {completedTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between rounded-btn border border-gray-100 px-3 py-1.5 text-sm"
-                  >
-                    <div>
-                      <div className="font-medium text-gray-700">{task.store_name}</div>
-                      <div className="text-xs text-gray-500">
-                        {PLATFORM_LABEL[task.platform]} · {formatDateTime(task.completed_at)}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium text-gray-800">{formatKRW(task.settlement_amount)}</div>
-                      <span
-                        className={`text-xs ${
-                          task.settlement_status === 'paid' ? 'text-success-text' : 'text-warning-text'
-                        }`}
-                      >
-                        {task.settlement_status === 'paid' ? '정산완료' : '미정산'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
           {showRules && (
             <WorkRulesModal onClose={() => setShowRules(false)} onAcknowledge={handleAcknowledgeRules} />
           )}
         </>
       )}
+    </div>
+  )
+}
+
+function SettlementPage({ completedTasks, unpaidTotal, paidTotal, onBack }) {
+  return (
+    <div className="mx-auto max-w-3xl space-y-4 p-4">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-0.5 text-sm text-gray-500 hover:text-gray-800"
+        >
+          <ChevronLeft size={16} />
+          뒤로
+        </button>
+        <h1 className="text-lg font-semibold text-gray-900">작업내역 · 정산확인</h1>
+      </div>
+
+      <Card padding="md" className="space-y-2">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-btn bg-gray-50 py-2">
+            <div className="text-base font-semibold text-gray-800">{completedTasks.length}건</div>
+            <div className="text-xs text-gray-500">완료 작업</div>
+          </div>
+          <div className="rounded-btn bg-gray-50 py-2">
+            <div className="text-base font-semibold text-warning-text">{formatKRW(unpaidTotal)}</div>
+            <div className="text-xs text-gray-500">미정산</div>
+          </div>
+          <div className="rounded-btn bg-gray-50 py-2">
+            <div className="text-base font-semibold text-success-text">{formatKRW(paidTotal)}</div>
+            <div className="text-xs text-gray-500">정산완료</div>
+          </div>
+        </div>
+        {completedTasks.length === 0 ? (
+          <p className="text-sm text-gray-400">완료된 작업이 없습니다.</p>
+        ) : (
+          <div className="space-y-1">
+            {completedTasks.map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center justify-between rounded-btn border border-gray-100 px-3 py-1.5 text-sm"
+              >
+                <div>
+                  <div className="font-medium text-gray-700">{task.store_name}</div>
+                  <div className="text-xs text-gray-500">
+                    {PLATFORM_LABEL[task.platform]} · {formatDateTime(task.completed_at)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium text-gray-800">{formatKRW(task.settlement_amount)}</div>
+                  <span
+                    className={`text-xs ${
+                      task.settlement_status === 'paid' ? 'text-success-text' : 'text-warning-text'
+                    }`}
+                  >
+                    {task.settlement_status === 'paid' ? '정산완료' : '미정산'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   )
 }
