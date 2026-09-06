@@ -1,0 +1,485 @@
+<title>이지리뷰 개인정보처리방침</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f7f7f5;
+    --paper-raised: #ffffff;
+    --ink: #1c2024;
+    --ink-soft: #52565c;
+    --ink-faint: #8a8f98;
+    --line: #e3e3df;
+    --accent: #3182f6;
+    --accent-soft: #eaf1ff;
+    --accent-ink: #1a56c4;
+    --warn-bg: #fff7e6;
+    --warn-line: #f0d38a;
+    --warn-ink: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #16181c;
+      --paper-raised: #1d2025;
+      --ink: #eceef0;
+      --ink-soft: #a8adb5;
+      --ink-faint: #6b7178;
+      --line: #2b2f35;
+      --accent: #5b9dff;
+      --accent-soft: #1c2c47;
+      --accent-ink: #9cc2ff;
+      --warn-bg: #2c2410;
+      --warn-line: #5a4a1a;
+      --warn-ink: #e0b84e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #16181c;
+    --paper-raised: #1d2025;
+    --ink: #eceef0;
+    --ink-soft: #a8adb5;
+    --ink-faint: #6b7178;
+    --line: #2b2f35;
+    --accent: #5b9dff;
+    --accent-soft: #1c2c47;
+    --accent-ink: #9cc2ff;
+    --warn-bg: #2c2410;
+    --warn-line: #5a4a1a;
+    --warn-ink: #e0b84e;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Noto Sans KR", "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 64px 24px 120px;
+  }
+
+  .draft-banner {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-line);
+    color: var(--warn-ink);
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 48px;
+  }
+  .draft-banner strong { font-weight: 700; }
+
+  header.doc-head {
+    margin-bottom: 56px;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    padding: 5px 12px 5px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+    margin-bottom: 20px;
+  }
+  .eyebrow svg { flex: none; }
+  h1 {
+    font-size: clamp(28px, 4vw, 36px);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  .doc-meta {
+    color: var(--ink-faint);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .doc-meta span + span::before {
+    content: "·";
+    margin: 0 8px;
+    color: var(--line);
+  }
+
+  nav.toc {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 56px;
+  }
+  nav.toc .toc-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  nav.toc ol {
+    columns: 2;
+    column-gap: 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: toc;
+  }
+  nav.toc li {
+    break-inside: avoid;
+    counter-increment: toc;
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  nav.toc a {
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
+  nav.toc a::before {
+    content: counter(toc) ". ";
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  section.article {
+    padding: 36px 0;
+    border-top: 1px solid var(--line);
+    scroll-margin-top: 24px;
+  }
+  section.article:first-of-type { border-top: none; padding-top: 0; }
+
+  .article-num {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+  h2 {
+    font-size: 21px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 24px 0 10px;
+    color: var(--ink);
+  }
+  p { margin: 0 0 14px; color: var(--ink-soft); max-width: 65ch; }
+  p:last-child { margin-bottom: 0; }
+  strong { color: var(--ink); font-weight: 700; }
+
+  ul, ol.plain { margin: 0 0 14px; padding-left: 20px; color: var(--ink-soft); }
+  ul li, ol.plain li { margin-bottom: 6px; }
+  ul li::marker { color: var(--accent); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 14px;
+  }
+  table caption {
+    text-align: left;
+    font-size: 13px;
+    color: var(--ink-faint);
+    margin-bottom: 8px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    color: var(--ink-faint);
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  td { color: var(--ink-soft); }
+  .overflow-wrap { overflow-x: auto; }
+
+  .contact-card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 16px;
+    font-size: 14px;
+  }
+  .contact-card dt { color: var(--ink-faint); }
+  .contact-card dd { margin: 0; color: var(--ink); font-weight: 500; }
+  .placeholder {
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  footer.doc-foot {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-faint);
+    font-size: 13px;
+  }
+
+  @media (max-width: 560px) {
+    nav.toc ol { columns: 1; }
+    .page { padding: 40px 18px 100px; }
+  }
+</style>
+
+<div class="page">
+
+  <div class="draft-banner">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="margin-top:2px">
+      <path d="M10 2L18 16H2L10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M10 8V11.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="10" cy="14" r="0.9" fill="currentColor"/>
+    </svg>
+    <div>
+      <strong>초안(Draft) — 검토 전 문서입니다.</strong> 실제 코드(수집 항목)를 기준으로 작성했지만,
+      법률 자문을 거치지 않았습니다. 구글플레이 등록이나 실제 서비스에 사용하기 전에 아래
+      <span class="placeholder">회색 표시</span> 항목을 채우고, 사업자·법무 검토를 받으신 뒤 게시해주세요.
+    </div>
+  </div>
+
+  <header class="doc-head">
+    <span class="eyebrow">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L12.5 3.5V7C12.5 10 10 12.3 7 13C4 12.3 1.5 10 1.5 7V3.5L7 1Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      개인정보처리방침
+    </span>
+    <h1>이지리뷰 개인정보처리방침</h1>
+    <div class="doc-meta">
+      <span>버전 1.0 (초안)</span>
+      <span>시행일 <span class="placeholder">2026-XX-XX</span></span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="목차">
+    <div class="toc-title">목차</div>
+    <ol>
+      <li><a href="#collect">수집하는 개인정보 항목</a></li>
+      <li><a href="#purpose">개인정보의 수집 및 이용 목적</a></li>
+      <li><a href="#retention">보유 및 이용 기간</a></li>
+      <li><a href="#thirdparty">개인정보의 제3자 제공</a></li>
+      <li><a href="#outsourcing">개인정보 처리업무의 위탁</a></li>
+      <li><a href="#rights">이용자의 권리와 행사 방법</a></li>
+      <li><a href="#destroy">개인정보의 파기</a></li>
+      <li><a href="#security">개인정보의 안전성 확보조치</a></li>
+      <li><a href="#app">앱(모바일) 관련 사항</a></li>
+      <li><a href="#officer">개인정보 보호책임자</a></li>
+      <li><a href="#change">고지의 의무</a></li>
+    </ol>
+  </nav>
+
+  <p style="max-width:65ch; color:var(--ink-soft); margin-bottom:40px;">
+    <span class="placeholder">이지리뷰</span>(이하 "회사")는 「개인정보보호법」 등 관련 법령을 준수하며,
+    이용자의 개인정보를 안전하게 처리하기 위해 다음과 같이 개인정보처리방침을 수립·공개합니다.
+    이 방침은 회사가 운영하는 웹사이트(review-managing.vercel.app)와 이를 감싼 모바일 앱(이지리뷰
+    리뷰어 앱)에 동일하게 적용됩니다.
+  </p>
+
+  <section class="article" id="collect">
+    <div class="article-num">01</div>
+    <h2>수집하는 개인정보 항목</h2>
+    <p>회사는 회원가입, 서비스 이용, 정산 처리 과정에서 아래 정보를 수집합니다.</p>
+
+    <h3>가. 리뷰어(작업자) 회원가입 · 로그인 시</h3>
+    <div class="overflow-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>수집 항목</th></tr></thead>
+        <tbody>
+          <tr><td>필수</td><td>이름(또는 활동명), 아이디, 비밀번호, 휴대전화번호</td></tr>
+          <tr><td>필수</td><td>정산용 계좌번호(은행명 포함)</td></tr>
+          <tr><td>선택</td><td>이메일, 생년월일, 성별</td></tr>
+          <tr><td>선택(체험단)</td><td>지역, 블로그 URL, 관심 주제</td></tr>
+          <tr><td>선택</td><td>카카오 계정 연동 시 카카오 식별 정보</td></tr>
+          <tr><td>자동 수집</td><td>서비스 이용기록, 접속 로그, 기기정보(OS, 앱 버전)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>나. 광고주(매장) 등록 시</h3>
+    <ul>
+      <li>필수: 담당자 연락처, 사업자등록증 이미지, 사업자등록번호, 대표자명, 매장 정보(상호·주소·연락처)</li>
+    </ul>
+
+    <h3>다. 본인확인(OTP) 시</h3>
+    <ul>
+      <li>휴대전화번호로 발송되는 일회용 인증번호(OTP) 및 인증 이력</li>
+    </ul>
+  </section>
+
+  <section class="article" id="purpose">
+    <div class="article-num">02</div>
+    <h2>개인정보의 수집 및 이용 목적</h2>
+    <ul>
+      <li>리뷰어 회원 식별 및 본인 확인(휴대전화번호 OTP 인증)</li>
+      <li>리뷰 작업 배정, 진행 현황 관리, 작업 결과(영수증 등) 확인</li>
+      <li>수당 정산 및 지급(계좌이체)</li>
+      <li>광고주 사업자 확인 및 매장 등록 승인</li>
+      <li>부정 이용 방지(중복 가입, 재작업 주기 확인 등)</li>
+      <li>공지사항 전달, 문의 응대, 서비스 개선</li>
+      <li>(선택 동의 시) 마케팅 정보 및 이벤트 안내 문자 발송</li>
+    </ul>
+  </section>
+
+  <section class="article" id="retention">
+    <div class="article-num">03</div>
+    <h2>보유 및 이용 기간</h2>
+    <p>
+      원칙적으로 개인정보 수집·이용 목적이 달성되면 지체 없이 파기합니다. 다만 아래 정보는 명시한
+      사유가 종료될 때까지, 또는 관계 법령이 정한 기간 동안 보관합니다.
+    </p>
+    <div class="overflow-wrap">
+      <table>
+        <thead><tr><th>보관 정보</th><th>보관 사유 / 기간</th></tr></thead>
+        <tbody>
+          <tr><td>계약 또는 청약철회 등에 관한 기록</td><td>5년(전자상거래법)</td></tr>
+          <tr><td>대금결제 및 재화 등의 공급에 관한 기록</td><td>5년(전자상거래법)</td></tr>
+          <tr><td>소비자 불만 또는 분쟁처리에 관한 기록</td><td>3년(전자상거래법)</td></tr>
+          <tr><td>웹사이트 방문·접속 기록</td><td>3개월(통신비밀보호법)</td></tr>
+          <tr><td>탈퇴 회원의 부정이용 방지 기록</td><td>탈퇴 후 <span class="placeholder">30일</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="article" id="thirdparty">
+    <div class="article-num">04</div>
+    <h2>개인정보의 제3자 제공</h2>
+    <p>
+      회사는 이용자의 개인정보를 원칙적으로 외부에 제공하지 않습니다. 다만 아래의 경우는 예외로
+      합니다.
+    </p>
+    <ul>
+      <li>이용자가 사전에 별도 동의한 경우</li>
+      <li>법령의 규정에 의거하거나, 수사 목적으로 법령에 정해진 절차와 방법에 따라 수사기관의
+        요구가 있는 경우</li>
+    </ul>
+  </section>
+
+  <section class="article" id="outsourcing">
+    <div class="article-num">05</div>
+    <h2>개인정보 처리업무의 위탁</h2>
+    <p>
+      회사는 서비스 운영을 위해 아래와 같이 개인정보 처리업무를 외부 전문업체에 위탁하고 있으며,
+      위탁계약 시 개인정보가 안전하게 관리되도록 필요한 사항을 규정하고 있습니다.
+    </p>
+    <div class="overflow-wrap">
+      <table>
+        <thead><tr><th>수탁업체</th><th>위탁업무 내용</th></tr></thead>
+        <tbody>
+          <tr><td><span class="placeholder">호스팅사(예: Vercel)</span></td><td>서비스 인프라 운영</td></tr>
+          <tr><td><span class="placeholder">문자(SMS) 발송업체</span></td><td>휴대전화 본인확인(OTP) 발송</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="article" id="rights">
+    <div class="article-num">06</div>
+    <h2>이용자의 권리와 행사 방법</h2>
+    <p>이용자는 언제든지 자신의 개인정보에 대해 아래 권리를 행사할 수 있습니다.</p>
+    <ul>
+      <li>개인정보 열람·정정·삭제 요청</li>
+      <li>개인정보 처리정지 요청</li>
+      <li>회원 탈퇴(개인정보 이용 동의 철회)</li>
+    </ul>
+    <p>
+      권리 행사는 앱 또는 웹의 <strong>마이페이지</strong>에서 직접 처리하거나, 아래
+      <a href="#officer">개인정보 보호책임자</a> 연락처로 요청하시면 지체 없이 조치합니다.
+    </p>
+  </section>
+
+  <section class="article" id="destroy">
+    <div class="article-num">07</div>
+    <h2>개인정보의 파기</h2>
+    <p>
+      개인정보 보유기간이 경과하거나 처리목적이 달성된 경우, 전자적 파일 형태의 정보는 복구할 수
+      없는 방법으로 영구 삭제하며, 종이 문서는 분쇄하거나 소각하여 파기합니다.
+    </p>
+  </section>
+
+  <section class="article" id="security">
+    <div class="article-num">08</div>
+    <h2>개인정보의 안전성 확보조치</h2>
+    <ul>
+      <li>비밀번호는 복호화 불가능한 방식으로 암호화하여 저장·관리</li>
+      <li>계정 연동 비밀번호 등 민감 정보는 암호화하여 저장</li>
+      <li>개인정보 접근 권한을 최소 인원으로 제한하고 접근 기록을 관리</li>
+      <li>OTP(일회용 인증번호) 기반 본인확인으로 계정 도용 방지</li>
+    </ul>
+  </section>
+
+  <section class="article" id="app">
+    <div class="article-num">09</div>
+    <h2>앱(모바일) 관련 사항</h2>
+    <p>
+      이지리뷰 앱은 위 웹사이트를 앱 형태로 제공하는 것으로, 앱 자체가 별도로 수집하는 개인정보는
+      없습니다. 다만 아래 기기 권한을 요청할 수 있습니다.
+    </p>
+    <div class="overflow-wrap">
+      <table>
+        <thead><tr><th>권한</th><th>이용 목적</th></tr></thead>
+        <tbody>
+          <tr><td>카메라 / 저장소</td><td>리뷰 인증 사진 업로드</td></tr>
+          <tr><td>인터넷</td><td>서비스 이용을 위한 통신</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>권한은 실제 해당 기능을 사용하는 시점에 요청되며, 거부하더라도 해당 기능 외 서비스 이용에는
+      제한이 없습니다.</p>
+  </section>
+
+  <section class="article" id="officer">
+    <div class="article-num">10</div>
+    <h2>개인정보 보호책임자</h2>
+    <p>
+      회사는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한 이용자의 불만
+      처리 및 피해 구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.
+    </p>
+    <dl class="contact-card">
+      <dt>담당자</dt><dd class="placeholder">이름 입력</dd>
+      <dt>이메일</dt><dd class="placeholder">contact@example.com</dd>
+      <dt>연락처</dt><dd class="placeholder">010-0000-0000</dd>
+    </dl>
+  </section>
+
+  <section class="article" id="change">
+    <div class="article-num">11</div>
+    <h2>고지의 의무</h2>
+    <p>
+      이 개인정보처리방침은 법령·정책 변경에 따라 내용이 추가·삭제·수정될 수 있으며, 변경 시
+      최소 7일 전(중대한 변경의 경우 30일 전) 서비스 내 공지사항을 통해 고지합니다.
+    </p>
+  </section>
+
+  <footer class="doc-foot">
+    이 문서는 Claude가 easyreview-backend 코드(수집 필드 기준)를 근거로 작성한 초안입니다.
+    실제 사업자 정보, 위탁업체, 보관기간은 서비스 운영 현황에 맞춰 확정한 뒤 게시해주세요.
+  </footer>
+
+</div>

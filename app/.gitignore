@@ -1,0 +1,7 @@
+node_modules
+dist
+.DS_Store
+
+# 서명 키 — 절대 git에 올리면 안 됨 (분실하면 플레이스토어에 앱 업데이트 영구 불가)
+android-keystore/
+android/keystore.properties

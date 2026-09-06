@@ -1,0 +1,121 @@
+<title>이지리뷰 계정 삭제 요청</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f7f7f5;
+    --paper-raised: #ffffff;
+    --ink: #1c2024;
+    --ink-soft: #52565c;
+    --ink-faint: #8a8f98;
+    --line: #e3e3df;
+    --accent: #3182f6;
+    --accent-soft: #eaf1ff;
+    --accent-ink: #1a56c4;
+    --warn-bg: #fff7e6;
+    --warn-line: #f0d38a;
+    --warn-ink: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #16181c; --paper-raised: #1d2025; --ink: #eceef0; --ink-soft: #a8adb5;
+      --ink-faint: #6b7178; --line: #2b2f35; --accent: #5b9dff; --accent-soft: #1c2c47;
+      --accent-ink: #9cc2ff; --warn-bg: #2c2410; --warn-line: #5a4a1a; --warn-ink: #e0b84e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #16181c; --paper-raised: #1d2025; --ink: #eceef0; --ink-soft: #a8adb5;
+    --ink-faint: #6b7178; --line: #2b2f35; --accent: #5b9dff; --accent-soft: #1c2c47;
+    --accent-ink: #9cc2ff; --warn-bg: #2c2410; --warn-line: #5a4a1a; --warn-ink: #e0b84e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Noto Sans KR", "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
+    line-height: 1.7; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 640px; margin: 0 auto; padding: 64px 24px 100px; }
+  .draft-banner {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink);
+    border-radius: 10px; padding: 16px 18px; font-size: 14px; line-height: 1.6; margin-bottom: 40px;
+  }
+  h1 { font-size: clamp(26px, 4vw, 32px); font-weight: 800; letter-spacing: -0.01em; margin: 0 0 12px; text-wrap: balance; }
+  .lede { color: var(--ink-soft); margin-bottom: 40px; max-width: 60ch; }
+  .step-card {
+    background: var(--paper-raised); border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px; margin-bottom: 16px; display: flex; gap: 16px; align-items: flex-start;
+  }
+  .step-num {
+    flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft);
+    color: var(--accent-ink); font-weight: 700; font-size: 14px; display: flex;
+    align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  .step-body h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; }
+  .step-body p { margin: 0; color: var(--ink-soft); font-size: 14.5px; }
+  .contact-card {
+    background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 24px; margin: 32px 0; font-size: 14px;
+  }
+  .contact-card a { color: var(--accent-ink); font-weight: 600; }
+  h2 { font-size: 19px; font-weight: 700; margin: 40px 0 16px; }
+  ul { color: var(--ink-soft); padding-left: 20px; }
+  ul li { margin-bottom: 8px; }
+  ul li::marker { color: var(--accent); }
+  .placeholder { color: var(--accent-ink); background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 13px; }
+</style>
+
+<div class="page">
+  <div class="draft-banner">
+    <strong>초안(Draft).</strong> 연락처(이메일)를 실제 값으로 채운 뒤 게시해주세요.
+  </div>
+
+  <h1>계정 삭제 요청</h1>
+  <p class="lede">
+    이지리뷰 리뷰어 포털 계정과 관련 개인정보 삭제를 원하시면 아래 절차로 요청해주세요.
+    요청 확인 후 <strong>영업일 기준 7일 이내</strong>에 처리됩니다.
+  </p>
+
+  <div class="step-card">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>가입하신 연락처로 이메일 보내기</h3>
+      <p>아래 이메일로 "계정 삭제 요청"이라는 제목과 함께, 가입 시 등록한 <strong>아이디(또는 전화번호)</strong>를 적어 보내주세요.</p>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>본인 확인</h3>
+      <p>가입된 전화번호로 본인 확인 후 삭제를 진행합니다.</p>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>삭제 완료 안내</h3>
+      <p>처리가 완료되면 삭제 완료 사실을 안내드립니다.</p>
+    </div>
+  </div>
+
+  <div class="contact-card">
+    📧 요청 이메일: <a href="mailto:placeholder@example.com">placeholder@example.com</a> <span class="placeholder">(실제 이메일로 교체 필요)</span>
+  </div>
+
+  <h2>삭제되는 정보</h2>
+  <ul>
+    <li>이름, 아이디, 비밀번호, 전화번호, 이메일</li>
+    <li>정산용 계좌번호</li>
+    <li>생년월일, 성별, 지역 등 부가 프로필 정보</li>
+  </ul>
+
+  <h2>일부만 남을 수 있는 정보</h2>
+  <p style="color:var(--ink-soft); font-size:14.5px;">
+    관계 법령(전자상거래법 등)에 따라 거래·정산 기록은 법정 보관기간 동안 별도 보관 후 파기됩니다.
+    자세한 내용은 <a href="#" style="color:var(--accent-ink)">개인정보처리방침</a>을 참고해주세요.
+  </p>
+
+  <footer>이 페이지는 Claude가 작성한 초안입니다. 이메일 등 실제 연락처 확정 후 게시해주세요.</footer>
+</div>

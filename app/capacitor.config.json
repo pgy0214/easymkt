@@ -1,0 +1,9 @@
+{
+  "appId": "com.easyreview.app",
+  "appName": "이지리뷰",
+  "webDir": "dist",
+  "server": {
+    "url": "https://review-managing.vercel.app/portal",
+    "androidScheme": "https"
+  }
+}
