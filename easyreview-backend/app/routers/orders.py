@@ -30,3 +30,15 @@ def update_order_status(order_id: int, data: schemas.OrderStatusUpdate, db: Sess
     if not order:
         raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다")
     return crud.update_order_status(db, order, data.status)
+
+
+@router.post("/{order_id}/convert", response_model=schemas.OrderOut)
+def convert_order(order_id: int, data: schemas.ReviewTargetCreate, db: Session = Depends(get_db)):
+    order = crud.get_order(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다")
+    try:
+        crud.convert_order_to_target(db, order, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return order

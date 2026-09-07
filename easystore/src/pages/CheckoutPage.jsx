@@ -4,7 +4,14 @@ import { navigate } from '../App.jsx'
 import Header from '../components/Header.jsx'
 import Footer from '../components/Footer.jsx'
 
-const EMPTY_FORM = { buyer_name: '', buyer_phone: '', buyer_email: '', depositor_name: '', memo: '' }
+const EMPTY_FORM = {
+  buyer_name: '',
+  buyer_phone: '',
+  buyer_email: '',
+  depositor_name: '',
+  store_url: '',
+  memo: '',
+}
 
 export default function CheckoutPage({ productId, optionId }) {
   const [product, setProduct] = useState(null)
@@ -55,6 +62,8 @@ export default function CheckoutPage({ productId, optionId }) {
         ...form,
         buyer_email: form.buyer_email || null,
         memo: form.memo || null,
+        store_platform: 'naver',
+        store_url: form.store_url.trim(),
         items: [{ product_id: product.id, option_id: option.id, quantity: 1 }],
       })
       sessionStorage.setItem('last_order', JSON.stringify(order))
@@ -123,6 +132,16 @@ export default function CheckoutPage({ productId, optionId }) {
               type="email"
               value={form.buyer_email}
               onChange={(e) => setForm((prev) => ({ ...prev, buyer_email: e.target.value }))}
+              className="w-full rounded-btn border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">리뷰 받을 매장 — 네이버 플레이스 URL</label>
+            <input
+              required
+              placeholder="https://naver.me/... 또는 https://m.place.naver.com/..."
+              value={form.store_url}
+              onChange={(e) => setForm((prev) => ({ ...prev, store_url: e.target.value }))}
               className="w-full rounded-btn border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
