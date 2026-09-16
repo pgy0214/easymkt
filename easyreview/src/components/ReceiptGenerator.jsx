@@ -17,6 +17,7 @@ function todayForFilename() {
 export default function ReceiptGenerator() {
   const [stores, setStores] = useState([])
   const [loading, setLoading] = useState(true)
+  const [storeSearch, setStoreSearch] = useState('')
   const [storeId, setStoreId] = useState('')
   const [date, setDate] = useState('')
   const [count, setCount] = useState(1)
@@ -34,6 +35,9 @@ export default function ReceiptGenerator() {
   }, [])
 
   const store = stores.find((s) => s.id === Number(storeId)) ?? null
+  const filteredStores = stores.filter((s) =>
+    s.name.toLowerCase().includes(storeSearch.trim().toLowerCase()),
+  )
 
   async function handleGenerate() {
     if (!store) return
@@ -116,6 +120,13 @@ export default function ReceiptGenerator() {
       <div className="flex flex-wrap items-end gap-2 rounded-card border border-gray-200 bg-white p-4">
         <div>
           <label className="block text-xs text-gray-500">매장</label>
+          <input
+            type="text"
+            value={storeSearch}
+            onChange={(e) => setStoreSearch(e.target.value)}
+            placeholder="매장명 검색"
+            className="mb-1 w-64 rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
+          />
           <select
             value={storeId}
             onChange={(e) => {
@@ -126,7 +137,7 @@ export default function ReceiptGenerator() {
             className="w-64 rounded-btn border border-gray-300 px-2 py-1 text-sm text-gray-900"
           >
             <option value="">매장 선택</option>
-            {stores.map((s) => (
+            {filteredStores.map((s) => (
               <option key={s.id} value={s.id}>
                 [{PLATFORM_LABEL[s.platform]}] {s.name}
               </option>
