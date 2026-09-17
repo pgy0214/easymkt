@@ -1,5 +1,5 @@
-import { ExternalLink, Loader2, LogOut, Trash2, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ChevronLeft, ExternalLink, Loader2, LogOut, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { api, API_ORIGIN, portalApi } from '../lib/api.js'
 import {
   AGE_GROUP_OPTIONS,
@@ -658,6 +658,21 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   )
   const [showRules, setShowRules] = useState(false)
   const [showProfileEdit, setShowProfileEdit] = useState(false)
+  const [showSettlement, setShowSettlement] = useState(false)
+
+  const completedTasks = useMemo(
+    () =>
+      myTasks
+        .filter((t) => t.status === 'completed')
+        .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at)),
+    [myTasks],
+  )
+  const unpaidTotal = completedTasks
+    .filter((t) => t.settlement_status !== 'paid')
+    .reduce((sum, t) => sum + t.settlement_amount, 0)
+  const paidTotal = completedTasks
+    .filter((t) => t.settlement_status === 'paid')
+    .reduce((sum, t) => sum + t.settlement_amount, 0)
 
   function handleAcknowledgeRules() {
     localStorage.setItem(WORK_RULES_KEY, 'true')
@@ -754,6 +769,17 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   if (error) return <p className="p-6 text-sm text-danger-text">{error}</p>
   if (!reviewer) return null
 
+  if (showSettlement) {
+    return (
+      <SettlementPage
+        completedTasks={completedTasks}
+        unpaidTotal={unpaidTotal}
+        paidTotal={paidTotal}
+        onBack={() => setShowSettlement(false)}
+      />
+    )
+  }
+
   return (
     <div className={`mx-auto space-y-6 p-4 ${mode === 'experience' ? 'max-w-6xl' : 'max-w-3xl'}`}>
       <div className="space-y-2.5">
@@ -770,6 +796,9 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm text-gray-500">
+            <button type="button" onClick={() => setShowSettlement(true)} className="whitespace-nowrap hover:text-gray-800">
+              작업내역보기
+            </button>
             <button type="button" onClick={() => setShowProfileEdit(true)} className="whitespace-nowrap hover:text-gray-800">
               내 정보 수정
             </button>
@@ -953,9 +982,74 @@ function PortalHome({ token, mode, onModeChange, onLogout }) {
   )
 }
 
+function SettlementPage({ completedTasks, unpaidTotal, paidTotal, onBack }) {
+  return (
+    <div className="mx-auto max-w-3xl space-y-4 p-4">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-0.5 text-sm text-gray-500 hover:text-gray-800"
+        >
+          <ChevronLeft size={16} />
+          뒤로
+        </button>
+        <h1 className="text-lg font-semibold text-gray-900">작업내역 · 정산확인</h1>
+      </div>
+
+      <Card padding="md" className="space-y-2">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-btn bg-gray-50 py-2">
+            <div className="text-base font-semibold text-gray-800">{completedTasks.length}건</div>
+            <div className="text-xs text-gray-500">완료 작업</div>
+          </div>
+          <div className="rounded-btn bg-gray-50 py-2">
+            <div className="text-base font-semibold text-warning-text">{formatKRW(unpaidTotal)}</div>
+            <div className="text-xs text-gray-500">미정산</div>
+          </div>
+          <div className="rounded-btn bg-gray-50 py-2">
+            <div className="text-base font-semibold text-success-text">{formatKRW(paidTotal)}</div>
+            <div className="text-xs text-gray-500">정산완료</div>
+          </div>
+        </div>
+        {completedTasks.length === 0 ? (
+          <p className="text-sm text-gray-400">완료된 작업이 없습니다.</p>
+        ) : (
+          <div className="space-y-1">
+            {completedTasks.map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center justify-between rounded-btn border border-gray-100 px-3 py-1.5 text-sm"
+              >
+                <div>
+                  <div className="font-medium text-gray-700">{task.store_name}</div>
+                  <div className="text-xs text-gray-500">
+                    {PLATFORM_LABEL[task.platform]} · {formatDateTime(task.completed_at)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium text-gray-800">{formatKRW(task.settlement_amount)}</div>
+                  <span
+                    className={`text-xs ${
+                      task.settlement_status === 'paid' ? 'text-success-text' : 'text-warning-text'
+                    }`}
+                  >
+                    {task.settlement_status === 'paid' ? '정산완료' : '미정산'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
 function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
   const [name, setName] = useState(reviewer.name || '')
   const [contactInfo, setContactInfo] = useState(reviewer.contact_info || '')
+  const [bankAccount, setBankAccount] = useState(reviewer.bank_account || '')
   const [gender, setGender] = useState(reviewer.gender || '')
   const [region, setRegion] = useState(reviewer.region || '')
   const [ageGroup, setAgeGroup] = useState(reviewer.age_group || '')
@@ -981,6 +1075,7 @@ function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
       await portalApi.updateProfile(token, {
         name: name.trim(),
         contact_info: contactInfo.trim() || undefined,
+        bank_account: bankAccount.trim(),
         gender: gender || null,
         region: region || null,
         age_group: ageGroup || null,
@@ -1013,6 +1108,14 @@ function ProfileEditModal({ token, reviewer, onClose, onUpdated }) {
           onChange={(e) => setContactInfo(e.target.value)}
           placeholder="010-1234-5678"
         />
+        {reviewer.category !== 'advertiser' && (
+          <Input
+            label="정산용 계좌번호"
+            value={bankAccount}
+            onChange={(e) => setBankAccount(e.target.value)}
+            placeholder="은행명 계좌번호 (예: 국민 123456-01-123456)"
+          />
+        )}
         <div className="flex gap-2">
           <div className="flex-1">
             <label className="block text-xs text-gray-500">성별</label>

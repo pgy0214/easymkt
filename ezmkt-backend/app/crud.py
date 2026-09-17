@@ -1961,6 +1961,8 @@ def create_order(db: Session, data: schemas.OrderCreate) -> models.Order:
         buyer_email=data.buyer_email,
         depositor_name=data.depositor_name,
         memo=data.memo,
+        store_platform=data.store_platform,
+        store_url=data.store_url,
         total_price=0,
     )
     total = 0
@@ -2000,6 +2002,22 @@ def update_order_status(db: Session, order: models.Order, status: str) -> models
     db.commit()
     db.refresh(order)
     return order
+
+
+def convert_order_to_target(
+    db: Session, order: models.Order, data: schemas.ReviewTargetCreate
+) -> models.ReviewTarget:
+    """입금 확인된 주문을 캠페인(ReviewTarget)으로 전환한다 — store_id/필요건수/
+    리뷰어정산단가 등은 관리자가 주문 정보를 보고 직접 확정한 값(data)을 그대로
+    기존 create_review_target에 넘길 뿐, 새 생성 로직은 만들지 않는다."""
+    if order.status != "paid":
+        raise ValueError("입금 확인된 주문만 캠페인으로 전환할 수 있습니다")
+    if order.converted_review_target_id:
+        raise ValueError("이미 캠페인으로 전환된 주문입니다")
+    target = create_review_target(db, data)
+    order.converted_review_target_id = target.id
+    db.commit()
+    return target
 
 
 def get_products(db: Session, active_only: bool = False) -> list[schemas.ProductOut]:

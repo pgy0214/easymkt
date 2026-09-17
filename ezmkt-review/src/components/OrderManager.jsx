@@ -3,6 +3,7 @@ import { api } from '../lib/api.js'
 import { formatDateTime } from '../lib/format.js'
 import Badge from './ui/Badge.jsx'
 import Button from './ui/Button.jsx'
+import OrderConvertModal from './OrderConvertModal.jsx'
 
 const STATUS_LABEL = {
   pending_payment: '입금대기',
@@ -21,6 +22,7 @@ export default function OrderManager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [updatingId, setUpdatingId] = useState(null)
+  const [convertingOrder, setConvertingOrder] = useState(null)
 
   function refresh() {
     setLoading(true)
@@ -53,8 +55,8 @@ export default function OrderManager() {
       <div>
         <h2 className="text-base font-semibold text-gray-900">주문 관리 (ezmkt-store)</h2>
         <p className="text-xs text-gray-400">
-          PG 없이 계좌이체만 지원 — 입금 확인되면 "입금확인" 처리 후, 실행 사이트(캠페인
-          등록/목록)에서 이 주문 정보로 캠페인을 직접 개설해주세요.
+          PG 없이 계좌이체만 지원 — 입금 확인되면 "캠페인 만들기"로 주문 정보(매장/금액)가
+          채워진 채로 캠페인을 만들 수 있어요. 리뷰어 정산단가는 그 화면에서 직접 입력합니다.
         </p>
       </div>
 
@@ -74,6 +76,9 @@ export default function OrderManager() {
                 <p className="text-xs text-gray-400">
                   {order.buyer_phone} · 입금자명 "{order.depositor_name}" · {formatDateTime(order.created_at)}
                 </p>
+                {order.store_url && (
+                  <p className="text-xs text-gray-400">리뷰 받을 매장: {order.store_url}</p>
+                )}
               </div>
               <span className="font-semibold text-gray-900">{order.total_price.toLocaleString()}원</span>
             </div>
@@ -110,9 +115,30 @@ export default function OrderManager() {
                 </Button>
               </div>
             )}
+
+            {order.status === 'paid' &&
+              (order.converted_review_target_id ? (
+                <p className="text-xs text-success-text">
+                  캠페인 #{order.converted_review_target_id} 생성됨
+                </p>
+              ) : (
+                <Button size="sm" onClick={() => setConvertingOrder(order)}>
+                  캠페인 만들기
+                </Button>
+              ))}
           </div>
         ))}
       </div>
+
+      {convertingOrder && (
+        <OrderConvertModal
+          order={convertingOrder}
+          onClose={() => setConvertingOrder(null)}
+          onConverted={(updated) =>
+            setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)))
+          }
+        />
+      )}
     </div>
   )
 }

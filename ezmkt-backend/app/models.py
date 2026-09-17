@@ -370,8 +370,9 @@ class ExperienceApplication(Base):
 class Order(Base):
     """ezmkt-store(상품판매 사이트) 주문 — 로그인/회원가입 없는 게스트 주문.
     결제는 PG 연동 없이 계좌이체(무통장입금)만 지원 — 관리자가 입금 확인 후
-    status를 수동으로 'paid'로 바꾸고, 그 정보를 보고 실행 사이트에 캠페인을
-    수동으로 개설한다(ezmkt-store/STORE_CONTEXT.md 참고, 자동 연결 아님)."""
+    status를 수동으로 'paid'로 바꾸고, 주문 정보를 캠페인 등록 화면에 프리필해
+    실행 사이트에 캠페인을 만든다(반자동 — routers/orders.py의 convert 엔드포인트,
+    ezmkt-store/STORE_CONTEXT.md 참고)."""
 
     __tablename__ = "orders"
 
@@ -383,6 +384,9 @@ class Order(Base):
     total_price = Column(Integer, nullable=False)
     status = Column(String, nullable=False, default="pending_payment")  # pending_payment|paid|cancelled
     memo = Column(String, nullable=True)
+    store_platform = Column(String, nullable=True)  # 리뷰 받을 매장 플랫폼 — 지금은 항상 'naver'
+    store_url = Column(String, nullable=True)  # 리뷰 받을 매장 URL — 체크아웃에서 구매자가 직접 입력
+    converted_review_target_id = Column(Integer, ForeignKey("review_targets.id"), nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")

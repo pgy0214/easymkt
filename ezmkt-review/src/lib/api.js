@@ -223,6 +223,8 @@ export const api = {
   getOrders: () => request('/orders'),
   updateOrderStatus: (id, status) =>
     request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  convertOrder: (id, data) =>
+    request(`/orders/${id}/convert`, { method: 'POST', body: JSON.stringify(data) }),
 }
 
 export const productApi = {

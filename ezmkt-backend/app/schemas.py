@@ -630,6 +630,7 @@ class PortalProfileUpdateIn(BaseModel):
 
     name: Optional[str] = None
     contact_info: Optional[str] = None
+    bank_account: Optional[str] = None
     gender: Optional[Gender] = None
     region: Optional[str] = None
     age_group: Optional[str] = None
@@ -836,6 +837,8 @@ class OrderCreate(BaseModel):
     buyer_email: Optional[str] = None
     depositor_name: str
     memo: Optional[str] = None
+    store_platform: str = "naver"  # 리뷰 받을 매장 플랫폼 — 지금은 네이버만 지원
+    store_url: str  # 리뷰 받을 매장 URL
     items: list[OrderItemCreate]
 
 
@@ -854,6 +857,9 @@ class OrderOut(BaseModel):
     total_price: int
     status: OrderStatus
     memo: Optional[str] = None
+    store_platform: Optional[str] = None
+    store_url: Optional[str] = None
+    converted_review_target_id: Optional[int] = None
     created_at: datetime.datetime
     items: list[OrderItemOut] = []
 

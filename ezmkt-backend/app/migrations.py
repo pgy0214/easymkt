@@ -372,4 +372,11 @@ def run_migrations(engine) -> None:
             conn, "review_accounts", "browserbase_context_id", "browserbase_context_id TEXT"
         )
 
+        # orders: 매장정보(체크아웃에서 수집) + 캠페인 전환 상태
+        _add_column_if_missing(conn, "orders", "store_platform", "store_platform TEXT")
+        _add_column_if_missing(conn, "orders", "store_url", "store_url TEXT")
+        _add_column_if_missing(
+            conn, "orders", "converted_review_target_id", "converted_review_target_id INTEGER"
+        )
+
         conn.commit()
