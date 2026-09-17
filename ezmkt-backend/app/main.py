@@ -66,6 +66,8 @@ _frontend_origins = [
     "https://review-managing.vercel.app",
     "https://review-ezmkt.vercel.app",
     "https://store-ezmkt.vercel.app",
+    "https://review.ezmkt.co.kr",
+    "https://store.ezmkt.co.kr",
     "https://easymkt.com",
     "https://www.easymkt.com",
 ]

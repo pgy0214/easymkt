@@ -2,15 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "easyreview",
+      "name": "ezmkt-review",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "easyreview"],
+      "runtimeArgs": ["run", "dev", "--prefix", "ezmkt-review"],
       "port": 5173
     },
     {
-      "name": "easystore",
+      "name": "ezmkt-store",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "easystore"],
+      "runtimeArgs": ["run", "dev", "--prefix", "ezmkt-store"],
       "port": 5174
     },
     {

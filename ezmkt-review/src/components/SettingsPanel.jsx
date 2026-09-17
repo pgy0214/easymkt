@@ -106,7 +106,7 @@ export default function SettingsPanel() {
 
     <Card className="space-y-3">
       <div>
-        <h3 className="text-sm font-medium text-gray-700">easystore 입금계좌 (계좌이체 안내용)</h3>
+        <h3 className="text-sm font-medium text-gray-700">ezmkt-store 입금계좌 (계좌이체 안내용)</h3>
         <p className="mt-0.5 text-xs text-gray-400">
           PG 연동 없이 계좌이체만 지원합니다. 고객이 결제(주문) 화면에서 이 계좌로 입금하고,
           관리자가 입금 확인 후 주문 상태를 처리합니다.

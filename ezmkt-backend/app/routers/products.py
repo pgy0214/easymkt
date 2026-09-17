@@ -6,7 +6,7 @@ from app.database import get_db
 
 router = APIRouter(prefix="/api/products", tags=["products"])
 
-# easystore(상품판매 사이트)의 카탈로그 조회용 — 관리자 인증 없이 공개 노출된다.
+# ezmkt-store(상품판매 사이트)의 카탈로그 조회용 — 관리자 인증 없이 공개 노출된다.
 # main.py에서 admin 인증 의존성 없이 별도로 등록됨 (router는 admin 전용으로 등록됨).
 public_router = APIRouter(prefix="/api/products", tags=["products-public"])
 

@@ -250,7 +250,7 @@ class Settings(Base):
     naver_blind_check_interval_minutes = Column(Integer, nullable=False, default=20)
     kakao_blind_check_interval_minutes = Column(Integer, nullable=False, default=20)
     naver_default_claim_minutes = Column(Integer, nullable=False, default=1440)
-    # easystore 결제 계좌 — PG 없이 계좌이체(무통장입금)만 지원하므로 입금 안내에 쓰임
+    # ezmkt-store 결제 계좌 — PG 없이 계좌이체(무통장입금)만 지원하므로 입금 안내에 쓰임
     bank_name = Column(String, nullable=True)
     bank_account_number = Column(String, nullable=True)
     bank_account_holder = Column(String, nullable=True)
@@ -295,7 +295,7 @@ class Product(Base):
 
 class ProductOption(Base):
     """구매 가능한 상품(SKU)의 옵션 — 예: "리뷰 10건" 30,000원 / "리뷰 30건" 80,000원.
-    easystore(상품판매 사이트)에서 옵션선택 드롭다운 + 가격표시에 쓰인다."""
+    ezmkt-store(상품판매 사이트)에서 옵션선택 드롭다운 + 가격표시에 쓰인다."""
 
     __tablename__ = "product_options"
 
@@ -368,10 +368,10 @@ class ExperienceApplication(Base):
 
 
 class Order(Base):
-    """easystore(상품판매 사이트) 주문 — 로그인/회원가입 없는 게스트 주문.
+    """ezmkt-store(상품판매 사이트) 주문 — 로그인/회원가입 없는 게스트 주문.
     결제는 PG 연동 없이 계좌이체(무통장입금)만 지원 — 관리자가 입금 확인 후
     status를 수동으로 'paid'로 바꾸고, 그 정보를 보고 실행 사이트에 캠페인을
-    수동으로 개설한다(easystore/STORE_CONTEXT.md 참고, 자동 연결 아님)."""
+    수동으로 개설한다(ezmkt-store/STORE_CONTEXT.md 참고, 자동 연결 아님)."""
 
     __tablename__ = "orders"
 

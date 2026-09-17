@@ -553,7 +553,7 @@ class SettingsUpdate(BaseModel):
 
 
 class BankInfoOut(BaseModel):
-    """easystore 결제(계좌이체) 안내용 — 공개 엔드포인트, 계좌정보 3개만 노출."""
+    """ezmkt-store 결제(계좌이체) 안내용 — 공개 엔드포인트, 계좌정보 3개만 노출."""
 
     bank_name: Optional[str] = None
     bank_account_number: Optional[str] = None
@@ -807,7 +807,7 @@ class ProductOut(BaseModel):
     options: list[ProductOptionOut] = []
 
 
-# --- Order (easystore, 계좌이체 전용) ---
+# --- Order (ezmkt-store, 계좌이체 전용) ---
 
 OrderStatus = Literal["pending_payment", "paid", "cancelled"]
 

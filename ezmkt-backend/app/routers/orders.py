@@ -6,7 +6,7 @@ from app.database import get_db
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
-# easystore 결제(계좌이체) 흐름 — 게스트 주문 생성은 인증 없이 공개.
+# ezmkt-store 결제(계좌이체) 흐름 — 게스트 주문 생성은 인증 없이 공개.
 # main.py에서 admin 인증 의존성 없이 별도로 등록됨 (router는 admin 전용으로 등록됨).
 public_router = APIRouter(prefix="/api/orders", tags=["orders-public"])
 

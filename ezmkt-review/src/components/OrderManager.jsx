@@ -51,7 +51,7 @@ export default function OrderManager() {
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-base font-semibold text-gray-900">주문 관리 (easystore)</h2>
+        <h2 className="text-base font-semibold text-gray-900">주문 관리 (ezmkt-store)</h2>
         <p className="text-xs text-gray-400">
           PG 없이 계좌이체만 지원 — 입금 확인되면 "입금확인" 처리 후, 실행 사이트(캠페인
           등록/목록)에서 이 주문 정보로 캠페인을 직접 개설해주세요.

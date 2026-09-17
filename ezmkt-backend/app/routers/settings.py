@@ -6,7 +6,7 @@ from app.database import get_db
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-# easystore 결제 안내용 계좌정보 — 인증 없이 공개(체크아웃 화면에서 조회)
+# ezmkt-store 결제 안내용 계좌정보 — 인증 없이 공개(체크아웃 화면에서 조회)
 public_router = APIRouter(prefix="/api/settings", tags=["settings-public"])
 
 

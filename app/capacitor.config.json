@@ -3,7 +3,7 @@
   "appName": "이지리뷰",
   "webDir": "dist",
   "server": {
-    "url": "https://review-managing.vercel.app/portal",
+    "url": "https://review.ezmkt.co.kr/portal",
     "androidScheme": "https"
   }
 }
