@@ -121,6 +121,27 @@ def end_session(account_id: int, db: Session = Depends(get_db)):
     return {"ended": ended}
 
 
+@router.post("/{account_id}/check-login", response_model=schemas.ReviewAccountOut)
+def check_login(account_id: int, db: Session = Depends(get_db)):
+    """Browserbase 계정이 지금 실제로 네이버에 로그인돼 있는지 확인해서
+    상태 램프(has_login_issue)를 그 결과로 갱신한다."""
+    account = crud.get_account(db, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
+    if not account.browserbase_context_id:
+        raise HTTPException(
+            status_code=400, detail="이 계정은 아직 한 번도 실행하지 않아 확인할 Browserbase 계정이 없습니다"
+        )
+    try:
+        logged_in = browserbase.check_naver_login(account.browserbase_context_id, account.ip_address)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"로그인 확인 실패: {e}")
+    account.has_login_issue = not logged_in
+    db.commit()
+    db.refresh(account)
+    return crud.account_to_out(account)
+
+
 @router.post("/{account_id}/detect-profile-url", response_model=schemas.ReviewAccountOut)
 def detect_profile_url(account_id: int, db: Session = Depends(get_db)):
     """AdsPower로 이미 로그인해둔 계정의 브라우저를 열어 네이버 마이플레이스

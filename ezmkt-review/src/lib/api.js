@@ -106,6 +106,7 @@ export const api = {
   getAccountStoreHistory: (id) => request(`/accounts/${id}/store-history`),
   launchAccount: (id) => request(`/accounts/${id}/launch`, { method: 'POST' }),
   endAccountSession: (id) => request(`/accounts/${id}/end-session`, { method: 'POST' }),
+  checkAccountLogin: (id) => request(`/accounts/${id}/check-login`, { method: 'POST' }),
   detectProfileUrl: (id) => request(`/accounts/${id}/detect-profile-url`, { method: 'POST' }),
   bulkAssignTimeSlot: (accountIds) =>
     request('/accounts/bulk-assign-time-slot', {

@@ -1,4 +1,4 @@
-import { Clock, Download, ExternalLink, Pencil, Play, Plus, Search, Send, Trash2, Upload } from 'lucide-react'
+import { Clock, Download, ExternalLink, Pencil, Play, Plus, RefreshCw, Search, Send, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
 import AccountEditModal from './AccountEditModal.jsx'
@@ -77,6 +77,8 @@ export default function AdminAccountManager() {
   const [bulkAssigning, setBulkAssigning] = useState(false)
   const [assigningTimeSlot, setAssigningTimeSlot] = useState(false)
   const [launchingId, setLaunchingId] = useState(null)
+  const [checkingLoginId, setCheckingLoginId] = useState(null)
+  const [checkingAllLogin, setCheckingAllLogin] = useState(false)
   const fileInputRef = useRef(null)
 
   function rowKey(row) {
@@ -270,6 +272,18 @@ export default function AdminAccountManager() {
     }
   }
 
+  async function handleCheckLogin(row) {
+    setCheckingLoginId(row.id)
+    try {
+      const updated = await api.checkAccountLogin(row.id)
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updated } : r)))
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setCheckingLoginId(null)
+    }
+  }
+
   function handleEdited(updated) {
     setRows((prev) => prev.map((r) => (r.id === editingRow.id ? { ...r, ...updated } : r)))
     setEditingRow(null)
@@ -289,6 +303,30 @@ export default function AdminAccountManager() {
       alert(err.message)
     } finally {
       setAssigningTimeSlot(false)
+    }
+  }
+
+  async function handleBulkCheckLogin() {
+    const targets = selectedRows.filter((r) => r.id != null && r.ip_address)
+    if (targets.length === 0) return
+    setCheckingAllLogin(true)
+    try {
+      let issueCount = 0
+      let failCount = 0
+      for (const row of targets) {
+        try {
+          const updated = await api.checkAccountLogin(row.id)
+          setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updated } : r)))
+          if (updated.has_login_issue) issueCount += 1
+        } catch (err) {
+          failCount += 1
+        }
+      }
+      alert(
+        `${targets.length}개 계정 확인 완료 — 로그인 문제 ${issueCount}건${failCount ? `, 확인 실패 ${failCount}건` : ''}`,
+      )
+    } finally {
+      setCheckingAllLogin(false)
     }
   }
 
@@ -525,6 +563,15 @@ export default function AdminAccountManager() {
                   {assigningTimeSlot ? '배정 중...' : '선택 시간대 랜덤배정'}
                 </button>
                 <button
+                  onClick={handleBulkCheckLogin}
+                  disabled={checkingAllLogin}
+                  className="flex items-center gap-1 rounded-pill bg-[#E9F6EF] px-2 py-1 text-xs font-semibold text-success-text hover:opacity-80 disabled:opacity-50"
+                  title="선택한 계정 중 IP가 배정된 계정만 실제로 네이버에 접속해 로그인 상태를 확인하고 상태 램프를 갱신합니다"
+                >
+                  <RefreshCw size={12} />
+                  {checkingAllLogin ? '확인 중...' : '선택 로그인 확인'}
+                </button>
+                <button
                   onClick={handleBulkDelete}
                   className="flex items-center gap-1 rounded-pill bg-danger-bg px-2 py-1 text-xs font-semibold text-danger-text hover:opacity-80"
                 >
@@ -683,6 +730,16 @@ export default function AdminAccountManager() {
                               title="AdsPower 브라우저 실행"
                             >
                               <Play size={14} />
+                            </button>
+                          )}
+                          {row.ip_address && (
+                            <button
+                              onClick={() => handleCheckLogin(row)}
+                              disabled={checkingLoginId === row.id}
+                              className="text-gray-400 hover:text-success-text disabled:opacity-50"
+                              title="네이버 로그인 상태를 실제로 확인해서 상태 표시를 갱신합니다"
+                            >
+                              <RefreshCw size={14} className={checkingLoginId === row.id ? 'animate-spin' : ''} />
                             </button>
                           )}
                         </>
