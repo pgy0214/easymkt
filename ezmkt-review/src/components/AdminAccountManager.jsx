@@ -311,7 +311,10 @@ export default function AdminAccountManager() {
   const LOGIN_CHECK_BATCH_SIZE = 15
 
   async function handleBulkCheckLogin() {
-    const targets = selectedRows.filter((r) => r.id != null && r.ip_address)
+    // 이미 빨간불(로그인 문제)로 표시된 계정은 관리자가 직접 고치기 전까진 다시
+    // 확인해봐야 결과가 똑같으므로 매번 다시 확인할 필요가 없다 — 점검 대상에서 뺀다.
+    const targets = selectedRows.filter((r) => r.id != null && r.ip_address && !r.has_login_issue)
+    const skipped = selectedRows.filter((r) => r.id != null && r.ip_address && r.has_login_issue).length
     if (targets.length === 0) return
     setCheckingAllLogin(true)
     try {
@@ -332,7 +335,8 @@ export default function AdminAccountManager() {
         })
       }
       alert(
-        `${targets.length}개 계정 확인 완료 — 로그인 문제 ${issueCount}건${failCount ? `, 확인 실패 ${failCount}건` : ''}`,
+        `${targets.length}개 계정 확인 완료 — 로그인 문제 ${issueCount}건${failCount ? `, 확인 실패 ${failCount}건` : ''}` +
+          (skipped ? ` (이미 빨간불인 ${skipped}개는 건너뜀)` : ''),
       )
     } finally {
       setCheckingAllLogin(false)

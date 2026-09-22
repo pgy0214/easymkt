@@ -103,6 +103,59 @@ def create_session(context_id: str, ip_address: str | None = None) -> dict:
     return res.json()
 
 
+def _remote_driver(session_id: str, selenium_url: str):
+    """이 세션에 Selenium Remote WebDriver를 붙인다. Selenium은 커스텀 헤더를 못
+    넣어서, Browserbase가 요구하는 x-bb-api-key/session-id를 주입해야 붙을 수 있다."""
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options as ChromeOptions
+    from selenium.webdriver.remote.remote_connection import RemoteConnection
+
+    api_key = os.environ["BROWSERBASE_API_KEY"]
+
+    class _BrowserbaseConnection(RemoteConnection):
+        def get_remote_connection_headers(self, parsed_url, keep_alive=False):
+            headers = super().get_remote_connection_headers(parsed_url, keep_alive)
+            headers["x-bb-api-key"] = api_key
+            headers["session-id"] = session_id
+            return headers
+
+    connection = _BrowserbaseConnection(selenium_url)
+    return webdriver.Remote(command_executor=connection, options=ChromeOptions())
+
+
+def _get_with_retry(driver, url: str) -> None:
+    """세션이 막 만들어진 직후엔 Bright Data 프록시 연결이 아직 준비되기 전이라
+    첫 driver.get()이 "failed to connect to browser"로 실패하는 경우가 있다 —
+    실측으로 확인한 동작이라 몇 초 간격으로 재시도한다."""
+    from selenium.common.exceptions import WebDriverException
+
+    for attempt in range(3):
+        try:
+            driver.get(url)
+            return
+        except WebDriverException:
+            if attempt == 2:
+                raise
+            time.sleep(2)
+
+
+def create_session_and_open(context_id: str, ip_address: str | None, url: str = NAVER_MY_URL) -> dict:
+    """세션을 만들고 곧바로 지정한 주소로 이동시켜둔다. 그냥 세션만 만들면 브라우저가
+    about:blank 상태로 떠서, "플레이스바로가기"로 라이브뷰를 열어도 빈 화면만 보인다
+    — 관리자가 탭을 열자마자 마이플레이스 화면(로그인 여부까지 한눈에 보임)이 떠
+    있도록 미리 이동시킨다. 이동이 실패해도(네트워크 문제 등) 세션 자체는 살아있으니
+    그대로 반환한다 — 라이브뷰에서 직접 주소를 입력해 넘어갈 수 있다."""
+    session = create_session(context_id, ip_address)
+    selenium_url = session.get("seleniumRemoteUrl")
+    if selenium_url:
+        try:
+            driver = _remote_driver(session["id"], selenium_url)
+            _get_with_retry(driver, url)
+        except Exception:
+            pass
+    return session
+
+
 def get_live_view_url(session_id: str) -> str:
     """사람이 직접 로그인하거나 화면을 봐야 할 때 여는 링크 — 로컬 프로그램 설치 없이
     일반 브라우저 새 탭에서 바로 열린다."""
@@ -155,38 +208,8 @@ def check_naver_login(context_id: str, ip_address: str | None = None) -> bool:
         raise RuntimeError("Browserbase 세션에서 seleniumRemoteUrl을 받지 못했습니다")
 
     try:
-        from selenium import webdriver
-        from selenium.common.exceptions import WebDriverException
-        from selenium.webdriver.chrome.options import Options as ChromeOptions
-        from selenium.webdriver.remote.remote_connection import RemoteConnection
-
-        api_key = os.environ["BROWSERBASE_API_KEY"]
-
-        class _BrowserbaseConnection(RemoteConnection):
-            """Selenium은 커스텀 헤더를 못 넣어서, Browserbase가 요구하는
-            x-bb-api-key/session-id를 여기서 주입해야 세션에 붙을 수 있다."""
-
-            def get_remote_connection_headers(self, parsed_url, keep_alive=False):
-                headers = super().get_remote_connection_headers(parsed_url, keep_alive)
-                headers["x-bb-api-key"] = api_key
-                headers["session-id"] = session_id
-                return headers
-
-        connection = _BrowserbaseConnection(selenium_url)
-        options = ChromeOptions()
-        driver = webdriver.Remote(command_executor=connection, options=options)
-
-        # 세션이 막 만들어진 직후엔 Bright Data 프록시 연결이 아직 준비되기 전이라
-        # 첫 driver.get()이 "failed to connect to browser"로 실패하는 경우가 있다 —
-        # 실측으로 확인한 동작이라 몇 초 간격으로 재시도한다.
-        for attempt in range(3):
-            try:
-                driver.get(NAVER_MY_URL)
-                break
-            except WebDriverException:
-                if attempt == 2:
-                    raise
-                time.sleep(2)
+        driver = _remote_driver(session_id, selenium_url)
+        _get_with_retry(driver, NAVER_MY_URL)
         time.sleep(3)
         current_url = driver.current_url.rstrip("/")
         if "nid.naver.com" in current_url or "/login" in current_url:

@@ -66,7 +66,7 @@ def launch_account(account_id: int, db: Session = Depends(get_db)):
             account.browserbase_context_id = ctx["id"]
             db.commit()
         try:
-            session = browserbase.create_session(account.browserbase_context_id, account.ip_address)
+            session = browserbase.create_session_and_open(account.browserbase_context_id, account.ip_address)
             live_view_url = browserbase.get_live_view_url(session["id"])
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Browserbase 세션 생성 실패: {e}")
