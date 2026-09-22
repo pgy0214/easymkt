@@ -105,6 +105,7 @@ export const api = {
   deleteAccount: (id) => request(`/accounts/${id}`, { method: 'DELETE' }),
   getAccountStoreHistory: (id) => request(`/accounts/${id}/store-history`),
   launchAccount: (id) => request(`/accounts/${id}/launch`, { method: 'POST' }),
+  endAccountSession: (id) => request(`/accounts/${id}/end-session`, { method: 'POST' }),
   detectProfileUrl: (id) => request(`/accounts/${id}/detect-profile-url`, { method: 'POST' }),
   bulkAssignTimeSlot: (accountIds) =>
     request('/accounts/bulk-assign-time-slot', {

@@ -105,6 +105,22 @@ def launch_account(account_id: int, db: Session = Depends(get_db)):
     return schemas.AccountLaunchOut(debug_port=data.get("debug_port"), has_login_issue=account.has_login_issue)
 
 
+@router.post("/{account_id}/end-session")
+def end_session(account_id: int, db: Session = Depends(get_db)):
+    """관리자가 로그인 등 작업을 마친 뒤 켜져 있는 Browserbase 세션을 직접 끈다 —
+    안 끄면 타임아웃(1시간)까지 과금이 계속된다."""
+    account = crud.get_account(db, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
+    if not account.browserbase_context_id:
+        return {"ended": 0}
+    try:
+        ended = browserbase.end_running_sessions_for_context(account.browserbase_context_id)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"세션 종료 실패: {e}")
+    return {"ended": ended}
+
+
 @router.post("/{account_id}/detect-profile-url", response_model=schemas.ReviewAccountOut)
 def detect_profile_url(account_id: int, db: Session = Depends(get_db)):
     """AdsPower로 이미 로그인해둔 계정의 브라우저를 열어 네이버 마이플레이스

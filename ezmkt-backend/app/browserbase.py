@@ -75,11 +75,16 @@ def create_session(context_id: str, ip_address: str | None = None) -> dict:
     """이 계정(context)으로 실제 브라우저를 하나 띄운다. ip_address를 주면 Bright Data
     프록시로 그 고정 IP를 통해 접속한다 — 매번 같은 IP로 접속해야 계정별 로그인이
     안 섞인다. 켜져있는 시간만큼 과금되므로 작업이 끝나면 반드시 end_session으로
-    닫아야 한다."""
+    닫아야 한다.
+
+    timeout을 명시하지 않으면 프로젝트 기본값(300초=5분)이 적용돼서, 관리자가 직접
+    로그인(2단계 인증 등 포함)하는 도중에 "Debugging connection was closed" 로 끊겨버린다
+    — 1시간으로 넉넉히 늘려서 사람이 로그인할 시간을 확보한다."""
     body = {
         "browserSettings": {
             "context": {"id": context_id, "persist": True},
         },
+        "timeout": 3600,
     }
     project_id = _project_id()
     if project_id:
@@ -108,6 +113,22 @@ def end_session(session_id: str) -> None:
         timeout=15,
     )
     res.raise_for_status()
+
+
+def end_running_sessions_for_context(context_id: str) -> int:
+    """이 계정(context)으로 지금 켜져 있는 세션을 전부 찾아서 닫는다 — "지금 실행"이
+    타임아웃(1시간)까지 켜둔 세션을 관리자가 로그인을 마친 뒤 직접 끌 수 있게 하기 위함.
+    반환값은 닫은 세션 개수."""
+    params = {"status": "RUNNING"}
+    project_id = _project_id()
+    if project_id:
+        params["projectId"] = project_id
+    res = requests.get(f"{BASE_URL}/sessions", headers=_headers(), params=params, timeout=15)
+    res.raise_for_status()
+    matching = [s for s in res.json() if s.get("contextId") == context_id]
+    for session in matching:
+        end_session(session["id"])
+    return len(matching)
 
 
 def check_naver_login(context_id: str, ip_address: str | None = None) -> bool:

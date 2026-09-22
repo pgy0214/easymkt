@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Play, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, Play, Search, Square } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { API_ORIGIN, api } from '../lib/api.js'
 import { formatDate, formatKRW, STATUS_LABEL } from '../lib/format.js'
@@ -184,6 +184,7 @@ export default function AccountTaskModal({ row, onClose }) {
   const [error, setError] = useState(null)
   const [storeSearch, setStoreSearch] = useState('')
   const [launching, setLaunching] = useState(false)
+  const [endingSession, setEndingSession] = useState(false)
 
   async function refresh() {
     setLoading(true)
@@ -288,6 +289,17 @@ export default function AccountTaskModal({ row, onClose }) {
     }
   }
 
+  async function handleEndSession() {
+    setEndingSession(true)
+    try {
+      await api.endAccountSession(row.id)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setEndingSession(false)
+    }
+  }
+
   async function handleSubmitResult(taskId, link) {
     try {
       await api.updateTaskResult(taskId, link)
@@ -309,10 +321,24 @@ export default function AccountTaskModal({ row, onClose }) {
           {row.name} — {row.label} 작업 관리
         </h3>
         {(row.ip_address || row.adspower_profile_id) && (
-          <Button variant="primary" size="sm" onClick={handleLaunch} disabled={launching}>
-            <Play size={12} />
-            {launching ? '실행 중...' : '지금 실행'}
-          </Button>
+          <div className="flex gap-1.5">
+            <Button variant="primary" size="sm" onClick={handleLaunch} disabled={launching}>
+              <Play size={12} />
+              {launching ? '실행 중...' : '지금 실행'}
+            </Button>
+            {row.ip_address && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleEndSession}
+                disabled={endingSession}
+                title="로그인 등 작업을 마쳤으면 눌러서 세션을 끄세요 — 안 끄면 최대 1시간까지 켜진 채로 과금됩니다"
+              >
+                <Square size={12} />
+                {endingSession ? '종료 중...' : '세션 종료'}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
