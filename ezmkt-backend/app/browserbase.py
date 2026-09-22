@@ -186,7 +186,8 @@ def check_naver_login(context_id: str, ip_address: str | None = None) -> bool:
                 time.sleep(2)
         time.sleep(3)
         current_url = driver.current_url.rstrip("/")
-        print(f"[check_naver_login] context={context_id} final_url={current_url}")
+        print(f"[check_naver_login] context={context_id} final_url={current_url} title={driver.title!r}")
+        print(f"[check_naver_login] body_snippet={driver.find_element('tag name', 'body').text[:300]!r}")
         return not (
             "nid.naver.com" in current_url
             or "/login" in current_url
