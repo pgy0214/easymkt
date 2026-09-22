@@ -324,7 +324,7 @@ export default function AccountTaskModal({ row, onClose }) {
           <div className="flex gap-1.5">
             <Button variant="primary" size="sm" onClick={handleLaunch} disabled={launching}>
               <Play size={12} />
-              {launching ? '실행 중...' : '지금 실행'}
+              {launching ? '실행 중...' : '플레이스바로가기'}
             </Button>
             {row.ip_address && (
               <Button

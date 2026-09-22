@@ -79,12 +79,19 @@ def create_session(context_id: str, ip_address: str | None = None) -> dict:
 
     timeout을 명시하지 않으면 프로젝트 기본값(300초=5분)이 적용돼서, 관리자가 직접
     로그인(2단계 인증 등 포함)하는 도중에 "Debugging connection was closed" 로 끊겨버린다
-    — 1시간으로 넉넉히 늘려서 사람이 로그인할 시간을 확보한다."""
+    — 1시간으로 넉넉히 늘려서 사람이 로그인할 시간을 확보한다.
+
+    region을 명시하지 않으면 기본값 us-west-2(미국 오레곤)라서, 한국 사이트 접속 + 실시간
+    화면보기 스트리밍 왕복 지연이 커서 체감상 많이 느리다 — 한국에서 제일 가까운
+    ap-southeast-1(싱가포르)로 지정한다. (Browserbase API는 locale/언어 설정 필드 자체가
+    없어서, 원격 브라우저가 영어로 뜨는 문제는 이 방법으로는 못 고침 — 라이브뷰 안에서
+    직접 크롬 언어 설정을 한국어로 바꿔야 함)"""
     body = {
         "browserSettings": {
             "context": {"id": context_id, "persist": True},
         },
         "timeout": 3600,
+        "region": "ap-southeast-1",
     }
     project_id = _project_id()
     if project_id:
