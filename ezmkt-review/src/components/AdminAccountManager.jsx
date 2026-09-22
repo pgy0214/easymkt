@@ -306,6 +306,10 @@ export default function AdminAccountManager() {
     }
   }
 
+  // Browserbase 동시 세션 한도 안에서 여유를 두고 한 번에 이만큼씩 동시 확인한다 —
+  // 계정 수가 많아도(예: 100개) 순차 확인(계정당 20~40초)보다 훨씬 빨리 끝난다.
+  const LOGIN_CHECK_BATCH_SIZE = 15
+
   async function handleBulkCheckLogin() {
     const targets = selectedRows.filter((r) => r.id != null && r.ip_address)
     if (targets.length === 0) return
@@ -313,14 +317,19 @@ export default function AdminAccountManager() {
     try {
       let issueCount = 0
       let failCount = 0
-      for (const row of targets) {
-        try {
-          const updated = await api.checkAccountLogin(row.id)
-          setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updated } : r)))
-          if (updated.has_login_issue) issueCount += 1
-        } catch (err) {
-          failCount += 1
-        }
+      for (let i = 0; i < targets.length; i += LOGIN_CHECK_BATCH_SIZE) {
+        const batch = targets.slice(i, i + LOGIN_CHECK_BATCH_SIZE)
+        const results = await Promise.allSettled(batch.map((row) => api.checkAccountLogin(row.id)))
+        results.forEach((result, idx) => {
+          if (result.status === 'fulfilled') {
+            const updated = result.value
+            const row = batch[idx]
+            setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updated } : r)))
+            if (updated.has_login_issue) issueCount += 1
+          } else {
+            failCount += 1
+          }
+        })
       }
       alert(
         `${targets.length}개 계정 확인 완료 — 로그인 문제 ${issueCount}건${failCount ? `, 확인 실패 ${failCount}건` : ''}`,
