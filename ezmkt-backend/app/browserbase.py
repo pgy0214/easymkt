@@ -153,6 +153,7 @@ def check_naver_login(context_id: str, ip_address: str | None = None) -> bool:
 
     try:
         from selenium import webdriver
+        from selenium.common.exceptions import WebDriverException
         from selenium.webdriver.chrome.options import Options as ChromeOptions
         from selenium.webdriver.remote.remote_connection import RemoteConnection
 
@@ -171,7 +172,18 @@ def check_naver_login(context_id: str, ip_address: str | None = None) -> bool:
         connection = _BrowserbaseConnection(selenium_url)
         options = ChromeOptions()
         driver = webdriver.Remote(command_executor=connection, options=options)
-        driver.get(NAVER_MY_URL)
+
+        # 세션이 막 만들어진 직후엔 Bright Data 프록시 연결이 아직 준비되기 전이라
+        # 첫 driver.get()이 "failed to connect to browser"로 실패하는 경우가 있다 —
+        # 실측으로 확인한 동작이라 몇 초 간격으로 재시도한다.
+        for attempt in range(3):
+            try:
+                driver.get(NAVER_MY_URL)
+                break
+            except WebDriverException:
+                if attempt == 2:
+                    raise
+                time.sleep(2)
         time.sleep(3)
         current_url = driver.current_url.rstrip("/")
         return not (
