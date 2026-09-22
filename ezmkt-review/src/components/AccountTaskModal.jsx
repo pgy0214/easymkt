@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Play, Search, Square } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_ORIGIN, api } from '../lib/api.js'
 import { formatDate, formatKRW, STATUS_LABEL } from '../lib/format.js'
 import CopyButton from './CopyButton.jsx'
@@ -185,6 +185,7 @@ export default function AccountTaskModal({ row, onClose }) {
   const [storeSearch, setStoreSearch] = useState('')
   const [launching, setLaunching] = useState(false)
   const [endingSession, setEndingSession] = useState(false)
+  const launchedWindowRef = useRef(null)
 
   async function refresh() {
     setLoading(true)
@@ -280,8 +281,9 @@ export default function AccountTaskModal({ row, onClose }) {
     try {
       const result = await api.launchAccount(row.id)
       // Browserbase 경로는 로컬에서 자동으로 창이 뜨지 않으므로, 받은 링크를 직접 새
-      // 탭으로 열어줘야 한다(AdsPower 경로는 로컬 프로그램이 알아서 창을 띄움).
-      if (result.live_view_url) window.open(result.live_view_url, '_blank')
+      // 탭으로 열어줘야 한다(AdsPower 경로는 로컬 프로그램이 알아서 창을 띄움). 참조를
+      // 저장해뒀다가 "세션 종료" 누르면 이 탭도 같이 닫는다.
+      if (result.live_view_url) launchedWindowRef.current = window.open(result.live_view_url, '_blank')
     } catch (err) {
       alert(err.message)
     } finally {
@@ -293,6 +295,10 @@ export default function AccountTaskModal({ row, onClose }) {
     setEndingSession(true)
     try {
       await api.endAccountSession(row.id)
+      if (launchedWindowRef.current && !launchedWindowRef.current.closed) {
+        launchedWindowRef.current.close()
+      }
+      launchedWindowRef.current = null
     } catch (err) {
       alert(err.message)
     } finally {
