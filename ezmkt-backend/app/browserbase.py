@@ -139,11 +139,14 @@ def end_running_sessions_for_context(context_id: str) -> int:
 
 
 def check_naver_login(context_id: str, ip_address: str | None = None) -> bool:
-    """이 계정(context)이 지금 네이버에 로그인돼 있는지 확인한다 — adspower.
-    detect_naver_profile_url과 같은 판정 방식(마이플레이스로 이동시켜 로그인
-    화면으로 튕기는지 확인). 확인용 세션을 새로 열었다가 끝나면 바로 닫으므로
-    과금은 확인에 걸리는 몇 초뿐이다. 실제 사용과 같은 IP로 확인해야 의미가
-    있으므로 ip_address를 그대로 넘겨서 세션을 연다."""
+    """이 계정(context)이 지금 네이버에 로그인돼 있는지 확인한다 — 마이플레이스로
+    이동시켜서 로그인 화면(nid.naver.com)으로 튕기는지, 또는 URL은 그대로 /my에
+    남아있지만 본문에 "로그인해주세요."가 뜨는지로 판단한다(URL이 안 바뀌었다고
+    무조건 로그인 안 된 게 아니다 — 로그인된 경우에도 이 페이지는 리다이렉트 없이
+    같은 주소에서 닉네임/리뷰 개수 등 실제 내용만 채워서 보여준다). 확인용 세션을
+    새로 열었다가 끝나면 바로 닫으므로 과금은 확인에 걸리는 몇 초뿐이다. 실제
+    사용과 같은 IP로 확인해야 의미가 있으므로 ip_address를 그대로 넘겨서 세션을
+    연다."""
     session = create_session(context_id, ip_address)
     session_id = session["id"]
     selenium_url = session.get("seleniumRemoteUrl")
@@ -186,12 +189,14 @@ def check_naver_login(context_id: str, ip_address: str | None = None) -> bool:
                 time.sleep(2)
         time.sleep(3)
         current_url = driver.current_url.rstrip("/")
-        print(f"[check_naver_login] context={context_id} final_url={current_url} title={driver.title!r}")
-        print(f"[check_naver_login] body_snippet={driver.find_element('tag name', 'body').text[:300]!r}")
-        return not (
-            "nid.naver.com" in current_url
-            or "/login" in current_url
-            or current_url == NAVER_MY_URL
-        )
+        if "nid.naver.com" in current_url or "/login" in current_url:
+            return False
+
+        # 로그인 안 된 상태에서도 이 페이지 자체는 리다이렉트 없이 그대로 /my에
+        # 남아있고, 대신 본문에 "로그인해주세요."가 뜬다(반대로 로그인된 경우엔
+        # 닉네임/리뷰 개수 등 실제 내용이 채워짐) — 실제로 로그인된 계정과 아닌
+        # 계정을 각각 붙여서 비교해 확인한 판정 기준이다.
+        body_text = driver.find_element("tag name", "body").text
+        return "로그인해주세요" not in body_text
     finally:
         end_session(session_id)
