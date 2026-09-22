@@ -1782,3 +1782,25 @@ DB 관련 에러 없이 정상 기동 + 요청 처리 중임을 확인함(어느
 Railway 환경변수에 실제 값으로 들어가 있는 것을 발견함 — 사용자 확인 결과 두 서비스 다 가입은
 이미 되어 있고 회원정보도 들어가 있으나 **결제(비용 처리)만 안 된 상태**. 즉 관리자 계정
 "지금 실행"(Browserbase) 기능은 코드·설정 다 준비됐고 결제만 하면 바로 테스트 가능한 상태.
+
+## 폴더/브랜드명 리네임 + 커스텀 도메인 연결 (2026-09-17)
+
+다른 세션(pilotfish)이 브랜드 통일을 위해 폴더명을 바꿔 main에 병합·푸시함:
+`easyreview` → `ezmkt-review`, `easyreview-backend` → `ezmkt-backend`,
+`easystore` → `ezmkt-store`. Railway 서비스/Vercel 프로젝트도 각각 `ezmkt-backend`/
+`ezmkt-review`/`ezmkt-store`로 같이 개명하고 Root Directory 설정도 새 경로로 맞춰둠.
+이 세션에서 pull 받은 뒤 새 경로에 의존성 재설치 + 백엔드/양쪽 프론트 전부 브라우저로
+직접 띄워서 회귀 없음 확인함(로그인, 영수증 생성, 스토어 체크아웃, 주문→캠페인 전환까지 전부
+정상 — `OrderConvertModal.jsx`처럼 최근에 추가된 파일도 폴더 이동 후 import 안 깨짐).
+
+**커스텀 도메인은 `ezmkt.com`이 아니라 `ezmkt.co.kr`** — 카페24에서 이미 구매/연결 완료됨.
+`review.ezmkt.co.kr`/`store.ezmkt.co.kr` 둘 다 Vercel에 연결되어 실제 라이브 중이고,
+Railway `FRONTEND_ORIGINS`에도 이미 두 도메인이 등록되어 CORS 문제 없음(누가 언제 했는지는
+기록에 없으나 확인해보니 이미 되어 있었음). `ezmkt-store`는 GitHub 연동이 아니라 수동 배포
+(`vercel deploy --prod`)라는 점 유의 — main 푸시만으로는 스토어 사이트에 반영 안 됨.
+
+**루트 도메인(`ezmkt.co.kr`, 서브도메인 없이 그 자체)은 DNS 레코드가 아예 없어서 접속 시
+DNS_PROBE_FINISHED_NXDOMAIN 에러남 — 사용자가 직접 겪음.** 사용자에게 확인한 결과
+**의도적으로 미사용 상태로 둔 것**(나중에 회사소개 페이지 등을 얹을 예정, 지금은 리다이렉트도
+안 만들기로 결정, 2026-09-22). `review.`/`store.` 서브도메인이 붙은 정확한 링크로만 안내하는
+한 문제 없음 — 루트 도메인만 단독으로 홍보/명함 등에 쓰면 안 됨.
