@@ -120,7 +120,44 @@ def _remote_driver(session_id: str, selenium_url: str):
             return headers
 
     connection = _BrowserbaseConnection(selenium_url)
-    return webdriver.Remote(command_executor=connection, options=ChromeOptions())
+    driver = webdriver.Remote(command_executor=connection, options=ChromeOptions())
+    _apply_mobile_emulation(driver)
+    return driver
+
+
+# 네이버 리뷰/마이플레이스 쪽 기능(방문인증 등) 상당수가 모바일 환경에서만 동작해서
+# ("방문 인증은 모바일 환경에서만 가능합니다" 안내가 데스크톱 UA/화면에서 뜸), 이
+# 모듈로 여는 세션은 항상 실제 휴대폰처럼 보이도록 미리 맞춰둔다 — 관리자가 매번
+# 라이브뷰에서 크롬 개발자도구로 수동으로 모바일 모드를 켤 필요가 없게.
+_MOBILE_UA = (
+    "Mozilla/5.0 (Linux; Android 14; SM-S911N) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36"
+)
+
+
+def _apply_mobile_emulation(driver) -> None:
+    driver.command_executor._commands["executeCdpCommand"] = (
+        "POST",
+        "/session/$sessionId/goog/cdp/execute",
+    )
+    driver.execute_cdp_cmd(
+        "Emulation.setDeviceMetricsOverride",
+        {"width": 390, "height": 844, "deviceScaleFactor": 3, "mobile": True},
+    )
+    driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": True})
+    driver.execute_cdp_cmd(
+        "Network.setUserAgentOverride",
+        {
+            "userAgent": _MOBILE_UA,
+            "userAgentMetadata": {
+                "platform": "Android",
+                "mobile": True,
+                "architecture": "",
+                "model": "SM-S911N",
+                "platformVersion": "14",
+            },
+        },
+    )
 
 
 def _get_with_retry(driver, url: str) -> None:
