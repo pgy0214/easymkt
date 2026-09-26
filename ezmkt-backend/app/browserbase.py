@@ -1,7 +1,10 @@
+import json
 import os
+import threading
 import time
 
 import requests
+import websocket
 
 # Browserbase 클라우드 브라우저 — AdsPower와 달리 로컬 PC 없이도 서버(Railway)에서
 # 바로 호출 가능한 진짜 인터넷 API. 계정별 고정 IP는 Bright Data ISP 프록시(호스트/
@@ -235,6 +238,113 @@ def end_running_sessions_for_context(context_id: str) -> int:
     for session in matching:
         end_session(session["id"])
     return len(matching)
+
+
+def _page_debugger_ws_url(session_id: str) -> str:
+    """이 세션이 지금 보여주고 있는 페이지(탭 1개)에 직접 붙는 CDP 웹소켓 주소.
+    /debug의 debuggerUrl에 쿼리스트링으로 박혀 나오는 걸 그대로 뽑아 쓴다."""
+    res = requests.get(f"{BASE_URL}/sessions/{session_id}/debug", headers=_headers(), timeout=15)
+    res.raise_for_status()
+    debugger_url = res.json()["pages"][0]["debuggerUrl"]
+    qs = debugger_url.split("?", 1)[1]
+    return "wss://" + qs[len("wss="):]
+
+
+def upload_file_to_session(session_id: str, filename: str, content: bytes, content_type: str) -> None:
+    """관리자 PC에서 받은 파일을 이 세션(원격 브라우저) 쪽으로 올려둔다 — 올린 파일은
+    DOM.setFileInputFiles가 "/tmp/.uploads/<파일명>" 경로로 그대로 참조할 수 있다."""
+    res = requests.post(
+        f"{BASE_URL}/sessions/{session_id}/uploads",
+        headers={"X-BB-API-Key": _headers()["X-BB-API-Key"]},
+        files={"file": (filename, content, content_type)},
+        timeout=30,
+    )
+    res.raise_for_status()
+
+
+class FileChooserWatcher:
+    """네이버 페이지에서 "파일 선택" 버튼을 누르면(=원격 브라우저 안이라 관리자 PC의
+    파일탐색기가 뜰 방법이 없음) 그 순간을 감지해뒀다가, 관리자가 우리 사이트에서
+    고른 파일을 대신 그 입력칸에 꽂아 넣기 위한 백그라운드 감시자.
+    Page.setInterceptFileChooserDialog를 켜두면 원래 뜨는 파일탐색기 대신
+    Page.fileChooserOpened 이벤트가 오는데, 그걸 계속 듣고 있어야 해서 이 세션이
+    켜져있는 동안 붙어있는 별도 웹소켓 연결(스레드)이 필요하다."""
+
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self._ws = websocket.create_connection(_page_debugger_ws_url(session_id), timeout=20)
+        self._next_id = 1
+        self._lock = threading.Lock()
+        self._pending_node_id: int | None = None
+        self._stop = False
+        self._send("Page.enable")
+        self._send("Page.setInterceptFileChooserDialog", {"enabled": True})
+        self._thread = threading.Thread(target=self._listen, daemon=True)
+        self._thread.start()
+
+    def _send(self, method: str, params: dict | None = None) -> None:
+        with self._lock:
+            self._next_id += 1
+            self._ws.send(json.dumps({"id": self._next_id, "method": method, "params": params or {}}))
+
+    def _listen(self) -> None:
+        while not self._stop:
+            try:
+                raw = self._ws.recv()
+            except Exception:
+                return
+            try:
+                msg = json.loads(raw)
+            except ValueError:
+                continue
+            if msg.get("method") == "Page.fileChooserOpened":
+                self._pending_node_id = msg["params"]["backendNodeId"]
+
+    def has_pending(self) -> bool:
+        return self._pending_node_id is not None
+
+    def resolve(self, filename: str) -> None:
+        """방금 올린 파일을 열려있던 입력칸에 실제로 꽂는다."""
+        if self._pending_node_id is None:
+            raise RuntimeError("지금 열려있는 파일 선택창이 없습니다")
+        self._send(
+            "DOM.setFileInputFiles",
+            {"files": [f"/tmp/.uploads/{filename}"], "backendNodeId": self._pending_node_id},
+        )
+        self._pending_node_id = None
+
+    def close(self) -> None:
+        self._stop = True
+        try:
+            self._ws.close()
+        except Exception:
+            pass
+
+
+_watchers: dict[int, FileChooserWatcher] = {}
+_watchers_lock = threading.Lock()
+
+
+def start_file_watcher(account_id: int, session_id: str) -> None:
+    stop_file_watcher(account_id)
+    try:
+        watcher = FileChooserWatcher(session_id)
+    except Exception:
+        return
+    with _watchers_lock:
+        _watchers[account_id] = watcher
+
+
+def get_file_watcher(account_id: int) -> FileChooserWatcher | None:
+    with _watchers_lock:
+        return _watchers.get(account_id)
+
+
+def stop_file_watcher(account_id: int) -> None:
+    with _watchers_lock:
+        watcher = _watchers.pop(account_id, None)
+    if watcher:
+        watcher.close()
 
 
 def check_naver_login(context_id: str, ip_address: str | None = None) -> bool:

@@ -3,6 +3,7 @@ uvicorn[standard]
 sqlalchemy
 apscheduler
 selenium
+websocket-client
 beautifulsoup4
 pydantic
 openpyxl

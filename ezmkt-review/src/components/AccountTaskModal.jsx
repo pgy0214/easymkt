@@ -185,6 +185,8 @@ export default function AccountTaskModal({ row, onClose }) {
   const [storeSearch, setStoreSearch] = useState('')
   const [launching, setLaunching] = useState(false)
   const [endingSession, setEndingSession] = useState(false)
+  const [filePending, setFilePending] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
   const launchedWindowRef = useRef(null)
   const popupWatcherRef = useRef(null)
 
@@ -317,8 +319,17 @@ export default function AccountTaskModal({ row, onClose }) {
           if (launchedWindowRef.current?.closed) {
             stopWatchingPopup()
             launchedWindowRef.current = null
+            setFilePending(false)
             api.endAccountSession(row.id).catch(() => {})
+            return
           }
+          // 네이버 페이지 안에서 "파일 선택"을 누르면(영수증 첨부 등) 관리자 PC의
+          // 파일탐색기가 뜰 방법이 없어서, 그 순간을 여기서 감지해 아래 배너로
+          // 알려주고 대신 파일을 올릴 수 있게 한다.
+          api
+            .getFileChooserStatus(row.id)
+            .then((r) => setFilePending(r.pending))
+            .catch(() => {})
         }, 1000)
       } else if (popup) {
         popup.close()
@@ -336,6 +347,7 @@ export default function AccountTaskModal({ row, onClose }) {
     try {
       await api.endAccountSession(row.id)
       stopWatchingPopup()
+      setFilePending(false)
       if (launchedWindowRef.current && !launchedWindowRef.current.closed) {
         launchedWindowRef.current.close()
       }
@@ -344,6 +356,21 @@ export default function AccountTaskModal({ row, onClose }) {
       alert(err.message)
     } finally {
       setEndingSession(false)
+    }
+  }
+
+  async function handleFileSelected(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingFile(true)
+    try {
+      await api.uploadAccountFile(row.id, file)
+      setFilePending(false)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setUploadingFile(false)
+      e.target.value = ''
     }
   }
 
@@ -388,6 +415,16 @@ export default function AccountTaskModal({ row, onClose }) {
           </div>
         )}
       </div>
+
+      {filePending && (
+        <div className="flex items-center justify-between gap-2 rounded-btn border border-warning-text/30 bg-warning-bg px-3 py-2 text-sm text-warning-text">
+          <span>네이버 페이지에서 파일 선택창이 열렸어요 — PC에서 파일을 골라 올려주세요.</span>
+          <label className="cursor-pointer rounded-btn bg-white px-2 py-1 text-xs font-semibold text-warning-text ring-1 ring-warning-text/30 hover:opacity-80">
+            {uploadingFile ? '업로드 중...' : '파일 선택'}
+            <input type="file" className="hidden" disabled={uploadingFile} onChange={handleFileSelected} />
+          </label>
+        </div>
+      )}
 
       <div>
         <p className="mb-1 text-xs font-medium text-gray-500">

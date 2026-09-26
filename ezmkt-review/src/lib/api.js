@@ -107,6 +107,12 @@ export const api = {
   launchAccount: (id) => request(`/accounts/${id}/launch`, { method: 'POST' }),
   endAccountSession: (id) => request(`/accounts/${id}/end-session`, { method: 'POST' }),
   checkAccountLogin: (id) => request(`/accounts/${id}/check-login`, { method: 'POST' }),
+  getFileChooserStatus: (id) => request(`/accounts/${id}/file-chooser-status`),
+  uploadAccountFile: (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return uploadRequest(`/accounts/${id}/upload-file`, form)
+  },
   detectProfileUrl: (id) => request(`/accounts/${id}/detect-profile-url`, { method: 'POST' }),
   bulkAssignTimeSlot: (accountIds) =>
     request('/accounts/bulk-assign-time-slot', {

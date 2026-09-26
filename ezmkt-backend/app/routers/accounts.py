@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import adspower, browserbase, crud, schemas
@@ -70,6 +70,9 @@ def launch_account(account_id: int, db: Session = Depends(get_db)):
             live_view_url = browserbase.get_live_view_url(session["id"])
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Browserbase 세션 생성 실패: {e}")
+        # 원격 브라우저에서 "파일 선택"을 누르면 관리자 PC의 파일탐색기가 뜰 방법이
+        # 없어서, 그 순간을 감지해뒀다가 대신 파일을 꽂아 넣어주는 감시자를 붙여둔다.
+        browserbase.start_file_watcher(account.id, session["id"])
         return schemas.AccountLaunchOut(
             has_login_issue=account.has_login_issue, live_view_url=live_view_url
         )
@@ -112,6 +115,7 @@ def end_session(account_id: int, db: Session = Depends(get_db)):
     account = crud.get_account(db, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다")
+    browserbase.stop_file_watcher(account_id)
     if not account.browserbase_context_id:
         return {"ended": 0}
     try:
@@ -119,6 +123,31 @@ def end_session(account_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"세션 종료 실패: {e}")
     return {"ended": ended}
+
+
+@router.get("/{account_id}/file-chooser-status")
+def file_chooser_status(account_id: int):
+    """지금 원격 브라우저에서 파일 선택창이 열려있는지(=관리자가 대신 파일을
+    올려줘야 하는지) 프론트가 주기적으로 확인하는 용도."""
+    watcher = browserbase.get_file_watcher(account_id)
+    return {"pending": bool(watcher and watcher.has_pending())}
+
+
+@router.post("/{account_id}/upload-file")
+async def upload_file(account_id: int, file: UploadFile = File(...)):
+    """관리자가 PC에서 고른 파일을 열려있는 파일 선택창에 대신 꽂아 넣는다."""
+    watcher = browserbase.get_file_watcher(account_id)
+    if not watcher or not watcher.has_pending():
+        raise HTTPException(status_code=400, detail="지금 열려있는 파일 선택창이 없습니다")
+    content = await file.read()
+    try:
+        browserbase.upload_file_to_session(
+            watcher.session_id, file.filename, content, file.content_type or "application/octet-stream"
+        )
+        watcher.resolve(file.filename)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"파일 업로드 실패: {e}")
+    return {"ok": True}
 
 
 @router.post("/{account_id}/check-login", response_model=schemas.ReviewAccountOut)
