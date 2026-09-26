@@ -296,6 +296,13 @@ export default function AccountTaskModal({ row, onClose }) {
     // 안 보이는 원인). 그래서 빈 탭을 클릭 즉시(동기적으로) 먼저 열어두고, 결과가
     // 오면 그 탭의 주소만 바꿔준다.
     const popup = window.open('', '_blank')
+    if (popup) {
+      // 세션 생성+로그인 페이지 이동에 최대 1분 가까이 걸릴 수 있어서, 그냥
+      // about:blank로 두면 멈춘 것처럼 보인다 — 기다리는 동안 보여줄 안내문.
+      popup.document.title = '세션 준비 중...'
+      popup.document.body.innerHTML =
+        '<div style="font-family:sans-serif;padding:32px;color:#666">브라우저 세션을 준비하고 있어요. 최대 1분 정도 걸릴 수 있습니다...</div>'
+    }
     setLaunching(true)
     try {
       const result = await api.launchAccount(row.id)

@@ -126,9 +126,12 @@ def _remote_driver(session_id: str, selenium_url: str):
 def _get_with_retry(driver, url: str) -> None:
     """세션이 막 만들어진 직후엔 Bright Data 프록시 연결이 아직 준비되기 전이라
     첫 driver.get()이 "failed to connect to browser"로 실패하는 경우가 있다 —
-    실측으로 확인한 동작이라 몇 초 간격으로 재시도한다."""
+    실측으로 확인한 동작이다. 실패한 시도 자체가 에러로 끝나기까지 15초 안팎
+    걸려서(재시도 2번이면 30초 이상 그냥 날아감), 먼저 짧게 기다렸다가 시도하면
+    대부분 첫 시도에 바로 성공한다 — 그래도 실패하면 기존대로 재시도한다."""
     from selenium.common.exceptions import WebDriverException
 
+    time.sleep(3)
     for attempt in range(3):
         try:
             driver.get(url)
