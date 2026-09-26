@@ -299,7 +299,6 @@ class FileChooserWatcher:
                 continue
             if msg.get("method") == "Page.fileChooserOpened":
                 self._pending_node_id = msg["params"]["backendNodeId"]
-                print(f"[file_watcher] pid={os.getpid()} session={self.session_id} chooser opened, node={self._pending_node_id}")
 
     def has_pending(self) -> bool:
         return self._pending_node_id is not None
@@ -330,19 +329,15 @@ def start_file_watcher(account_id: int, session_id: str) -> None:
     stop_file_watcher(account_id)
     try:
         watcher = FileChooserWatcher(session_id)
-    except Exception as e:
-        print(f"[file_watcher] pid={os.getpid()} start FAILED for account={account_id}: {e}")
+    except Exception:
         return
     with _watchers_lock:
         _watchers[account_id] = watcher
-    print(f"[file_watcher] pid={os.getpid()} started for account={account_id} session={session_id}")
 
 
 def get_file_watcher(account_id: int) -> FileChooserWatcher | None:
     with _watchers_lock:
-        w = _watchers.get(account_id)
-    print(f"[file_watcher] pid={os.getpid()} lookup account={account_id} found={bool(w)}")
-    return w
+        return _watchers.get(account_id)
 
 
 def stop_file_watcher(account_id: int) -> None:
