@@ -186,6 +186,19 @@ export default function AccountTaskModal({ row, onClose }) {
   const [launching, setLaunching] = useState(false)
   const [endingSession, setEndingSession] = useState(false)
   const launchedWindowRef = useRef(null)
+  const popupWatcherRef = useRef(null)
+
+  function stopWatchingPopup() {
+    if (popupWatcherRef.current) {
+      clearInterval(popupWatcherRef.current)
+      popupWatcherRef.current = null
+    }
+  }
+
+  // 라이브뷰 탭은 browserbase.com 원격 문서라 여기서 그 안에 unload 이벤트를 걸
+  // 수 없다(다른 출처) — 그래서 "닫혔는지"를 주기적으로 확인하는 방식으로 감지한다.
+  // 사람이 "세션 종료"를 안 누르고 탭만 닫아도 과금이 최대 1시간까지 새는 걸 막는다.
+  useEffect(() => stopWatchingPopup, [])
 
   async function refresh() {
     setLoading(true)
@@ -292,6 +305,14 @@ export default function AccountTaskModal({ row, onClose }) {
         // 탭으로 열어줘야 한다(AdsPower 경로는 로컬 프로그램이 알아서 창을 띄움). 참조를
         // 저장해뒀다가 "세션 종료" 누르면 이 탭도 같이 닫는다.
         launchedWindowRef.current = popup
+        stopWatchingPopup()
+        popupWatcherRef.current = setInterval(() => {
+          if (launchedWindowRef.current?.closed) {
+            stopWatchingPopup()
+            launchedWindowRef.current = null
+            api.endAccountSession(row.id).catch(() => {})
+          }
+        }, 1000)
       } else if (popup) {
         popup.close()
       }
@@ -307,6 +328,7 @@ export default function AccountTaskModal({ row, onClose }) {
     setEndingSession(true)
     try {
       await api.endAccountSession(row.id)
+      stopWatchingPopup()
       if (launchedWindowRef.current && !launchedWindowRef.current.closed) {
         launchedWindowRef.current.close()
       }
