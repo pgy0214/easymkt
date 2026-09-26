@@ -1,7 +1,14 @@
 import { ChevronDown, ChevronRight, Copy, FileText, MessageSquare, Pencil, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { api } from '../lib/api.js'
-import { formatDateRange, formatDateTime, formatKRW, formatWorkDays, PLATFORM_LABEL } from '../lib/format.js'
+import {
+  formatDateRange,
+  formatDateTime,
+  formatKRW,
+  formatWorkDays,
+  PLATFORM_LABEL,
+  todayKstDateString,
+} from '../lib/format.js'
 import Badge from './ui/Badge.jsx'
 import Button from './ui/Button.jsx'
 import Input from './ui/Input.jsx'
@@ -56,10 +63,13 @@ export default function TargetList({ targets, onDelete, onUpdated, onCopy }) {
 
   const filtered = useMemo(() => {
     const query = storeSearch.trim().toLowerCase()
+    const todayStr = todayKstDateString()
     return targets.filter((target) => {
       const isCompleted = target.completed_count >= target.required_count
-      if (statusFilter === 'in_progress' && isCompleted) return false
+      const isExpired = !isCompleted && target.end_date && todayStr > target.end_date
+      if (statusFilter === 'in_progress' && (isCompleted || isExpired)) return false
       if (statusFilter === 'completed' && !isCompleted) return false
+      if (statusFilter === 'expired' && !isExpired) return false
       if (query && !target.store_name?.toLowerCase().includes(query)) return false
       return true
     })
@@ -108,6 +118,7 @@ export default function TargetList({ targets, onDelete, onUpdated, onCopy }) {
         >
           <option value="all">전체 상태</option>
           <option value="in_progress">진행중</option>
+          <option value="expired">기간종료</option>
           <option value="completed">완료</option>
         </select>
       </div>
@@ -140,6 +151,7 @@ export default function TargetList({ targets, onDelete, onUpdated, onCopy }) {
             <tbody className="divide-y divide-gray-100">
               {filtered.map((target) => {
                 const isCompleted = target.completed_count >= target.required_count
+                const isExpired = !isCompleted && target.end_date && todayKstDateString() > target.end_date
                 return (
                   <tr key={target.id}>
                     <td className="px-3 py-2">{PLATFORM_LABEL[target.platform]}</td>
@@ -154,8 +166,8 @@ export default function TargetList({ targets, onDelete, onUpdated, onCopy }) {
                       </a>
                     </td>
                     <td className="px-3 py-2">
-                      <Badge variant={isCompleted ? 'neutral' : 'success'}>
-                        {isCompleted ? '완료' : '진행중'} ({target.completed_count}/{target.required_count})
+                      <Badge variant={isCompleted ? 'neutral' : isExpired ? 'warning' : 'success'}>
+                        {isCompleted ? '완료' : isExpired ? '기간종료' : '진행중'} ({target.completed_count}/{target.required_count})
                       </Badge>
                     </td>
                     <td className="px-3 py-2">

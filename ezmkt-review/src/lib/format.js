@@ -1,3 +1,11 @@
+// 캠페인 작업기간(end_date, "YYYY-MM-DD") 만료 여부 판정 등에 쓰는 오늘 날짜(KST) —
+// end_date와 그대로 문자열 비교 가능한 형식.
+export function todayKstDateString() {
+  const now = new Date()
+  const kst = new Date(now.getTime() + (9 * 60 - now.getTimezoneOffset()) * 60000)
+  return kst.toISOString().slice(0, 10)
+}
+
 export function formatKRW(amount) {
   if (amount === null || amount === undefined) return '-'
   return `${new Intl.NumberFormat('ko-KR').format(amount)}원`

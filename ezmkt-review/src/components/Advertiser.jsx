@@ -10,6 +10,7 @@ import {
   localDateToUtcNaiveIso,
   MAX_PRODUCT_NAME_LENGTH,
   parseProductString,
+  todayKstDateString,
   WEEKDAY_LABELS,
 } from '../lib/format.js'
 import ProductRowsEditor from './ProductRowsEditor.jsx'
@@ -1007,7 +1008,10 @@ function AdvertiserHome({ token, onLogout }) {
               <div>
                 <p className="mb-1.5 text-xs font-medium text-gray-500">영수증리뷰</p>
                 <div className="space-y-2">
-                  {reviewTargets.map((t) => (
+                  {reviewTargets.map((t) => {
+                    const isCompleted = t.completed_count >= t.required_count
+                    const isExpired = !isCompleted && t.end_date && todayKstDateString() > t.end_date
+                    return (
                     <div key={t.id} className="flex items-center justify-between rounded-btn border border-gray-200 p-3">
                       <div>
                         <div className="flex items-center gap-2">
@@ -1015,8 +1019,8 @@ function AdvertiserHome({ token, onLogout }) {
                           {t.approval_status !== 'approved' ? (
                             <Badge variant={APPROVAL_VARIANT[t.approval_status]}>{APPROVAL_LABEL[t.approval_status]}</Badge>
                           ) : (
-                            <Badge variant={t.completed_count >= t.required_count ? 'success' : 'info'}>
-                              {t.completed_count >= t.required_count ? '완료' : '진행중'}
+                            <Badge variant={isCompleted ? 'success' : isExpired ? 'warning' : 'info'}>
+                              {isCompleted ? '완료' : isExpired ? '기간종료' : '진행중'}
                             </Badge>
                           )}
                         </div>
@@ -1029,7 +1033,8 @@ function AdvertiserHome({ token, onLogout }) {
                         <X size={16} />
                       </button>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
