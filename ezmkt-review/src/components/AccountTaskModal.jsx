@@ -277,14 +277,26 @@ export default function AccountTaskModal({ row, onClose }) {
   }
 
   async function handleLaunch() {
+    // 세션 생성+마이플레이스 이동까지 몇십 초 걸릴 수 있어서, API 응답을 기다린 뒤
+    // window.open()을 호출하면 클릭 시점의 사용자 제스처가 이미 끝난 뒤라 브라우저
+    // 팝업 차단에 걸려 탭이 아예 안 뜬다(백엔드는 정상 실행됐는데 화면엔 아무것도
+    // 안 보이는 원인). 그래서 빈 탭을 클릭 즉시(동기적으로) 먼저 열어두고, 결과가
+    // 오면 그 탭의 주소만 바꿔준다.
+    const popup = window.open('', '_blank')
     setLaunching(true)
     try {
       const result = await api.launchAccount(row.id)
-      // Browserbase 경로는 로컬에서 자동으로 창이 뜨지 않으므로, 받은 링크를 직접 새
-      // 탭으로 열어줘야 한다(AdsPower 경로는 로컬 프로그램이 알아서 창을 띄움). 참조를
-      // 저장해뒀다가 "세션 종료" 누르면 이 탭도 같이 닫는다.
-      if (result.live_view_url) launchedWindowRef.current = window.open(result.live_view_url, '_blank')
+      if (result.live_view_url && popup) {
+        popup.location.href = result.live_view_url
+        // Browserbase 경로는 로컬에서 자동으로 창이 뜨지 않으므로, 받은 링크를 직접 새
+        // 탭으로 열어줘야 한다(AdsPower 경로는 로컬 프로그램이 알아서 창을 띄움). 참조를
+        // 저장해뒀다가 "세션 종료" 누르면 이 탭도 같이 닫는다.
+        launchedWindowRef.current = popup
+      } else if (popup) {
+        popup.close()
+      }
     } catch (err) {
+      if (popup) popup.close()
       alert(err.message)
     } finally {
       setLaunching(false)
