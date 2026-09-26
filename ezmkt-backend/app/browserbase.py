@@ -277,7 +277,12 @@ class FileChooserWatcher:
 
     def __init__(self, session_id: str):
         self.session_id = session_id
-        self._ws = websocket.create_connection(_page_debugger_ws_url(session_id), timeout=20)
+        # 이 타임아웃은 "몇 초 안에 응답이 와야 한다"가 아니라 recv()가 멈춰있을 때
+        # 주기적으로 깨어나 self._stop을 확인하기 위한 값이다 — 관리자가 영수증
+        # 버튼까지 가는 데 20초 넘게 걸리는 건 흔한 일이라, 기존처럼 20초짜리
+        # 타임아웃에서 그냥 죽어버리면(아래 _listen 참고) 실제로 누르기도 전에
+        # 감시자가 멎어있는 경우가 대부분이었다.
+        self._ws = websocket.create_connection(_page_debugger_ws_url(session_id), timeout=30)
         self._next_id = 1
         self._lock = threading.Lock()
         self._pending_node_id: int | None = None
@@ -296,8 +301,10 @@ class FileChooserWatcher:
         while not self._stop:
             try:
                 raw = self._ws.recv()
+            except websocket.WebSocketTimeoutException:
+                continue  # 그냥 잠깐 조용했던 것 — 계속 듣는다
             except Exception:
-                return
+                return  # 연결 자체가 끊긴 경우만 진짜로 멈춘다
             try:
                 msg = json.loads(raw)
             except ValueError:
