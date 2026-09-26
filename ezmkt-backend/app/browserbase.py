@@ -149,6 +149,11 @@ def _apply_mobile_emulation(driver) -> None:
         "Network.setUserAgentOverride",
         {
             "userAgent": _MOBILE_UA,
+            # Browserbase의 브라우저 자체 언어가 영어라 여태 영어 UI로 떴었다 —
+            # chrome://settings는 막혀서 못 바꿨지만, 페이지가 보고 판단하는 값(요청
+            # 헤더의 Accept-Language, JS의 navigator.language)은 CDP로 직접 덮어써서
+            # 고칠 수 있다는 걸 실측으로 확인했다.
+            "acceptLanguage": "ko-KR,ko;q=0.9",
             "userAgentMetadata": {
                 "platform": "Android",
                 "mobile": True,
@@ -158,6 +163,7 @@ def _apply_mobile_emulation(driver) -> None:
             },
         },
     )
+    driver.execute_cdp_cmd("Emulation.setLocaleOverride", {"locale": "ko-KR"})
 
 
 def _get_with_retry(driver, url: str) -> None:
