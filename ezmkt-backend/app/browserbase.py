@@ -143,9 +143,14 @@ def _apply_mobile_emulation(driver) -> None:
         "POST",
         "/session/$sessionId/goog/cdp/execute",
     )
+    # deviceScaleFactor는 일부러 1로 둔다 — 실제 폰처럼 2~3으로 하면 화질은
+    # 나아지지만, 라이브뷰에서 클릭한 화면 좌표를 실제 페이지 좌표로 바꾸는 계산이
+    # 이 배율만큼 어긋나서 작은 버튼(예: 영수증 아이콘)을 클릭이 빗나가는 문제가
+    # 있었다(실측으로 확인) — 모바일 판정(mobile:true, UA)에는 배율이 영향을 안
+    # 주므로 1로 고정해 클릭 정확도를 우선한다.
     driver.execute_cdp_cmd(
         "Emulation.setDeviceMetricsOverride",
-        {"width": 390, "height": 844, "deviceScaleFactor": 3, "mobile": True},
+        {"width": 390, "height": 844, "deviceScaleFactor": 1, "mobile": True},
     )
     driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": True})
     driver.execute_cdp_cmd(
